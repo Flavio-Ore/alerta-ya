@@ -1,0 +1,13 @@
+import Redis from 'ioredis';
+
+import { env } from './env';
+
+export const redis = new Redis(env.REDIS_URL, {
+  maxRetriesPerRequest: 3,
+  lazyConnect: true,
+});
+
+redis.on('error', (err) => {
+  // No loggear datos sensibles — solo el mensaje de error
+  console.error('Redis connection error:', err.message);
+});

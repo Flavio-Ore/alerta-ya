@@ -1,0 +1,156 @@
+# ─────────────────────────────────────────────
+# AlertaYa — .gitignore
+# Stack: Flutter · Node.js/Bun/TS · Python/uv · Docker
+# ─────────────────────────────────────────────
+
+# ── Environment & Secrets ──────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+service-account.json
+firebase-adminsdk*.json
+google-services.json
+
+# ── OS ────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── IDEs & Editors ────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+*.iml
+
+# ─────────────────────────────────────────────
+# NODE.JS / BUN  (api/ · web/)
+# ─────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.turbo/
+.cache/
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-error.log*
+*.log
+logs/
+
+# Lock files — keep bun.lock, ignore npm leftovers
+package-lock.json
+
+# ─────────────────────────────────────────────
+# VITE  (web/)
+# ─────────────────────────────────────────────
+web/dist/
+web/.vite/
+
+# ─────────────────────────────────────────────
+# PRISMA  (api/)
+# ─────────────────────────────────────────────
+api/prisma/migrations/dev.db
+api/prisma/migrations/dev.db-journal
+
+# ─────────────────────────────────────────────
+# PYTHON / UV  (ml/)
+# ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+ml/.venv/
+ml/.python-version
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+*.coveragerc
+
+# mypy / ruff / pyright
+.mypy_cache/
+.ruff_cache/
+.pyright/
+pyrightconfig.json
+
+# uv — keep uv.lock, ignore build artifacts
+ml/dist/
+ml/*.egg-info/
+
+# Prophet / Stan compiled models
+ml/src/**/*.pkl
+ml/src/**/*.joblib
+
+# ─────────────────────────────────────────────
+# FLUTTER / DART  (mobile/)
+# ─────────────────────────────────────────────
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/build/
+mobile/android/.gradle/
+mobile/android/captures/
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Flutter.framework/
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Pods/
+mobile/ios/Podfile.lock
+mobile/ios/Runner.xcworkspace/xcshareddata/
+mobile/ios/Runner.xcworkspace/xcuserdata/
+mobile/ios/Runner.xcodeproj/project.xcworkspace/
+mobile/ios/Runner.xcodeproj/xcuserdata/
+mobile/macos/Pods/
+mobile/macos/Flutter/GeneratedPluginRegistrant.swift
+mobile/macos/Flutter/ephemeral/
+mobile/web/
+
+# Dart coverage
+mobile/coverage/
+mobile/*.lcov
+
+# ─────────────────────────────────────────────
+# DOCKER
+# ─────────────────────────────────────────────
+.docker/
+
+# ─────────────────────────────────────────────
+# TESTING & COVERAGE
+# ─────────────────────────────────────────────
+coverage/
+*.lcov
+lcov.info
+
+# ─────────────────────────────────────────────
+# UPLOADS & GENERATED MEDIA
+# ─────────────────────────────────────────────
+uploads/
+tmp/
+temp/
+*.tmp

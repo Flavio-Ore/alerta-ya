@@ -1,0 +1,118 @@
+// AlertaYa — Prisma Schema
+// Fuente: docs/architecture/DATA_MODELS.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tipos de incidente (MVP: solo ROBBERY y ACCIDENT tienen formulario completo)
+enum IncidentType {
+  ROBBERY
+  ACCIDENT
+  HARASSMENT
+  EXTORTION
+  SUSPICIOUS
+}
+
+enum Severity {
+  LOW
+  MODERATE
+  CRITICAL
+}
+
+enum IncidentStatus {
+  ACTIVE
+  IN_ATTENTION
+  CLOSED
+}
+
+enum PanicStatus {
+  ACTIVE
+  DEACTIVATED
+  TIMEOUT
+}
+
+// NUNCA almacenar email/nombre en texto plano
+// Datos de identidad en tabla separada cifrada (fuera del MVP)
+model User {
+  id              String        @id @default(uuid())
+  firebaseUid     String        @unique // Cifrado en reposo
+  reputationScore Int           @default(100)
+  createdAt       DateTime      @default(now())
+  reports         Report[]
+  panicSessions   PanicSession[]
+
+  @@map("users")
+}
+
+// Incidentes publicados — anónimos, nunca exponen reportante
+model Incident {
+  id           String         @id @default(uuid())
+  type         IncidentType
+  severity     Severity
+  status       IncidentStatus @default(ACTIVE)
+  lat          Float
+  lng          Float
+  district     String
+  confirmCount Int            @default(0)
+  denyCount    Int            @default(0)
+  reportCount  Int            @default(1)
+  expiresAt    DateTime
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  unitAssigned String?        // ID de unidad operativa asignada
+  reports      Report[]
+
+  @@map("incidents")
+}
+
+// Reportes individuales — identidad nunca sale de aquí
+model Report {
+  id         String    @id @default(uuid())
+  incidentId String?   // null = aún no alcanzó threshold de publicación
+  userId     String    // Solo para rate limiting interno, NUNCA expuesto
+  formData   Json      // JSONB: respuestas del formulario dinámico
+  mediaUrls  String[]  // URLs en GCS — cifradas AES-256
+  lat        Float
+  lng        Float
+  aiVerified Boolean?
+  aiScore    Float?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id])
+  incident   Incident? @relation(fields: [incidentId], references: [id])
+
+  @@map("reports")
+}
+
+model PanicSession {
+  id            String      @id @default(uuid())
+  userId        String
+  startedAt     DateTime    @default(now())
+  endedAt       DateTime?
+  recordingUrls String[]    // GCS URLs — cifradas AES-256
+  lat           Float
+  lng           Float
+  status        PanicStatus @default(ACTIVE)
+  deactivatedBy String?     // "pin" | "timeout"
+  user          User        @relation(fields: [userId], references: [id])
+
+  @@map("panic_sessions")
+}
+
+// Caché de predicciones IA — actualizado por el microservicio ML
+model RiskZone {
+  id            String   @id @default(uuid())
+  district      String
+  lat           Float
+  lng           Float
+  riskScore     Int      // 0–100
+  predictedHour Int      // 0–23
+  updatedAt     DateTime @updatedAt
+
+  @@map("risk_zones")
+}

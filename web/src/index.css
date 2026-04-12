@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ── AlertaYa dark dashboard theme → shadcn/ui CSS variables ──────── */
+  :root {
+    --background:         222 16% 12%;   /* #1A1D23 ay-bg-dark        */
+    --foreground:         220 33% 96%;   /* #F4F6F9 ay-bg-gray        */
+
+    --card:               226 18%  9%;   /* #141720 ay-bg-dark2       */
+    --card-foreground:    220 33% 96%;
+
+    --popover:            226 18%  9%;
+    --popover-foreground: 220 33% 96%;
+
+    --primary:            216 58% 26%;   /* #1B3A6B ay-primary        */
+    --primary-foreground:   0  0% 100%;
+
+    --secondary:          210 25% 24%;   /* #2D3A4A ay-border         */
+    --secondary-foreground: 220 33% 96%;
+
+    --muted:              210 25% 24%;
+    --muted-foreground:   210 14% 49%;   /* #6B7A8D ay-text-sec       */
+
+    --accent:              37 91% 54%;   /* #F5A623 ay-accent         */
+    --accent-foreground:  214 53% 11%;   /* #0D1B2A ay-dark           */
+
+    --destructive:          0 84% 60%;   /* #EF4444 ay-critical       */
+    --destructive-foreground: 0 0% 100%;
+
+    --border:             210 25% 24%;   /* #2D3A4A                   */
+    --input:              210 25% 24%;
+    --ring:               216 58% 26%;   /* #1B3A6B ay-primary        */
+
+    --radius: 0.875rem;                  /* 14px — card radius        */
+
+    /* Chart palette (recharts via shadcn) */
+    --chart-1: 37  91% 54%;   /* amber  — MODERADO           */
+    --chart-2: 142 71% 45%;   /* green  — LEVE               */
+    --chart-3:   0 84% 60%;   /* red    — CRÍTICO             */
+    --chart-4: 216 58% 45%;   /* blue   — primary light      */
+    --chart-5: 210 14% 49%;   /* slate  — muted series       */
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'DM Sans', 'Barlow', 'Nunito Sans', Arial, sans-serif;
+    font-weight: 500;
+    margin: 0;
+    padding: 0;
+  }
+}
