@@ -27,6 +27,9 @@ const envSchema = z.object({
 
   // JWT
   JWT_SECRET: z.string().min(32),
+
+  // Jobs — secret que Cloud Scheduler manda en X-Job-Secret
+  JOB_SECRET: z.string().min(16).default('dev-job-secret-change-in-prod'),
 });
 
 const parsed = envSchema.safeParse(process.env);
