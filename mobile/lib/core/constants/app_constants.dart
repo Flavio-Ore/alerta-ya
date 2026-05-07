@@ -40,6 +40,17 @@ class AppConstants {
   static const double panicScreenButtonDiameter = 180;
   static const double fabSize = 56;
 
+  // Red — override con --dart-define=API_BASE_URL=http://... al correr la app
+  // 10.0.2.2 es el localhost del host visto desde el emulador Android
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:3000',
+  );
+  static const String wsUrl = String.fromEnvironment(
+    'WS_URL',
+    defaultValue: 'ws://10.0.2.2:3000',
+  );
+
   // App
   static const String appName = 'AlertaYa';
   static const String supportEmail = 'soporte@alertaya.pe';

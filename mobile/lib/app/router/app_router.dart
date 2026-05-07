@@ -11,11 +11,12 @@ import 'package:alertaya/features/report/presentation/pages/dynamic_form_page.da
 import 'package:alertaya/features/report/presentation/pages/incident_type_page.dart';
 import 'package:alertaya/features/report/presentation/pages/report_confirmation_page.dart';
 import 'package:alertaya/features/risk/presentation/pages/risk_dashboard_page.dart';
+import 'app_shell.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   routes: [
-    // Onboarding — solo primera vez
+    // Onboarding + auth — fuera del shell
     GoRoute(
       path: '/',
       builder: (context, state) => const SplashRedirectPage(),
@@ -29,41 +30,13 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const LoginPage(),
     ),
 
-    // Bottom nav principal
-    GoRoute(
-      path: '/map',
-      builder: (context, state) => const MapPage(),
-      routes: [
-        GoRoute(
-          path: 'incident/:id',
-          builder: (context, state) => IncidentDetailSheetPage(
-            incidentId: state.pathParameters['id']!,
-          ),
-        ),
-        GoRoute(
-          path: 'routes',
-          builder: (context, state) => const RouteComparatorPage(),
-        ),
-      ],
-    ),
-    GoRoute(
-      path: '/alerts',
-      builder: (context, state) => const AlertsPage(),
-    ),
+    // Pánico — fuera del shell: durante S10 el bottom nav no existe
     GoRoute(
       path: '/panic',
       builder: (context, state) => const PanicPage(),
     ),
-    GoRoute(
-      path: '/risk',
-      builder: (context, state) => const RiskDashboardPage(),
-    ),
-    GoRoute(
-      path: '/profile',
-      builder: (context, state) => const ProfilePage(),
-    ),
 
-    // Flujo de reporte — FAB desde /map
+    // Flujo de reporte — modal flow iniciado desde el FAB en /map
     GoRoute(
       path: '/report/type',
       builder: (context, state) => const IncidentTypePage(),
@@ -77,6 +50,64 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/report/confirm',
       builder: (context, state) => const ReportConfirmationPage(),
+    ),
+
+    // Shell principal — bottom nav con 4 branches (mapa, alertas, riesgo, perfil)
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, shell) => AppShell(navigationShell: shell),
+      branches: [
+        // Branch 0: Mapa
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/map',
+              builder: (context, state) => const MapPage(),
+              routes: [
+                GoRoute(
+                  path: 'incident/:id',
+                  builder: (context, state) => IncidentDetailSheetPage(
+                    incidentId: state.pathParameters['id']!,
+                  ),
+                ),
+                GoRoute(
+                  path: 'routes',
+                  builder: (context, state) => const RouteComparatorPage(),
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        // Branch 1: Alertas
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/alerts',
+              builder: (context, state) => const AlertsPage(),
+            ),
+          ],
+        ),
+
+        // Branch 2: Riesgo (nav index 3 — el 2 es el pánico central)
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/risk',
+              builder: (context, state) => const RiskDashboardPage(),
+            ),
+          ],
+        ),
+
+        // Branch 3: Perfil (nav index 4)
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/profile',
+              builder: (context, state) => const ProfilePage(),
+            ),
+          ],
+        ),
+      ],
     ),
   ],
 );
