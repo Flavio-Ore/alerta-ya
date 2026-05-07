@@ -24,10 +24,19 @@ export interface PublicIncidentDTO {
   unitAssigned?: string | null;
 }
 
+export interface ReportEvidenceDTO {
+  /** Respuestas del formulario — sin userId ni datos de identidad */
+  formData: Record<string, unknown>;
+  /** URLs de media subidas por el reportante (Firebase Storage / GCS) */
+  mediaUrls: string[];
+}
+
 export interface PublicIncidentDetailDTO extends PublicIncidentDTO {
   weaponReports: number;
   injuredReports: number;
   stillHereReports: number;
+  /** Evidencia agregada por reporte — nunca expone userId ni firebaseUid */
+  evidence: ReportEvidenceDTO[];
 }
 
 export function toPublicDTO(incident: Incident): PublicIncidentDTO {

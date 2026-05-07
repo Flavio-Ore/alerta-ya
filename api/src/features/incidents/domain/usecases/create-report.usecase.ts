@@ -17,6 +17,7 @@ export interface CreateReportInput {
   lng: number;
   type: IncidentType;
   formData: ReportFormData;
+  mediaUrls: string[];
 }
 
 export interface CreateReportDeps {
@@ -41,6 +42,7 @@ export async function createReport(
     lng: input.lng,
     type: input.type,
     formData: input.formData,
+    mediaUrls: input.mediaUrls,
     incidentId: null,
   });
 

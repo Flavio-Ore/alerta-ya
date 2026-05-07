@@ -18,7 +18,7 @@ export class PrismaReportRepository implements ReportRepository {
         lat: data.lat,
         lng: data.lng,
         formData: formDataWithType,
-        mediaUrls: [],
+        mediaUrls: data.mediaUrls,
         incidentId: data.incidentId ?? null,
       },
     });

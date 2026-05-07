@@ -8,6 +8,7 @@ export interface CreateReportData {
   lng: number;
   type: IncidentType;
   formData: ReportFormData;
+  mediaUrls: string[];
   incidentId?: string | null;
 }
 

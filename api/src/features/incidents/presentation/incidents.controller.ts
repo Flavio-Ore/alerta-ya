@@ -11,8 +11,6 @@ import { getIncidentById } from '../domain/usecases/get-incident-by-id.usecase';
 import { confirmIncident } from '../domain/usecases/confirm-incident.usecase';
 import { AppError } from '../../../core/errors/AppError';
 import { IncidentType } from '@prisma/client';
-import { thresholdKey } from '../application/threshold.engine';
-
 const ZONE_CONFIRM_COOLDOWN = 30 * 60; // 30 minutos entre respuestas por zona
 
 const incidentRepo = new PrismaIncidentRepository(prisma);
@@ -64,7 +62,13 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
 
     const user = await userLookup.findOrCreate(req.user.uid);
 
-    const body = req.body as { lat: number; lng: number; type: IncidentType; formData: Record<string, unknown> };
+    const body = req.body as {
+      lat: number;
+      lng: number;
+      type: IncidentType;
+      formData: Record<string, unknown>;
+      mediaUrls: string[];
+    };
 
     const dto = await createReport(
       {
@@ -74,6 +78,7 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
         lng: body.lng,
         type: body.type,
         formData: body.formData,
+        mediaUrls: body.mediaUrls ?? [],
       },
       { incidentRepo, reportRepo, redis },
     );

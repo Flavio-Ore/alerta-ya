@@ -6,6 +6,9 @@ export const createReportSchema = z.object({
   lng: z.number().min(-180).max(180),
   type: z.nativeEnum(IncidentType),
   formData: z.record(z.unknown()),
+  // URLs de evidencia subidas desde el dispositivo (Firebase Storage o GCS)
+  // El cliente sube primero, luego manda las URLs aquí
+  mediaUrls: z.array(z.string().url()).max(5).default([]),
 });
 
 export const listIncidentsQuerySchema = z.object({
