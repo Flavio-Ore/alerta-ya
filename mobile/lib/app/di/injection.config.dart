@@ -29,6 +29,16 @@ import 'package:alertaya/features/auth/domain/usecases/sign_out_usecase.dart'
     as _i290;
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart'
     as _i70;
+import 'package:alertaya/features/report/data/repositories/mock_report_repository.dart'
+    as _i900;
+import 'package:alertaya/features/report/domain/repositories/report_repository.dart'
+    as _i901;
+import 'package:alertaya/features/report/domain/usecases/create_report_usecase.dart'
+    as _i902;
+import 'package:alertaya/features/report/domain/usecases/get_form_schema_usecase.dart'
+    as _i903;
+import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart'
+    as _i904;
 import 'package:connectivity_plus/connectivity_plus.dart' as _i895;
 import 'package:dio/dio.dart' as _i361;
 import 'package:firebase_auth/firebase_auth.dart' as _i59;
@@ -76,6 +86,13 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i401.CompleteOnboardingUseCase>(),
           gh<_i576.AuthRepository>(),
         ));
+    gh.lazySingleton<_i901.ReportRepository>(() => _i900.MockReportRepository());
+    gh.factory<_i903.GetFormSchemaUseCase>(
+        () => _i903.GetFormSchemaUseCase(gh<_i901.ReportRepository>()));
+    gh.factory<_i902.CreateReportUseCase>(
+        () => _i902.CreateReportUseCase(gh<_i901.ReportRepository>()));
+    gh.lazySingleton<_i904.ReportBloc>(
+        () => _i904.ReportBloc(gh<_i902.CreateReportUseCase>()));
     return this;
   }
 }

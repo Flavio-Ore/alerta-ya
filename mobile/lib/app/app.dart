@@ -7,6 +7,7 @@ import 'package:alertaya/app/router/app_router.dart';
 import 'package:alertaya/app/router/go_router_refresh_stream.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart';
 
 class AlertaYaApp extends StatefulWidget {
   const AlertaYaApp({super.key});
@@ -37,8 +38,11 @@ class _AlertaYaAppState extends State<AlertaYaApp> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _authBloc,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _authBloc),
+        BlocProvider.value(value: getIt<ReportBloc>()),
+      ],
       child: MaterialApp.router(
         title: 'AlertaYa',
         debugShowCheckedModeBanner: false,
@@ -58,3 +62,4 @@ class _AlertaYaAppState extends State<AlertaYaApp> {
     );
   }
 }
+
