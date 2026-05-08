@@ -37,8 +37,8 @@ dependencies:
   # Notificaciones y pánico
   firebase_messaging: ^14.9.2
   flutter_local_notifications: ^17.2.1
-  record: ^5.1.0
   flutter_foreground_task: ^6.1.6
+  # record — se agrega en FASE 5 (botón de pánico) con versión validada contra el AGP del momento
 
   # Seguridad
   flutter_secure_storage: ^9.0.0
