@@ -74,8 +74,11 @@ export class PrismaIncidentRepository implements IncidentRepository {
     return this.prisma.incident.update({ where: { id }, data: { severity } });
   }
 
-  async updateStatus(id: string, status: IncidentStatus): Promise<Incident> {
-    return this.prisma.incident.update({ where: { id }, data: { status } });
+  async updateStatus(id: string, status: IncidentStatus, feedback?: string): Promise<Incident> {
+    return this.prisma.incident.update({
+      where: { id },
+      data: { status, ...(feedback !== undefined && { feedback }) },
+    });
   }
 
   async incrementReportCount(id: string): Promise<void> {

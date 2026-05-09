@@ -38,10 +38,11 @@ enum PanicStatus {
 }
 
 enum NotificationType {
-  INCIDENT_NEW      // Nuevo incidente publicado cerca del usuario
-  INCIDENT_UPDATED  // Incidente escaló de severidad
-  ZONE_RISK         // Zona de alto riesgo predicha por ML
-  PANIC_RESOLVED    // Sesión de pánico resuelta (para el propio usuario)
+  INCIDENT_NEW           // Nuevo incidente publicado cerca del usuario
+  INCIDENT_UPDATED       // Incidente escaló de severidad
+  INCIDENT_STATUS_UPDATE // Autoridad actualizó el estado con feedback
+  ZONE_RISK              // Zona de alto riesgo predicha por ML
+  PANIC_RESOLVED         // Sesión de pánico resuelta (para el propio usuario)
 }
 
 // NUNCA almacenar email/nombre en texto plano
@@ -75,6 +76,7 @@ model Incident {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   unitAssigned  String?        // ID de unidad operativa asignada
+  feedback      String?        // Mensaje de la autoridad visible al ciudadano (max 200 chars)
   reports       Report[]
   notifications Notification[]
 
