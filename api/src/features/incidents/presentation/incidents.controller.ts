@@ -9,12 +9,15 @@ import { createReport } from '../domain/usecases/create-report.usecase';
 import { getIncidents } from '../domain/usecases/get-incidents.usecase';
 import { getIncidentById } from '../domain/usecases/get-incident-by-id.usecase';
 import { confirmIncident } from '../domain/usecases/confirm-incident.usecase';
+import { updateIncidentStatus } from '../domain/usecases/update-incident-status.usecase';
+import { PrismaNotificationRepository } from '../../notifications/infrastructure/prisma-notification.repository';
 import { AppError } from '../../../core/errors/AppError';
-import { IncidentType } from '@prisma/client';
+import { IncidentType, IncidentStatus } from '@prisma/client';
 const ZONE_CONFIRM_COOLDOWN = 30 * 60; // 30 minutos entre respuestas por zona
 
 const incidentRepo = new PrismaIncidentRepository(prisma);
 const reportRepo = new PrismaReportRepository(prisma);
+const notificationRepo = new PrismaNotificationRepository(prisma);
 const userLookup = new UserLookupService(prisma);
 
 export async function listIncidents(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -112,6 +115,25 @@ export async function respondZoneConfirm(req: Request, res: Response, next: Next
     }
 
     res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function patchIncidentStatus(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { status, feedback } = req.body as { status: IncidentStatus; feedback?: string };
+
+    const dto = await updateIncidentStatus(
+      { incidentId: req.params['id']!, status, feedback },
+      { incidentRepo, reportRepo, notificationRepo },
+    );
+
+    res.json(dto);
   } catch (err) {
     next(err);
   }
