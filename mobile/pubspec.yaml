@@ -92,3 +92,8 @@ flutter:
           weight: 500
         - asset: fonts/DMSans-ExtraBold.ttf
           weight: 800
+
+dependency_overrides:
+  analyzer: 6.4.1
+  test_api: 0.7.10
+  matcher: 0.12.19

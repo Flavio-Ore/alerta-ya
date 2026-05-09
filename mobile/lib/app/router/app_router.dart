@@ -18,7 +18,7 @@ import 'app_shell.dart';
 
 GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/map',
     refreshListenable: refreshStream,
     redirect: (context, state) => _authGuard(state, authBloc),
     routes: [
