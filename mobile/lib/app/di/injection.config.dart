@@ -11,6 +11,19 @@
 import 'package:alertaya/core/di/firebase_module.dart' as _i1044;
 import 'package:alertaya/core/network/dio_module.dart' as _i197;
 import 'package:alertaya/core/network/network_info.dart' as _i857;
+import 'package:alertaya/core/realtime/socket_client.dart' as _i635;
+import 'package:alertaya/features/alerts/data/datasources/notification_remote_datasource.dart'
+    as _i238;
+import 'package:alertaya/features/alerts/data/repositories/notification_repository_impl.dart'
+    as _i303;
+import 'package:alertaya/features/alerts/domain/repositories/notification_repository.dart'
+    as _i328;
+import 'package:alertaya/features/alerts/domain/usecases/get_notifications_usecase.dart'
+    as _i750;
+import 'package:alertaya/features/alerts/domain/usecases/mark_notifications_read_usecase.dart'
+    as _i748;
+import 'package:alertaya/features/alerts/presentation/bloc/alerts_bloc.dart'
+    as _i767;
 import 'package:alertaya/features/auth/data/datasources/firebase_auth_datasource.dart'
     as _i781;
 import 'package:alertaya/features/auth/data/datasources/onboarding_local_datasource.dart'
@@ -29,16 +42,32 @@ import 'package:alertaya/features/auth/domain/usecases/sign_out_usecase.dart'
     as _i290;
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart'
     as _i70;
+import 'package:alertaya/features/incidents/data/datasources/incident_remote_datasource.dart'
+    as _i860;
+import 'package:alertaya/features/incidents/data/repositories/incident_repository_impl.dart'
+    as _i93;
+import 'package:alertaya/features/incidents/domain/repositories/incident_repository.dart'
+    as _i512;
+import 'package:alertaya/features/incidents/domain/usecases/confirm_incident_usecase.dart'
+    as _i715;
+import 'package:alertaya/features/incidents/domain/usecases/confirm_zone_usecase.dart'
+    as _i414;
+import 'package:alertaya/features/incidents/domain/usecases/get_incident_detail_usecase.dart'
+    as _i125;
+import 'package:alertaya/features/incidents/domain/usecases/get_incidents_usecase.dart'
+    as _i1069;
+import 'package:alertaya/features/incidents/presentation/bloc/incidents_bloc.dart'
+    as _i352;
 import 'package:alertaya/features/report/data/repositories/mock_report_repository.dart'
-    as _i900;
+    as _i594;
 import 'package:alertaya/features/report/domain/repositories/report_repository.dart'
-    as _i901;
+    as _i658;
 import 'package:alertaya/features/report/domain/usecases/create_report_usecase.dart'
-    as _i902;
+    as _i280;
 import 'package:alertaya/features/report/domain/usecases/get_form_schema_usecase.dart'
-    as _i903;
+    as _i638;
 import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart'
-    as _i904;
+    as _i108;
 import 'package:connectivity_plus/connectivity_plus.dart' as _i895;
 import 'package:dio/dio.dart' as _i361;
 import 'package:firebase_auth/firebase_auth.dart' as _i59;
@@ -56,21 +85,55 @@ extension GetItInjectableX on _i174.GetIt {
       environment,
       environmentFilter,
     );
-    final dioModule = _$DioModule();
     final firebaseModule = _$FirebaseModule();
+    final dioModule = _$DioModule();
+    gh.lazySingleton<_i59.FirebaseAuth>(() => firebaseModule.firebaseAuth);
     gh.lazySingleton<_i895.Connectivity>(() => dioModule.connectivity);
     gh.lazySingleton<_i361.Dio>(() => dioModule.dio());
-    gh.lazySingleton<_i59.FirebaseAuth>(() => firebaseModule.firebaseAuth);
+    gh.lazySingleton<_i635.SocketClient>(
+      () => _i635.SocketClient(),
+      dispose: (i) => i.dispose(),
+    );
+    gh.lazySingleton<_i238.NotificationRemoteDataSource>(
+        () => _i238.NotificationRemoteDataSourceImpl(gh<_i361.Dio>()));
+    gh.lazySingleton<_i658.ReportRepository>(
+        () => _i594.MockReportRepository());
     gh.lazySingleton<_i852.OnboardingLocalDataSource>(
         () => _i852.OnboardingLocalDataSourceImpl());
+    gh.lazySingleton<_i860.IncidentRemoteDataSource>(
+        () => _i860.IncidentRemoteDataSourceImpl(gh<_i361.Dio>()));
+    gh.factory<_i280.CreateReportUseCase>(
+        () => _i280.CreateReportUseCase(gh<_i658.ReportRepository>()));
+    gh.factory<_i638.GetFormSchemaUseCase>(
+        () => _i638.GetFormSchemaUseCase(gh<_i658.ReportRepository>()));
     gh.lazySingleton<_i857.NetworkInfo>(
         () => _i857.NetworkInfoImpl(gh<_i895.Connectivity>()));
+    gh.lazySingleton<_i512.IncidentRepository>(
+        () => _i93.IncidentRepositoryImpl(
+              gh<_i860.IncidentRemoteDataSource>(),
+              gh<_i857.NetworkInfo>(),
+            ));
+    gh.lazySingleton<_i108.ReportBloc>(
+        () => _i108.ReportBloc(gh<_i280.CreateReportUseCase>()));
     gh.lazySingleton<_i781.FirebaseAuthDataSource>(
         () => _i781.FirebaseAuthDataSourceImpl(gh<_i59.FirebaseAuth>()));
+    gh.factory<_i715.ConfirmIncidentUseCase>(
+        () => _i715.ConfirmIncidentUseCase(gh<_i512.IncidentRepository>()));
+    gh.factory<_i414.ConfirmZoneUseCase>(
+        () => _i414.ConfirmZoneUseCase(gh<_i512.IncidentRepository>()));
+    gh.factory<_i1069.GetIncidentsUseCase>(
+        () => _i1069.GetIncidentsUseCase(gh<_i512.IncidentRepository>()));
+    gh.factory<_i125.GetIncidentDetailUseCase>(
+        () => _i125.GetIncidentDetailUseCase(gh<_i512.IncidentRepository>()));
     gh.lazySingleton<_i576.AuthRepository>(() => _i779.AuthRepositoryImpl(
           gh<_i781.FirebaseAuthDataSource>(),
           gh<_i852.OnboardingLocalDataSource>(),
         ));
+    gh.lazySingleton<_i328.NotificationRepository>(
+        () => _i303.NotificationRepositoryImpl(
+              gh<_i238.NotificationRemoteDataSource>(),
+              gh<_i857.NetworkInfo>(),
+            ));
     gh.factory<_i401.CompleteOnboardingUseCase>(
         () => _i401.CompleteOnboardingUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i586.IsFirstLaunchUseCase>(
@@ -86,17 +149,25 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i401.CompleteOnboardingUseCase>(),
           gh<_i576.AuthRepository>(),
         ));
-    gh.lazySingleton<_i901.ReportRepository>(() => _i900.MockReportRepository());
-    gh.factory<_i903.GetFormSchemaUseCase>(
-        () => _i903.GetFormSchemaUseCase(gh<_i901.ReportRepository>()));
-    gh.factory<_i902.CreateReportUseCase>(
-        () => _i902.CreateReportUseCase(gh<_i901.ReportRepository>()));
-    gh.lazySingleton<_i904.ReportBloc>(
-        () => _i904.ReportBloc(gh<_i902.CreateReportUseCase>()));
+    gh.lazySingleton<_i352.IncidentsBloc>(() => _i352.IncidentsBloc(
+          gh<_i1069.GetIncidentsUseCase>(),
+          gh<_i125.GetIncidentDetailUseCase>(),
+          gh<_i715.ConfirmIncidentUseCase>(),
+          gh<_i414.ConfirmZoneUseCase>(),
+          gh<_i635.SocketClient>(),
+        ));
+    gh.factory<_i750.GetNotificationsUseCase>(() =>
+        _i750.GetNotificationsUseCase(gh<_i328.NotificationRepository>()));
+    gh.factory<_i748.MarkNotificationsReadUseCase>(() =>
+        _i748.MarkNotificationsReadUseCase(gh<_i328.NotificationRepository>()));
+    gh.factory<_i767.AlertsBloc>(() => _i767.AlertsBloc(
+          gh<_i750.GetNotificationsUseCase>(),
+          gh<_i748.MarkNotificationsReadUseCase>(),
+        ));
     return this;
   }
 }
 
-class _$DioModule extends _i197.DioModule {}
-
 class _$FirebaseModule extends _i1044.FirebaseModule {}
+
+class _$DioModule extends _i197.DioModule {}

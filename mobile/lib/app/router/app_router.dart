@@ -7,6 +7,7 @@ import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:alertaya/features/auth/presentation/pages/login_page.dart';
 import 'package:alertaya/features/auth/presentation/pages/onboarding_page.dart';
 import 'package:alertaya/features/auth/presentation/pages/splash_page.dart';
+import 'package:alertaya/features/incidents/presentation/pages/incident_detail_page.dart';
 import 'package:alertaya/features/map/presentation/pages/map_page.dart';
 import 'package:alertaya/features/panic/presentation/pages/panic_page.dart';
 import 'package:alertaya/features/profile/presentation/pages/profile_page.dart';
@@ -71,7 +72,7 @@ GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
                 routes: [
                   GoRoute(
                     path: 'incident/:id',
-                    builder: (context, state) => IncidentDetailSheetPage(
+                    builder: (context, state) => IncidentDetailPage(
                       incidentId: state.pathParameters['id']!,
                     ),
                   ),
@@ -133,14 +134,6 @@ String? _authGuard(GoRouterState state, AuthBloc authBloc) {
   }
 
   return null;
-}
-
-// Placeholder pages — se implementan en sus features
-class IncidentDetailSheetPage extends StatelessWidget {
-  const IncidentDetailSheetPage({super.key, required this.incidentId});
-  final String incidentId;
-  @override
-  Widget build(BuildContext context) => const Scaffold();
 }
 
 class RouteComparatorPage extends StatelessWidget {

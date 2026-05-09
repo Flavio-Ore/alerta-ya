@@ -7,6 +7,7 @@ import 'package:alertaya/app/router/app_router.dart';
 import 'package:alertaya/app/router/go_router_refresh_stream.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:alertaya/features/incidents/presentation/bloc/incidents_bloc.dart';
 import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart';
 
 class AlertaYaApp extends StatefulWidget {
@@ -42,6 +43,7 @@ class _AlertaYaAppState extends State<AlertaYaApp> {
       providers: [
         BlocProvider.value(value: _authBloc),
         BlocProvider.value(value: getIt<ReportBloc>()),
+        BlocProvider.value(value: getIt<IncidentsBloc>()),
       ],
       child: MaterialApp.router(
         title: 'AlertaYa',
