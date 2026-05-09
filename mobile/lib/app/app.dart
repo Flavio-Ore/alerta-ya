@@ -9,6 +9,12 @@ import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart';
 
+import 'package:alertaya/features/map/data/datasources/mock_incident_datasource.dart';
+import 'package:alertaya/features/map/data/repositories/mock_incident_repository.dart';
+import 'package:alertaya/features/map/domain/usecases/get_active_incidents_usecase.dart';
+import 'package:alertaya/features/map/domain/usecases/confirm_incident_usecase.dart';
+import 'package:alertaya/features/map/presentation/bloc/map_bloc.dart';
+
 class AlertaYaApp extends StatefulWidget {
   const AlertaYaApp({super.key});
 
@@ -42,6 +48,16 @@ class _AlertaYaAppState extends State<AlertaYaApp> {
       providers: [
         BlocProvider.value(value: _authBloc),
         BlocProvider.value(value: getIt<ReportBloc>()),
+        BlocProvider(
+          create: (_) => MapBloc(
+            GetActiveIncidentsUseCase(
+              MockIncidentRepository(MockIncidentDatasource()),
+            ),
+            ConfirmIncidentUseCase(
+              MockIncidentRepository(MockIncidentDatasource()),
+            ),
+          ),
+        ),
       ],
       child: MaterialApp.router(
         title: 'AlertaYa',
@@ -62,4 +78,3 @@ class _AlertaYaAppState extends State<AlertaYaApp> {
     );
   }
 }
-
