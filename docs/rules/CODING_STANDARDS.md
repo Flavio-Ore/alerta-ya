@@ -79,21 +79,62 @@ class IncidentEntity with _$IncidentEntity {
 
 ### BLoC pattern
 ```dart
-// Events: descripción de intención del usuario
+// Events: descripción de intención del usuario — siempre sealed class (Dart 3)
+sealed class IncidentEvent {}
 class LoadActiveIncidentsEvent extends IncidentEvent {}
 class ConfirmIncidentEvent extends IncidentEvent {
   final String incidentId;
   final ConfirmAction action; // stillHere | gone
+  const ConfirmIncidentEvent({required this.incidentId, required this.action});
 }
 
 // States: descripción del estado de la UI
 @freezed
-class IncidentState with _$IncidentState {
-  const factory IncidentState.initial()                = IncidentInitial;
-  const factory IncidentState.loading()               = IncidentLoading;
-  const factory IncidentState.loaded(List<IncidentEntity> incidents) = IncidentLoaded;
-  const factory IncidentState.error(String message)   = IncidentError;
+sealed class IncidentState with _$IncidentState {
+  const factory IncidentState.initial()                                      = IncidentInitial;
+  const factory IncidentState.loading()                                      = IncidentLoading;
+  const factory IncidentState.loaded(List<IncidentEntity> incidents)         = IncidentLoaded;
+  const factory IncidentState.error(String message)                          = IncidentError;
 }
+```
+
+### Consumir BLoC en widgets
+
+```dart
+// ✅ Preferir context.read / context.watch — más conciso que BlocProvider.of
+context.read<IncidentBloc>().add(LoadActiveIncidentsEvent());
+context.watch<IncidentBloc>().state;
+
+// ✅ BlocBuilder con buildWhen para evitar rebuilds innecesarios
+BlocBuilder<IncidentBloc, IncidentState>(
+  buildWhen: (previous, current) => previous != current,
+  builder: (context, state) {
+    return switch (state) {
+      IncidentInitial()              => const SizedBox.shrink(),
+      IncidentLoading()              => const CircularProgressIndicator(),
+      IncidentLoaded(:final incidents) => IncidentList(incidents: incidents),
+      IncidentError(:final message)  => ErrorWidget(message: message),
+    };
+  },
+)
+
+// ✅ BlocListener para side effects (navegación, snackbars) — NUNCA en builder
+BlocListener<IncidentBloc, IncidentState>(
+  listener: (context, state) {
+    if (state case IncidentError(:final message)) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  },
+  child: ...,
+)
+
+// ✅ Patrón freezed — switch nativo Dart 3 (NO usar .when() ni .map(), son legado)
+final widget = switch (state) {
+  IncidentInitial()                => const SizedBox.shrink(),
+  IncidentLoading()                => const CircularProgressIndicator(),
+  IncidentLoaded(:final incidents) => IncidentList(incidents: incidents),
+  IncidentError(:final message)    => ErrorWidget(message: message),
+};
 ```
 
 ### Widgets
