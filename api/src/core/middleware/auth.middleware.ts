@@ -9,6 +9,7 @@ declare global {
     interface Request {
       user?: {
         uid: string;
+        authority?: boolean; // Firebase custom claim — solo cuentas de autoridad
       };
     }
   }
@@ -33,7 +34,10 @@ export const authMiddleware = async (
 
   try {
     const decodedToken = await getAuth().verifyIdToken(token);
-    req.user = { uid: decodedToken.uid };
+    req.user = {
+      uid: decodedToken.uid,
+      authority: decodedToken['authority'] === true,
+    };
     next();
   } catch {
     next(new AppError(401, "Token inválido o expirado"));

@@ -22,6 +22,8 @@ export interface PublicIncidentDTO {
   createdAt: string;
   updatedAt: string;
   unitAssigned?: string | null;
+  /** Mensaje de la autoridad visible al ciudadano al atender el incidente */
+  feedback?: string | null;
 }
 
 export interface ReportEvidenceDTO {
@@ -55,5 +57,6 @@ export function toPublicDTO(incident: Incident): PublicIncidentDTO {
     createdAt: incident.createdAt.toISOString(),
     updatedAt: incident.updatedAt.toISOString(),
     unitAssigned: incident.unitAssigned,
+    feedback: incident.feedback,
   };
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IncidentType, Severity } from '@prisma/client';
+import { IncidentType, IncidentStatus, Severity } from '@prisma/client';
 
 export const createReportSchema = z.object({
   lat: z.number().min(-90).max(90),
@@ -27,6 +27,12 @@ export const confirmSchema = z.object({
   vote: z.enum(['yes', 'no']),
 });
 
+// Solo para autoridades — actualizar estado + mensaje de feedback al ciudadano
+export const updateStatusSchema = z.object({
+  status: z.nativeEnum(IncidentStatus),
+  feedback: z.string().max(200).optional(),
+});
+
 // Mini-alert: respuesta del ciudadano al "¿viste algo?"
 export const zoneConfirmSchema = z.object({
   zoneKey: z.string().min(1),           // "threshold:-11.980:-77.005:ROBBERY"
@@ -36,4 +42,5 @@ export const zoneConfirmSchema = z.object({
 export type CreateReportInput = z.infer<typeof createReportSchema>;
 export type ListIncidentsQuery = z.infer<typeof listIncidentsQuerySchema>;
 export type ConfirmInput = z.infer<typeof confirmSchema>;
+export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;
 export type ZoneConfirmInput = z.infer<typeof zoneConfirmSchema>;

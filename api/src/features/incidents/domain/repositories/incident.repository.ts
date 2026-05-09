@@ -29,7 +29,7 @@ export interface IncidentRepository {
   findActiveInZone(bucketLat: number, bucketLng: number, type: IncidentType): Promise<Incident | null>;
   create(data: CreateIncidentData): Promise<Incident>;
   updateSeverity(id: string, severity: Severity): Promise<Incident>;
-  updateStatus(id: string, status: IncidentStatus): Promise<Incident>;
+  updateStatus(id: string, status: IncidentStatus, feedback?: string): Promise<Incident>;
   incrementReportCount(id: string): Promise<void>;
   linkReport(reportId: string, incidentId: string): Promise<void>;
   extendExpiry(id: string, extraMinutes: number): Promise<void>;
