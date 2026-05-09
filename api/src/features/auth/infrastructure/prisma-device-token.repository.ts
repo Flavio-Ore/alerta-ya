@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 import {
   DeviceTokenRepository,
+  DeviceTokenEntry,
   UpsertDeviceTokenData,
 } from '../domain/repositories/device-token.repository';
 
@@ -29,5 +30,13 @@ export class PrismaDeviceTokenRepository implements DeviceTokenRepository {
       select: { token: true },
     });
     return rows.map((r) => r.token);
+  }
+
+  async findByDistrictWithUserId(district: string): Promise<DeviceTokenEntry[]> {
+    const rows = await this.prisma.deviceToken.findMany({
+      where: { district },
+      select: { token: true, userId: true },
+    });
+    return rows;
   }
 }
