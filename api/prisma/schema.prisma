@@ -37,15 +37,24 @@ enum PanicStatus {
   TIMEOUT
 }
 
+enum NotificationType {
+  INCIDENT_NEW      // Nuevo incidente publicado cerca del usuario
+  INCIDENT_UPDATED  // Incidente escaló de severidad
+  ZONE_RISK         // Zona de alto riesgo predicha por ML
+  PANIC_RESOLVED    // Sesión de pánico resuelta (para el propio usuario)
+}
+
 // NUNCA almacenar email/nombre en texto plano
 // Datos de identidad en tabla separada cifrada (fuera del MVP)
 model User {
-  id              String        @id @default(uuid())
-  firebaseUid     String        @unique // Cifrado en reposo
-  reputationScore Int           @default(100)
-  createdAt       DateTime      @default(now())
+  id              String         @id @default(uuid())
+  firebaseUid     String         @unique // Cifrado en reposo
+  reputationScore Int            @default(100)
+  createdAt       DateTime       @default(now())
   reports         Report[]
   panicSessions   PanicSession[]
+  deviceTokens    DeviceToken[]
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -65,8 +74,9 @@ model Incident {
   expiresAt    DateTime
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
-  unitAssigned String?        // ID de unidad operativa asignada
-  reports      Report[]
+  unitAssigned  String?        // ID de unidad operativa asignada
+  reports       Report[]
+  notifications Notification[]
 
   @@map("incidents")
 }
@@ -102,6 +112,39 @@ model PanicSession {
   user          User        @relation(fields: [userId], references: [id])
 
   @@map("panic_sessions")
+}
+
+// Token FCM del dispositivo — para push notifications por zona
+// Se crea/actualiza en login. Redis indexa por distrito para rapidez,
+// pero este registro es el backup persistente ante flushes de Redis.
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique // Token FCM — único por dispositivo
+  district  String           // Último distrito conocido del usuario
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([district]) // Lookup rápido: "todos los tokens del distrito X"
+  @@map("device_tokens")
+}
+
+// Historial de notificaciones push — alimenta el tab "Alertas" en mobile
+// NUNCA almacena datos del reportante — solo info pública del incidente
+model Notification {
+  id         String           @id @default(uuid())
+  userId     String
+  type       NotificationType
+  title      String
+  body       String
+  incidentId String?          // FK opcional — null para notifs de zona/risk
+  readAt     DateTime?        // null = no leída
+  createdAt  DateTime         @default(now())
+  user       User             @relation(fields: [userId], references: [id])
+  incident   Incident?        @relation(fields: [incidentId], references: [id])
+
+  @@index([userId, readAt]) // Consulta común: notifs no leídas de un usuario
+  @@map("notifications")
 }
 
 // Caché de predicciones IA — actualizado por el microservicio ML
