@@ -1,7 +1,9 @@
+import 'package:injectable/injectable.dart';
 import 'package:alertaya/features/map/domain/entities/incident_entity.dart';
 import 'package:alertaya/features/report/domain/entities/incident_type.dart';
 
 /// Mock datasource — reemplazar por DioClient en Sprint 3
+@lazySingleton
 class MockIncidentDatasource {
   List<IncidentEntity> getActiveIncidents() => [
         IncidentEntity(

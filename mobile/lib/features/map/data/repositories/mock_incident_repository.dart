@@ -1,7 +1,9 @@
+import 'package:injectable/injectable.dart';
 import 'package:alertaya/features/map/data/datasources/mock_incident_datasource.dart';
 import 'package:alertaya/features/map/domain/entities/incident_entity.dart';
 import 'package:alertaya/features/map/domain/repositories/incident_repository.dart';
 
+@LazySingleton(as: IncidentRepository)
 class MockIncidentRepository implements IncidentRepository {
   MockIncidentRepository(this._datasource);
   final MockIncidentDatasource _datasource;

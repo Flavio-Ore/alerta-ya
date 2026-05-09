@@ -1,3 +1,4 @@
+import 'package:injectable/injectable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:alertaya/features/map/domain/entities/incident_entity.dart';
 import 'package:alertaya/features/map/domain/usecases/get_active_incidents_usecase.dart';
@@ -6,6 +7,7 @@ import 'package:alertaya/features/map/domain/usecases/confirm_incident_usecase.d
 part 'map_event.dart';
 part 'map_state.dart';
 
+@injectable
 class MapBloc extends Bloc<MapEvent, MapState> {
   MapBloc(this._getActiveIncidents, this._confirmIncident)
       : super(const MapInitial()) {

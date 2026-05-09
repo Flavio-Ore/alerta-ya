@@ -29,16 +29,27 @@ import 'package:alertaya/features/auth/domain/usecases/sign_out_usecase.dart'
     as _i290;
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart'
     as _i70;
+import 'package:alertaya/features/map/data/datasources/mock_incident_datasource.dart'
+    as _i317;
+import 'package:alertaya/features/map/data/repositories/mock_incident_repository.dart'
+    as _i506;
+import 'package:alertaya/features/map/domain/repositories/incident_repository.dart'
+    as _i118;
+import 'package:alertaya/features/map/domain/usecases/confirm_incident_usecase.dart'
+    as _i327;
+import 'package:alertaya/features/map/domain/usecases/get_active_incidents_usecase.dart'
+    as _i618;
+import 'package:alertaya/features/map/presentation/bloc/map_bloc.dart' as _i670;
 import 'package:alertaya/features/report/data/repositories/mock_report_repository.dart'
-    as _i900;
+    as _i594;
 import 'package:alertaya/features/report/domain/repositories/report_repository.dart'
-    as _i901;
+    as _i658;
 import 'package:alertaya/features/report/domain/usecases/create_report_usecase.dart'
-    as _i902;
+    as _i280;
 import 'package:alertaya/features/report/domain/usecases/get_form_schema_usecase.dart'
-    as _i903;
+    as _i638;
 import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart'
-    as _i904;
+    as _i108;
 import 'package:connectivity_plus/connectivity_plus.dart' as _i895;
 import 'package:dio/dio.dart' as _i361;
 import 'package:firebase_auth/firebase_auth.dart' as _i59;
@@ -56,17 +67,37 @@ extension GetItInjectableX on _i174.GetIt {
       environment,
       environmentFilter,
     );
-    final dioModule = _$DioModule();
     final firebaseModule = _$FirebaseModule();
+    final dioModule = _$DioModule();
+    gh.lazySingleton<_i59.FirebaseAuth>(() => firebaseModule.firebaseAuth);
     gh.lazySingleton<_i895.Connectivity>(() => dioModule.connectivity);
     gh.lazySingleton<_i361.Dio>(() => dioModule.dio());
-    gh.lazySingleton<_i59.FirebaseAuth>(() => firebaseModule.firebaseAuth);
+    gh.lazySingleton<_i317.MockIncidentDatasource>(
+        () => _i317.MockIncidentDatasource());
+    gh.lazySingleton<_i118.IncidentRepository>(
+        () => _i506.MockIncidentRepository(gh<_i317.MockIncidentDatasource>()));
+    gh.lazySingleton<_i658.ReportRepository>(
+        () => _i594.MockReportRepository());
     gh.lazySingleton<_i852.OnboardingLocalDataSource>(
         () => _i852.OnboardingLocalDataSourceImpl());
+    gh.factory<_i280.CreateReportUseCase>(
+        () => _i280.CreateReportUseCase(gh<_i658.ReportRepository>()));
+    gh.factory<_i638.GetFormSchemaUseCase>(
+        () => _i638.GetFormSchemaUseCase(gh<_i658.ReportRepository>()));
     gh.lazySingleton<_i857.NetworkInfo>(
         () => _i857.NetworkInfoImpl(gh<_i895.Connectivity>()));
+    gh.lazySingleton<_i327.ConfirmIncidentUseCase>(
+        () => _i327.ConfirmIncidentUseCase(gh<_i118.IncidentRepository>()));
+    gh.lazySingleton<_i618.GetActiveIncidentsUseCase>(
+        () => _i618.GetActiveIncidentsUseCase(gh<_i118.IncidentRepository>()));
+    gh.lazySingleton<_i108.ReportBloc>(
+        () => _i108.ReportBloc(gh<_i280.CreateReportUseCase>()));
     gh.lazySingleton<_i781.FirebaseAuthDataSource>(
         () => _i781.FirebaseAuthDataSourceImpl(gh<_i59.FirebaseAuth>()));
+    gh.factory<_i670.MapBloc>(() => _i670.MapBloc(
+          gh<_i618.GetActiveIncidentsUseCase>(),
+          gh<_i327.ConfirmIncidentUseCase>(),
+        ));
     gh.lazySingleton<_i576.AuthRepository>(() => _i779.AuthRepositoryImpl(
           gh<_i781.FirebaseAuthDataSource>(),
           gh<_i852.OnboardingLocalDataSource>(),
@@ -86,17 +117,10 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i401.CompleteOnboardingUseCase>(),
           gh<_i576.AuthRepository>(),
         ));
-    gh.lazySingleton<_i901.ReportRepository>(() => _i900.MockReportRepository());
-    gh.factory<_i903.GetFormSchemaUseCase>(
-        () => _i903.GetFormSchemaUseCase(gh<_i901.ReportRepository>()));
-    gh.factory<_i902.CreateReportUseCase>(
-        () => _i902.CreateReportUseCase(gh<_i901.ReportRepository>()));
-    gh.lazySingleton<_i904.ReportBloc>(
-        () => _i904.ReportBloc(gh<_i902.CreateReportUseCase>()));
     return this;
   }
 }
 
-class _$DioModule extends _i197.DioModule {}
-
 class _$FirebaseModule extends _i1044.FirebaseModule {}
+
+class _$DioModule extends _i197.DioModule {}
