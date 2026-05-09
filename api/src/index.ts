@@ -14,6 +14,7 @@ import { loggerMiddleware } from "./core/middleware/logger.middleware";
 import { openApiSpec } from "./core/docs/openapi";
 
 import { jobsRouter } from "./core/jobs/jobs.router";
+import { authRouter } from "./features/auth/presentation/auth.router";
 import { incidentsRouter } from "./features/incidents/presentation/incidents.router";
 import { zonesRouter } from "./features/zones/presentation/zones.router";
 import { panicRouter } from "./features/panic/presentation/panic.router";
@@ -87,6 +88,7 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.use("/auth", authRouter);
 app.use("/incidents", incidentsRouter);
 app.use("/zones", zonesRouter);
 app.use("/panic", panicRouter);
