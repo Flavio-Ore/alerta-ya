@@ -18,6 +18,7 @@ import { authRouter } from "./features/auth/presentation/auth.router";
 import { incidentsRouter } from "./features/incidents/presentation/incidents.router";
 import { zonesRouter } from "./features/zones/presentation/zones.router";
 import { panicRouter } from "./features/panic/presentation/panic.router";
+import { notificationsRouter } from "./features/notifications/presentation/notifications.router";
 
 import { registerIncidentSocket } from "./sockets/incident.socket";
 import { registerSocketAuth } from "./sockets/auth.socket";
@@ -92,6 +93,7 @@ app.use("/auth", authRouter);
 app.use("/incidents", incidentsRouter);
 app.use("/zones", zonesRouter);
 app.use("/panic", panicRouter);
+app.use("/notifications", notificationsRouter);
 app.use("/internal/jobs", jobsRouter);
 
 // Error handler — siempre al final
