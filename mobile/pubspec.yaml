@@ -28,6 +28,9 @@ dependencies:
   # Conectividad
   connectivity_plus: ^6.0.3
 
+  # Tiempo real
+  socket_io_client: ^2.0.3+1
+
   # Mapas
   flutter_map: ^6.1.0
   latlong2: ^0.9.0
