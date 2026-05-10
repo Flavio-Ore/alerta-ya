@@ -25,6 +25,11 @@ class _PanicPageState extends State<PanicPage> {
   void initState() {
     super.initState();
     _pinController.addListener(_onPinChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = context.read<PanicBloc>().state;
+      if (state is PanicActive) _startTimer(state.session.startedAt);
+    });
   }
 
   @override
@@ -247,6 +252,42 @@ class _ActiveView extends StatelessWidget {
     return '$mm:$ss';
   }
 
+  List<Widget> _headerChildren() => [
+        const SizedBox(height: 48),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.severityCritical.withAlpha(38),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.severityCritical, width: 1),
+          ),
+          child: const Text(
+            'ALARMA ACTIVA',
+            style: TextStyle(
+              color: AppColors.severityCritical,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 3,
+            ),
+          ),
+        ),
+        const SizedBox(height: 40),
+        Text(
+          _format(elapsed),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 72,
+            fontWeight: FontWeight.w200,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Tiempo transcurrido',
+          style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+        ),
+      ];
+
   @override
   Widget build(BuildContext context) {
     final locked = state.isPinLocked;
@@ -257,134 +298,111 @@ class _ActiveView extends StatelessWidget {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 48),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.severityCritical.withAlpha(38),
-                  borderRadius: BorderRadius.circular(8),
-                  border:
-                      Border.all(color: AppColors.severityCritical, width: 1),
-                ),
-                child: const Text(
-                  'ALARMA ACTIVA',
-                  style: TextStyle(
-                    color: AppColors.severityCritical,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 3,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
-              Text(
-                _format(elapsed),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 72,
-                  fontWeight: FontWeight.w200,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Tiempo transcurrido',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
-              ),
-              const Spacer(),
-              if (locked) ...[
-                const Icon(Icons.lock_outline,
-                    color: AppColors.accent, size: 36),
-                const SizedBox(height: 12),
-                const Text(
-                  'Alarma bloqueada',
-                  style: TextStyle(
-                    color: AppColors.accent,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Demasiados intentos fallidos.\nLlamá a emergencias: 105',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                ),
-              ] else ...[
-                const Text(
-                  'Ingresá tu PIN para desactivar',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: pinController,
-                  keyboardType: TextInputType.number,
-                  obscureText: true,
-                  maxLength: 4,
-                  textAlign: TextAlign.center,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 36,
-                    letterSpacing: 20,
-                  ),
-                  decoration: InputDecoration(
-                    counterText: '',
-                    filled: true,
-                    fillColor: Colors.white10,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    hintText: '••••',
-                    hintStyle: const TextStyle(
-                        color: Colors.white24,
-                        fontSize: 36,
-                        letterSpacing: 20),
-                  ),
-                ),
-                if (attempts > 0) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    'PIN incorrecto — $attempts/${AppConstants.panicPinMaxAttempts} intentos',
-                    style: const TextStyle(
-                        color: AppColors.severityCritical, fontSize: 13),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: canDeactivate ? onDeactivate : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.severityCritical,
-                      disabledBackgroundColor: Colors.white12,
-                      foregroundColor: Colors.white,
-                      disabledForegroundColor: Colors.white38,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text(
-                      'Desactivar alarma',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 52),
-            ],
+          child: locked ? _buildLockedBody() : _buildUnlockedBody(attempts),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLockedBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        ..._headerChildren(),
+        const Spacer(),
+        const Icon(Icons.lock_outline, color: AppColors.accent, size: 36),
+        const SizedBox(height: 12),
+        const Text(
+          'Alarma bloqueada',
+          style: TextStyle(
+            color: AppColors.accent,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
           ),
         ),
+        const SizedBox(height: 10),
+        const Text(
+          'Demasiados intentos fallidos.\nLlamá a emergencias: 105',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+        const Spacer(),
+      ],
+    );
+  }
+
+  Widget _buildUnlockedBody(int attempts) {
+    return SingleChildScrollView(
+      reverse: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ..._headerChildren(),
+          const SizedBox(height: 48),
+          const Text(
+            'Ingresá tu PIN para desactivar',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: pinController,
+            keyboardType: TextInputType.number,
+            obscureText: true,
+            maxLength: 4,
+            textAlign: TextAlign.center,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 36,
+              letterSpacing: 20,
+            ),
+            decoration: InputDecoration(
+              counterText: '',
+              filled: true,
+              fillColor: Colors.white10,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              hintText: '••••',
+              hintStyle: const TextStyle(
+                  color: Colors.white24, fontSize: 36, letterSpacing: 20),
+            ),
+          ),
+          if (attempts > 0) ...[
+            const SizedBox(height: 12),
+            Text(
+              'PIN incorrecto — $attempts/${AppConstants.panicPinMaxAttempts} intentos',
+              style: const TextStyle(
+                  color: AppColors.severityCritical, fontSize: 13),
+            ),
+          ],
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: canDeactivate ? onDeactivate : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.severityCritical,
+                disabledBackgroundColor: Colors.white12,
+                foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white38,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text(
+                'Desactivar alarma',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          const SizedBox(height: 52),
+        ],
       ),
     );
   }
