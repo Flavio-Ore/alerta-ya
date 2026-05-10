@@ -15,6 +15,7 @@ class ReportConfirmationPage extends StatefulWidget {
 class _ReportConfirmationPageState extends State<ReportConfirmationPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _spinController;
+  late final Animation<double> _spinAnimation;
 
   @override
   void initState() {
@@ -23,6 +24,7 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+    _spinAnimation = Tween<double>(begin: 0, end: -1).animate(_spinController);
   }
 
   @override
@@ -74,7 +76,7 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
                   ),
                   const SizedBox(width: 6),
                   RotationTransition(
-                    turns: _spinController,
+                    turns: _spinAnimation,
                     child: const Icon(Icons.sync, color: AppColors.primary, size: 16),
                   ),
                 ],
@@ -104,7 +106,7 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
               ),
               const SizedBox(height: 32),
               // Timeline de estado
-              _StatusTimeline(spinController: _spinController),
+              _StatusTimeline(spinAnimation: _spinAnimation),
               const SizedBox(height: 24),
               // Nota de threshold
               Container(
@@ -158,8 +160,8 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
 }
 
 class _StatusTimeline extends StatelessWidget {
-  const _StatusTimeline({required this.spinController});
-  final AnimationController spinController;
+  const _StatusTimeline({required this.spinAnimation});
+  final Animation<double> spinAnimation;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +179,7 @@ class _StatusTimeline extends StatelessWidget {
         ),
         _TimelineItem(
           customIcon: RotationTransition(
-            turns: spinController,
+            turns: spinAnimation,
             child: const Icon(Icons.sync, color: AppColors.accent, size: 14),
           ),
           circleBg: AppColors.bgGray,
