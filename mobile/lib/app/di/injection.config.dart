@@ -12,6 +12,7 @@ import 'package:alertaya/core/di/firebase_module.dart' as _i1044;
 import 'package:alertaya/core/network/dio_module.dart' as _i197;
 import 'package:alertaya/core/network/network_info.dart' as _i857;
 import 'package:alertaya/core/realtime/socket_client.dart' as _i635;
+import 'package:alertaya/core/storage/secure_storage_service.dart' as _i142;
 import 'package:alertaya/features/alerts/data/datasources/notification_remote_datasource.dart'
     as _i238;
 import 'package:alertaya/features/alerts/data/repositories/notification_repository_impl.dart'
@@ -58,6 +59,18 @@ import 'package:alertaya/features/incidents/domain/usecases/get_incidents_usecas
     as _i1069;
 import 'package:alertaya/features/incidents/presentation/bloc/incidents_bloc.dart'
     as _i352;
+import 'package:alertaya/features/panic/data/datasources/panic_remote_datasource.dart'
+    as _i973;
+import 'package:alertaya/features/panic/data/repositories/panic_repository_impl.dart'
+    as _i432;
+import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart'
+    as _i519;
+import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart'
+    as _i947;
+import 'package:alertaya/features/panic/domain/usecases/deactivate_panic_usecase.dart'
+    as _i434;
+import 'package:alertaya/features/panic/presentation/bloc/panic_bloc.dart'
+    as _i776;
 import 'package:alertaya/features/report/data/repositories/mock_report_repository.dart'
     as _i594;
 import 'package:alertaya/features/report/domain/repositories/report_repository.dart'
@@ -94,8 +107,12 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i635.SocketClient(),
       dispose: (i) => i.dispose(),
     );
+    gh.lazySingleton<_i142.SecureStorageService>(
+        () => const _i142.SecureStorageService());
     gh.lazySingleton<_i238.NotificationRemoteDataSource>(
         () => _i238.NotificationRemoteDataSourceImpl(gh<_i361.Dio>()));
+    gh.lazySingleton<_i973.PanicRemoteDataSource>(
+        () => _i973.PanicRemoteDataSourceImpl(gh<_i361.Dio>()));
     gh.lazySingleton<_i658.ReportRepository>(
         () => _i594.MockReportRepository());
     gh.lazySingleton<_i852.OnboardingLocalDataSource>(
@@ -117,6 +134,14 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i108.ReportBloc(gh<_i280.CreateReportUseCase>()));
     gh.lazySingleton<_i781.FirebaseAuthDataSource>(
         () => _i781.FirebaseAuthDataSourceImpl(gh<_i59.FirebaseAuth>()));
+    gh.lazySingleton<_i519.PanicRepository>(() => _i432.PanicRepositoryImpl(
+          gh<_i973.PanicRemoteDataSource>(),
+          gh<_i857.NetworkInfo>(),
+        ));
+    gh.factory<_i947.ActivatePanicUseCase>(
+        () => _i947.ActivatePanicUseCase(gh<_i519.PanicRepository>()));
+    gh.factory<_i434.DeactivatePanicUseCase>(
+        () => _i434.DeactivatePanicUseCase(gh<_i519.PanicRepository>()));
     gh.factory<_i715.ConfirmIncidentUseCase>(
         () => _i715.ConfirmIncidentUseCase(gh<_i512.IncidentRepository>()));
     gh.factory<_i414.ConfirmZoneUseCase>(
@@ -125,6 +150,11 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i1069.GetIncidentsUseCase(gh<_i512.IncidentRepository>()));
     gh.factory<_i125.GetIncidentDetailUseCase>(
         () => _i125.GetIncidentDetailUseCase(gh<_i512.IncidentRepository>()));
+    gh.lazySingleton<_i776.PanicBloc>(() => _i776.PanicBloc(
+          gh<_i947.ActivatePanicUseCase>(),
+          gh<_i434.DeactivatePanicUseCase>(),
+          gh<_i142.SecureStorageService>(),
+        ));
     gh.lazySingleton<_i576.AuthRepository>(() => _i779.AuthRepositoryImpl(
           gh<_i781.FirebaseAuthDataSource>(),
           gh<_i852.OnboardingLocalDataSource>(),

@@ -8,6 +8,7 @@ import 'package:alertaya/app/router/go_router_refresh_stream.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:alertaya/features/incidents/presentation/bloc/incidents_bloc.dart';
+import 'package:alertaya/features/panic/presentation/bloc/panic_bloc.dart';
 import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart';
 
 class AlertaYaApp extends StatefulWidget {
@@ -19,6 +20,7 @@ class AlertaYaApp extends StatefulWidget {
 
 class _AlertaYaAppState extends State<AlertaYaApp> {
   late final AuthBloc _authBloc;
+  late final PanicBloc _panicBloc;
   late final GoRouterRefreshStream _refreshStream;
   late final GoRouter _router;
 
@@ -26,6 +28,7 @@ class _AlertaYaAppState extends State<AlertaYaApp> {
   void initState() {
     super.initState();
     _authBloc = getIt<AuthBloc>();
+    _panicBloc = getIt<PanicBloc>()..add(const PanicInitialized());
     _refreshStream = GoRouterRefreshStream(_authBloc.stream);
     _router = createRouter(_authBloc, _refreshStream);
   }
@@ -42,6 +45,7 @@ class _AlertaYaAppState extends State<AlertaYaApp> {
     return MultiBlocProvider(
       providers: [
         BlocProvider.value(value: _authBloc),
+        BlocProvider.value(value: _panicBloc),
         BlocProvider.value(value: getIt<ReportBloc>()),
         BlocProvider.value(value: getIt<IncidentsBloc>()),
       ],
