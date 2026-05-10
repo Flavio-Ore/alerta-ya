@@ -42,9 +42,43 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, UserEntity>> signUpWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final model = await _authDataSource.signUpWithEmail(
+        email: email,
+        password: password,
+      );
+      return Right(model.toEntity());
+    } on UnauthorizedException {
+      return const Left(Failure.unauthorized());
+    } on RateLimitException catch (e) {
+      return Left(Failure.rateLimit(message: e.message));
+    } on NetworkException catch (e) {
+      return Left(Failure.network(message: e.message));
+    } on ServerException catch (e) {
+      return Left(Failure.server(statusCode: e.statusCode, message: e.message));
+    }
+  }
+
+  @override
   Future<Either<Failure, UserEntity>> signInWithGoogle() async {
-    // Requiere google_sign_in package + google-services.json — Sprint 2
-    return const Left(Failure.unknown(message: 'Google Sign-In disponible próximamente'));
+    try {
+      final model = await _authDataSource.signInWithGoogle();
+      return Right(model.toEntity());
+    } on UserCancelledException {
+      return const Left(Failure.server(statusCode: 0, message: 'sign_in_cancelled'));
+    } on UnauthorizedException {
+      return const Left(Failure.unauthorized());
+    } on NetworkException catch (e) {
+      return Left(Failure.network(message: e.message));
+    } on ServerException catch (e) {
+      return Left(Failure.server(statusCode: e.statusCode, message: e.message));
+    } catch (e) {
+      return Left(Failure.unknown(message: e.toString()));
+    }
   }
 
   @override

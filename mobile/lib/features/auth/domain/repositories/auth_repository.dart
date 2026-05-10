@@ -12,7 +12,11 @@ abstract class AuthRepository {
     required String password,
   });
 
-  /// Google Sign-In — requiere google_sign_in + google-services.json (Sprint 2).
+  Future<Either<Failure, UserEntity>> signUpWithEmail({
+    required String email,
+    required String password,
+  });
+
   Future<Either<Failure, UserEntity>> signInWithGoogle();
 
   Future<Either<Failure, Unit>> signOut();

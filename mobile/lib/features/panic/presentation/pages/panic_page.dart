@@ -344,7 +344,7 @@ class _ActiveView extends StatelessWidget {
           ..._headerChildren(),
           const SizedBox(height: 48),
           const Text(
-            'Ingresá tu PIN para desactivar',
+            'Ingresa tu PIN para desactivar',
             style: TextStyle(color: AppColors.textMuted, fontSize: 14),
           ),
           const SizedBox(height: 16),
