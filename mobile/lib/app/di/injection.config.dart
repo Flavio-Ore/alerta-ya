@@ -41,6 +41,8 @@ import 'package:alertaya/features/auth/domain/usecases/sign_in_with_email_usecas
     as _i351;
 import 'package:alertaya/features/auth/domain/usecases/sign_out_usecase.dart'
     as _i290;
+import 'package:alertaya/features/auth/domain/usecases/sign_up_with_email_usecase.dart'
+    as _i929;
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart'
     as _i70;
 import 'package:alertaya/features/incidents/data/datasources/incident_remote_datasource.dart'
@@ -170,10 +172,13 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i586.IsFirstLaunchUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i351.SignInWithEmailUseCase>(
         () => _i351.SignInWithEmailUseCase(gh<_i576.AuthRepository>()));
+    gh.factory<_i929.SignUpWithEmailUseCase>(
+        () => _i929.SignUpWithEmailUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i290.SignOutUseCase>(
         () => _i290.SignOutUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i70.AuthBloc>(() => _i70.AuthBloc(
           gh<_i351.SignInWithEmailUseCase>(),
+          gh<_i929.SignUpWithEmailUseCase>(),
           gh<_i290.SignOutUseCase>(),
           gh<_i586.IsFirstLaunchUseCase>(),
           gh<_i401.CompleteOnboardingUseCase>(),
