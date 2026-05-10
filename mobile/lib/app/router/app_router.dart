@@ -132,6 +132,11 @@ String? _authGuard(GoRouterState state, AuthBloc authBloc) {
   if (authState is AuthUnauthenticated && isProtected) {
     return authState.isFirstLaunch ? '/onboarding' : '/login';
   }
+  if (authState is AuthUnauthenticated &&
+      location == '/onboarding' &&
+      !authState.isFirstLaunch) {
+    return '/login';
+  }
 
   return null;
 }
