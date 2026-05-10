@@ -65,12 +65,12 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
                 child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
               ),
               const SizedBox(height: 20),
-              Text('Reporte Enviado', style: AppTextStyles.h1),
+              const Text('Reporte Enviado', style: AppTextStyles.h1),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
+                  const Text(
                     'La IA está verificando coherencia...',
                     style: AppTextStyles.bodySecondary,
                   ),
@@ -191,7 +191,7 @@ class _StatusTimeline extends StatelessWidget {
           lineColor: AppColors.textMuted.withValues(alpha: 0.3),
           isDone: false,
         ),
-        _TimelineItem(
+        const _TimelineItem(
           circleBg: AppColors.bgGray,
           circleBorder: AppColors.textMuted,
           title: 'Publicando en el mapa',

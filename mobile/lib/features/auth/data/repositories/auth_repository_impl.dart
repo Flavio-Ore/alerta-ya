@@ -3,10 +3,10 @@ import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/exceptions.dart';
 import 'package:alertaya/core/errors/failures.dart';
-import '../../domain/entities/user_entity.dart';
-import '../../domain/repositories/auth_repository.dart';
-import '../datasources/firebase_auth_datasource.dart';
-import '../datasources/onboarding_local_datasource.dart';
+import 'package:alertaya/features/auth/domain/entities/user_entity.dart';
+import 'package:alertaya/features/auth/domain/repositories/auth_repository.dart';
+import 'package:alertaya/features/auth/data/datasources/firebase_auth_datasource.dart';
+import 'package:alertaya/features/auth/data/datasources/onboarding_local_datasource.dart';
 
 @LazySingleton(as: AuthRepository)
 class AuthRepositoryImpl implements AuthRepository {

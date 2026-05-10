@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 
 import 'package:alertaya/core/errors/failures.dart';
-import '../entities/notification_entity.dart';
+import 'package:alertaya/features/alerts/domain/entities/notification_entity.dart';
 
 abstract class NotificationRepository {
   Future<Either<Failure, List<NotificationEntity>>> getNotifications({

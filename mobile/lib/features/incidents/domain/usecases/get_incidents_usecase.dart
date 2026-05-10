@@ -2,8 +2,8 @@ import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/failures.dart';
-import '../entities/incident_entity.dart';
-import '../repositories/incident_repository.dart';
+import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
+import 'package:alertaya/features/incidents/domain/repositories/incident_repository.dart';
 
 class GetIncidentsParams {
   const GetIncidentsParams({

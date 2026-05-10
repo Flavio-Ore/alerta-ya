@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:injectable/injectable.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import 'package:alertaya/core/constants/app_constants.dart';
 import 'package:alertaya/core/domain/enums.dart';
@@ -21,7 +21,7 @@ class SocketClient {
   final _incidentUpdatedCtrl = StreamController<IncidentEntity>.broadcast();
   final _confirmRequestCtrl = StreamController<ConfirmRequestEvent>.broadcast();
 
-  IO.Socket? _socket;
+  io.Socket? _socket;
 
   Stream<IncidentEntity> get onIncidentNew => _incidentNewCtrl.stream;
   Stream<IncidentEntity> get onIncidentUpdated => _incidentUpdatedCtrl.stream;
@@ -35,9 +35,9 @@ class SocketClient {
     final user = FirebaseAuth.instance.currentUser;
     final token = user != null ? await user.getIdToken() : null;
 
-    _socket = IO.io(
+    _socket = io.io(
       AppConstants.apiBaseUrl,
-      IO.OptionBuilder()
+      io.OptionBuilder()
           .setTransports(['websocket'])
           .disableAutoConnect()
           .setAuth(<String, dynamic>{

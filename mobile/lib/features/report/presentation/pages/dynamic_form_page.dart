@@ -12,7 +12,7 @@ import 'package:alertaya/core/widgets/alertaya_button.dart';
 import 'package:alertaya/features/report/data/schemas/report_form_schemas.dart';
 import 'package:alertaya/features/report/domain/entities/form_question_entity.dart';
 import 'package:alertaya/features/report/domain/entities/incident_type.dart';
-import '../bloc/report_bloc.dart';
+import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart';
 
 // Coordenadas del centro de Lima como fallback cuando GPS no disponible (R01 — CONSTRAINTS.md)
 const _limaLat = -12.0464;
@@ -173,10 +173,10 @@ class _DynamicFormPageState extends State<DynamicFormPage> {
           context.go('/report/confirm');
         } else if (state is ReportFailure) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Error al enviar el reporte. Intentá de nuevo.'),
+            const SnackBar(
+              content: Text('Error al enviar el reporte. Intenta de nuevo.'),
               backgroundColor: AppColors.severityCritical,
-              duration: const Duration(seconds: 4),
+              duration: Duration(seconds: 4),
             ),
           );
         }
@@ -200,7 +200,7 @@ class _DynamicFormPageState extends State<DynamicFormPage> {
         ),
         body: Column(
           children: [
-            _ProgressBar(step: 2),
+            const _ProgressBar(step: 2),
             _UrgencyBanner(),
             Expanded(
               child: SingleChildScrollView(
@@ -238,7 +238,7 @@ class _DynamicFormPageState extends State<DynamicFormPage> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Tu información es procesada inmediatamente por el centro de monitoreo de Lima. Procurá ser lo más preciso posible.',
+                      'Tu información es procesada inmediatamente por el centro de monitoreo de Lima. Procura ser lo más preciso posible.',
                       style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
                     ),
                     const SizedBox(height: 100),

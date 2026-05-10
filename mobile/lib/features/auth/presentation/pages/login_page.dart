@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/widgets/alertaya_button.dart';
-import '../bloc/auth_bloc.dart';
+import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -97,7 +97,7 @@ class _LoginPageState extends State<LoginPage> {
                               width: 48,
                             ),
                             const SizedBox(height: 8),
-                            Row(
+                            const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text('Alerta', style: AppTextStyles.logoAlerta),
@@ -118,8 +118,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Anónimo para todos, seguro para ti.',
+                      const Text(
+                        'Anónimo para todos, más seguro para ti.',
                         style: AppTextStyles.bodySecondary,
                         textAlign: TextAlign.center,
                       ),
@@ -133,14 +133,14 @@ class _LoginPageState extends State<LoginPage> {
                             .add(const AuthGoogleSignInRequested()),
                       ),
                       const SizedBox(height: 24),
-                      Row(
+                      const Row(
                         children: [
-                          const Expanded(child: Divider()),
+                          Expanded(child: Divider()),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: EdgeInsets.symmetric(horizontal: 12),
                             child: Text('o', style: AppTextStyles.bodySecondary),
                           ),
-                          const Expanded(child: Divider()),
+                          Expanded(child: Divider()),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -150,7 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         decoration: _inputDecoration(
-                          hint: 'tu@correo.com',
+                          hint: 'correo@gmail.com',
                           icon: Icons.mail_outline,
                         ),
                         validator: (v) {
@@ -197,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                           textInputAction: TextInputAction.done,
                           onFieldSubmitted: (_) => _submit(),
                           decoration: _inputDecoration(
-                            hint: 'Confirmá tu contraseña',
+                            hint: 'Confirma tu contraseña',
                             icon: Icons.lock_outline,
                             suffix: IconButton(
                               icon: Icon(
@@ -211,10 +211,12 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                           validator: (v) {
-                            if (v == null || v.isEmpty)
-                              return 'Confirmá tu contraseña';
-                            if (v != _passwordController.text)
+                            if (v == null || v.isEmpty) {
+                              return 'Confirma tu contraseña';
+                            }
+                            if (v != _passwordController.text) {
                               return 'Las contraseñas no coinciden';
+                            }
                             return null;
                           },
                         ),
@@ -241,7 +243,7 @@ class _LoginPageState extends State<LoginPage> {
                                       : '¿No tienes cuenta? ',
                                 ),
                                 TextSpan(
-                                  text: _isRegistering ? 'Ingresar' : 'Registrate',
+                                  text: _isRegistering ? 'Ingresar' : 'Regístrate',
                                   style: AppTextStyles.bodySecondary.copyWith(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.w700,
@@ -255,8 +257,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const Spacer(),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
                         child: Text(
                           'Tu identidad es anónima para otros usuarios y autoridades.',
                           style: AppTextStyles.caption,
@@ -318,15 +320,15 @@ class _LoginPageState extends State<LoginPage> {
       return 'Ya existe una cuenta con ese email';
     }
     if (raw.contains('weak-password')) {
-      return 'La contraseña es muy débil. Usá mínimo 6 caracteres';
+      return 'La contraseña es muy débil. Usa mínimo 6 caracteres';
     }
     if (raw.contains('network') || raw.contains('Network')) {
-      return 'Sin conexión. Verificá tu internet';
+      return 'Sin conexión. Verifica tu internet';
     }
     if (raw.contains('rateLimit') || raw.contains('RateLimit')) {
-      return 'Demasiados intentos. Esperá unos minutos';
+      return 'Demasiados intentos. Espera unos minutos';
     }
-    return 'Ocurrió un error. Intentá de nuevo';
+    return 'Ocurrió un error. Intenta de nuevo';
   }
 }
 

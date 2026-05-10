@@ -3,7 +3,7 @@ import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/exceptions.dart';
 import 'package:alertaya/features/alerts/domain/entities/notification_entity.dart';
-import '../models/notification_model.dart';
+import 'package:alertaya/features/alerts/data/models/notification_model.dart';
 
 abstract class NotificationRemoteDataSource {
   Future<List<NotificationEntity>> getNotifications({

@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 
 import 'package:alertaya/core/errors/failures.dart';
-import '../entities/incident_entity.dart';
+import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
 
 abstract class IncidentRepository {
   Future<Either<Failure, List<IncidentEntity>>> getIncidents({

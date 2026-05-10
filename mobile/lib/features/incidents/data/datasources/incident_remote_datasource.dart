@@ -3,7 +3,7 @@ import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/exceptions.dart';
 import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
-import '../models/incident_model.dart';
+import 'package:alertaya/features/incidents/data/models/incident_model.dart';
 
 abstract class IncidentRemoteDataSource {
   Future<List<IncidentEntity>> getIncidents({

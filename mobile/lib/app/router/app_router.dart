@@ -15,7 +15,7 @@ import 'package:alertaya/features/report/presentation/pages/dynamic_form_page.da
 import 'package:alertaya/features/report/presentation/pages/incident_type_page.dart';
 import 'package:alertaya/features/report/presentation/pages/report_confirmation_page.dart';
 import 'package:alertaya/features/risk/presentation/pages/risk_dashboard_page.dart';
-import 'app_shell.dart';
+import 'package:alertaya/app/router/app_shell.dart';
 
 GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
   return GoRouter(

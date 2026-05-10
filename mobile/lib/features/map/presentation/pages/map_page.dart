@@ -52,7 +52,9 @@ class _MapPageState extends State<MapPage> {
       _userLng = lng;
     });
     _mapController.move(LatLng(lat, lng), _defaultZoom);
-    getIt<SocketClient>().connect(lat: lat, lng: lng);
+    await getIt<SocketClient>().connect(lat: lat, lng: lng);
+
+    if (!mounted) return;
     context.read<IncidentsBloc>().add(const IncidentsStarted());
   }
 

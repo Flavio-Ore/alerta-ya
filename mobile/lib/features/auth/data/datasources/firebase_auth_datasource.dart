@@ -3,7 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/exceptions.dart';
-import '../models/user_model.dart';
+import 'package:alertaya/features/auth/data/models/user_model.dart';
 
 abstract class FirebaseAuthDataSource {
   Stream<UserModel?> get authStateChanges;
@@ -90,9 +90,9 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         'invalid-credential' =>
           const UnauthorizedException(),
         'email-already-in-use' =>
-          ServerException(statusCode: 409, message: 'email-already-in-use'),
+          const ServerException(statusCode: 409, message: 'email-already-in-use'),
         'weak-password' =>
-          ServerException(statusCode: 400, message: 'weak-password'),
+          const ServerException(statusCode: 400, message: 'weak-password'),
         'too-many-requests' => const RateLimitException(),
         'network-request-failed' => NetworkException(e.message),
         _ => ServerException(statusCode: 0, message: e.message),

@@ -30,7 +30,7 @@ class _AlertsView extends StatelessWidget {
         backgroundColor: AppColors.bgLight,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: Text('Alertas', style: AppTextStyles.h2),
+        title: const Text('Alertas', style: AppTextStyles.h2),
         actions: [
           BlocBuilder<AlertsBloc, AlertsState>(
             builder: (context, state) {
@@ -39,7 +39,7 @@ class _AlertsView extends StatelessWidget {
                   onPressed: () =>
                       context.read<AlertsBloc>().add(const AlertsMarkAllRead()),
                   child: Text(
-                    'Marcar todo leído',
+                    'Marcar todo como leído',
                     style:
                         AppTextStyles.caption.copyWith(color: AppColors.primary),
                   ),
@@ -121,7 +121,7 @@ class _NotificationTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        color: isRead ? null : AppColors.primary.withOpacity(0.04),
+        color: isRead ? null : AppColors.primary.withValues(alpha: 0.04),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,15 +186,15 @@ class _EmptyView extends StatelessWidget {
   const _EmptyView();
 
   @override
-  Widget build(BuildContext context) => Center(
+  Widget build(BuildContext context) => const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.notifications_none_outlined,
+            Icon(Icons.notifications_none_outlined,
                 size: 64, color: AppColors.textMuted),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text('Sin alertas', style: AppTextStyles.h2),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'Las alertas de tu zona aparecerán acá.',
               style: AppTextStyles.bodySecondary,
@@ -220,7 +220,7 @@ class _ErrorView extends StatelessWidget {
               const Icon(Icons.cloud_off_outlined,
                   size: 48, color: AppColors.textMuted),
               const SizedBox(height: 16),
-              Text('No se pudo cargar', style: AppTextStyles.h2),
+              const Text('No se pudo cargar', style: AppTextStyles.h2),
               const SizedBox(height: 8),
               Text(message,
                   style: AppTextStyles.bodySecondary,

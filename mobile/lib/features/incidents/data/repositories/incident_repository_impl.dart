@@ -6,7 +6,7 @@ import 'package:alertaya/core/errors/failures.dart';
 import 'package:alertaya/core/network/network_info.dart';
 import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
 import 'package:alertaya/features/incidents/domain/repositories/incident_repository.dart';
-import '../datasources/incident_remote_datasource.dart';
+import 'package:alertaya/features/incidents/data/datasources/incident_remote_datasource.dart';
 
 @LazySingleton(as: IncidentRepository)
 class IncidentRepositoryImpl implements IncidentRepository {

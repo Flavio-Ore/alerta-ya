@@ -6,7 +6,7 @@ import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/widgets/alertaya_button.dart';
 import 'package:alertaya/features/report/domain/entities/incident_type.dart';
-import '../bloc/report_bloc.dart';
+import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart';
 
 class IncidentTypePage extends StatefulWidget {
   const IncidentTypePage({super.key});
@@ -52,7 +52,7 @@ class _IncidentTypePageState extends State<IncidentTypePage> {
       ),
       body: Column(
         children: [
-          _ProgressBar(step: 1),
+          const _ProgressBar(step: 1),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -266,7 +266,7 @@ class _InfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.bgGray,
         borderRadius: BorderRadius.circular(14),
-        border: Border(left: BorderSide(color: AppColors.accent, width: 3)),
+        border: const Border(left: BorderSide(color: AppColors.accent, width: 3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

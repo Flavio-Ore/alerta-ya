@@ -2,8 +2,8 @@ import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/failures.dart';
-import '../entities/notification_entity.dart';
-import '../repositories/notification_repository.dart';
+import 'package:alertaya/features/alerts/domain/entities/notification_entity.dart';
+import 'package:alertaya/features/alerts/domain/repositories/notification_repository.dart';
 
 class GetNotificationsParams {
   const GetNotificationsParams({

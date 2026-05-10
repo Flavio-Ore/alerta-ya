@@ -3,7 +3,7 @@ import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/exceptions.dart';
 import 'package:alertaya/features/panic/domain/entities/panic_session_entity.dart';
-import '../models/panic_session_model.dart';
+import 'package:alertaya/features/panic/data/models/panic_session_model.dart';
 
 abstract class PanicRemoteDataSource {
   Future<PanicSessionEntity> startSession({

@@ -2,8 +2,8 @@ import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/failures.dart';
-import '../entities/panic_session_entity.dart';
-import '../repositories/panic_repository.dart';
+import 'package:alertaya/features/panic/domain/entities/panic_session_entity.dart';
+import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart';
 
 class ActivatePanicParams {
   const ActivatePanicParams({required this.lat, required this.lng});

@@ -2,7 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/failures.dart';
-import '../repositories/panic_repository.dart';
+import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart';
 
 @injectable
 class DeactivatePanicUseCase {

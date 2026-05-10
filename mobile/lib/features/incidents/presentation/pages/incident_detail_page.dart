@@ -183,9 +183,9 @@ class _DetailContent extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 24),
-        Text('¿Sigue ocurriendo?', style: AppTextStyles.h2),
+        const Text('¿Sigue ocurriendo?', style: AppTextStyles.h2),
         const SizedBox(height: 4),
-        Text('Tu respuesta ayuda a otros ciudadanos.',
+        const Text('Tu respuesta ayuda a otros ciudadanos.',
             style: AppTextStyles.bodySecondary),
         const SizedBox(height: 12),
         Row(
@@ -307,7 +307,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(label,

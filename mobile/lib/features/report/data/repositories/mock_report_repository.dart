@@ -6,7 +6,7 @@ import 'package:alertaya/features/report/domain/entities/form_question_entity.da
 import 'package:alertaya/features/report/domain/entities/incident_type.dart';
 import 'package:alertaya/features/report/domain/entities/report_entity.dart';
 import 'package:alertaya/features/report/domain/repositories/report_repository.dart';
-import '../schemas/report_form_schemas.dart';
+import 'package:alertaya/features/report/data/schemas/report_form_schemas.dart';
 
 /// Repositorio mock para desarrollo — se reemplaza con la implementación real
 /// cuando el backend POST /reports esté disponible.

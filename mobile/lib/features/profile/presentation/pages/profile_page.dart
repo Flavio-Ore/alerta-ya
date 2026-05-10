@@ -16,7 +16,7 @@ class ProfilePage extends StatelessWidget {
         backgroundColor: AppColors.bgLight,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: Text('Mi perfil', style: AppTextStyles.h2),
+        title: const Text('Mi perfil', style: AppTextStyles.h2),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -37,9 +37,9 @@ class ProfilePage extends StatelessWidget {
                       size: 40, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 12),
-                Text('Usuario Anónimo', style: AppTextStyles.h2),
+                const Text('Usuario Anónimo', style: AppTextStyles.h2),
                 const SizedBox(height: 4),
-                Text('Tu identidad es privada',
+                const Text('Tu identidad es privada',
                     style: AppTextStyles.bodySecondary),
               ],
             ),
@@ -146,7 +146,7 @@ class _ComingSoonBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
-          color: AppColors.accent.withOpacity(0.15),
+          color: AppColors.accent.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

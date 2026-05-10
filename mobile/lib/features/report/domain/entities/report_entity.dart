@@ -1,4 +1,4 @@
-import 'incident_type.dart';
+import 'package:alertaya/features/report/domain/entities/incident_type.dart';
 
 class ReportEntity {
   const ReportEntity({

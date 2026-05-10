@@ -6,7 +6,7 @@ import 'package:alertaya/core/errors/failures.dart';
 import 'package:alertaya/core/network/network_info.dart';
 import 'package:alertaya/features/alerts/domain/entities/notification_entity.dart';
 import 'package:alertaya/features/alerts/domain/repositories/notification_repository.dart';
-import '../datasources/notification_remote_datasource.dart';
+import 'package:alertaya/features/alerts/data/datasources/notification_remote_datasource.dart';
 
 @LazySingleton(as: NotificationRepository)
 class NotificationRepositoryImpl implements NotificationRepository {
