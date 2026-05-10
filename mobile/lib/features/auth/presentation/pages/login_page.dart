@@ -19,23 +19,40 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  bool _isRegistering = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _toggleMode() {
+    setState(() {
+      _isRegistering = !_isRegistering;
+      _formKey.currentState?.reset();
+      _confirmPasswordController.clear();
+    });
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    context.read<AuthBloc>().add(
-          AuthEmailSignInRequested(
+    if (_isRegistering) {
+      context.read<AuthBloc>().add(AuthEmailSignUpRequested(
             email: _emailController.text.trim(),
             password: _passwordController.text,
-          ),
-        );
+          ));
+    } else {
+      context.read<AuthBloc>().add(AuthEmailSignInRequested(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          ));
+    }
   }
 
   @override
@@ -49,6 +66,7 @@ class _LoginPageState extends State<LoginPage> {
             SnackBar(
               content: Text(_mapError(state.message)),
               backgroundColor: AppColors.severityCritical,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
@@ -90,21 +108,29 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 40),
-                      Text('Ingresá a tu cuenta', style: AppTextStyles.h2, textAlign: TextAlign.center),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Text(
+                          _isRegistering ? 'Crea tu cuenta' : 'Ingresa a tu cuenta',
+                          key: ValueKey(_isRegistering),
+                          style: AppTextStyles.h2,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
-                        'Anónimo para todos, seguro para vos.',
+                        'Anónimo para todos, seguro para ti.',
                         style: AppTextStyles.bodySecondary,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 32),
-                      // Google (próximamente)
+                      // Google
                       _SocialButton(
                         label: 'Continuar con Google',
                         icon: Icons.g_mobiledata,
-                        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Google Sign-In disponible próximamente')),
-                        ),
+                        onPressed: () => context
+                            .read<AuthBloc>()
+                            .add(const AuthGoogleSignInRequested()),
                       ),
                       const SizedBox(height: 24),
                       Row(
@@ -128,7 +154,7 @@ class _LoginPageState extends State<LoginPage> {
                           icon: Icons.mail_outline,
                         ),
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Ingresá tu email';
+                          if (v == null || v.trim().isEmpty) return 'Ingresa tu email';
                           if (!v.contains('@')) return 'Email inválido';
                           return null;
                         },
@@ -138,29 +164,65 @@ class _LoginPageState extends State<LoginPage> {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _submit(),
+                        textInputAction: _isRegistering
+                            ? TextInputAction.next
+                            : TextInputAction.done,
+                        onFieldSubmitted: _isRegistering ? null : (_) => _submit(),
                         decoration: _inputDecoration(
                           hint: 'Contraseña',
                           icon: Icons.lock_outline,
                           suffix: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
                               color: AppColors.textSecondary,
                             ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            onPressed: () =>
+                                setState(() => _obscurePassword = !_obscurePassword),
                           ),
                         ),
                         validator: (v) {
-                          if (v == null || v.isEmpty) return 'Ingresá tu contraseña';
+                          if (v == null || v.isEmpty) return 'Ingresa tu contraseña';
                           if (v.length < 6) return 'Mínimo 6 caracteres';
                           return null;
                         },
                       ),
+                      // Confirmar contraseña — solo en registro
+                      if (_isRegistering) ...[
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _confirmPasswordController,
+                          obscureText: _obscureConfirmPassword,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) => _submit(),
+                          decoration: _inputDecoration(
+                            hint: 'Confirmá tu contraseña',
+                            icon: Icons.lock_outline,
+                            suffix: IconButton(
+                              icon: Icon(
+                                _obscureConfirmPassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: AppColors.textSecondary,
+                              ),
+                              onPressed: () => setState(() =>
+                                  _obscureConfirmPassword = !_obscureConfirmPassword),
+                            ),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.isEmpty)
+                              return 'Confirmá tu contraseña';
+                            if (v != _passwordController.text)
+                              return 'Las contraseñas no coinciden';
+                            return null;
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) => AlertaYaButton(
-                          label: 'Ingresar',
+                          label: _isRegistering ? 'Crear cuenta' : 'Ingresar',
                           onPressed: state is AuthLoading ? null : _submit,
                           isLoading: state is AuthLoading,
                         ),
@@ -168,14 +230,18 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 16),
                       Center(
                         child: TextButton(
-                          onPressed: () {},
+                          onPressed: _toggleMode,
                           child: RichText(
                             text: TextSpan(
                               style: AppTextStyles.bodySecondary,
                               children: [
-                                const TextSpan(text: '¿No tenés cuenta? '),
                                 TextSpan(
-                                  text: 'Registrate',
+                                  text: _isRegistering
+                                      ? '¿Ya tienes cuenta? '
+                                      : '¿No tienes cuenta? ',
+                                ),
+                                TextSpan(
+                                  text: _isRegistering ? 'Ingresar' : 'Registrate',
                                   style: AppTextStyles.bodySecondary.copyWith(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.w700,
@@ -240,12 +306,19 @@ class _LoginPageState extends State<LoginPage> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.severityCritical),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       );
 
   String _mapError(String raw) {
     if (raw.contains('unauthorized') || raw.contains('Unauthorized')) {
       return 'Email o contraseña incorrectos';
+    }
+    if (raw.contains('email-already-in-use')) {
+      return 'Ya existe una cuenta con ese email';
+    }
+    if (raw.contains('weak-password')) {
+      return 'La contraseña es muy débil. Usá mínimo 6 caracteres';
     }
     if (raw.contains('network') || raw.contains('Network')) {
       return 'Sin conexión. Verificá tu internet';
