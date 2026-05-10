@@ -59,6 +59,9 @@ dependencies:
   cloud_firestore: ^4.17.3
   firebase_storage: ^11.7.5
 
+  # Multimedia
+  image_picker: ^1.1.2
+
   # UI
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0
