@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'package:alertaya/app/router/go_router_refresh_stream.dart';
 import 'package:alertaya/features/alerts/presentation/pages/alerts_page.dart';
@@ -10,6 +11,7 @@ import 'package:alertaya/features/auth/presentation/pages/splash_page.dart';
 import 'package:alertaya/features/incidents/presentation/pages/incident_detail_page.dart';
 import 'package:alertaya/features/map/presentation/pages/map_page.dart';
 import 'package:alertaya/features/panic/presentation/pages/panic_page.dart';
+import 'package:alertaya/features/route/presentation/pages/route_comparator_page.dart';
 import 'package:alertaya/features/profile/presentation/pages/profile_page.dart';
 import 'package:alertaya/features/report/presentation/pages/dynamic_form_page.dart';
 import 'package:alertaya/features/report/presentation/pages/incident_type_page.dart';
@@ -78,7 +80,11 @@ GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
                   ),
                   GoRoute(
                     path: 'routes',
-                    builder: (context, state) => const RouteComparatorPage(),
+                    builder: (context, state) {
+                      final origin = state.extra as LatLng? ??
+                          const LatLng(-12.0464, -77.0428);
+                      return RouteComparatorPage(origin: origin);
+                    },
                   ),
                 ],
               ),
@@ -141,8 +147,3 @@ String? _authGuard(GoRouterState state, AuthBloc authBloc) {
   return null;
 }
 
-class RouteComparatorPage extends StatelessWidget {
-  const RouteComparatorPage({super.key});
-  @override
-  Widget build(BuildContext context) => const Scaffold();
-}
