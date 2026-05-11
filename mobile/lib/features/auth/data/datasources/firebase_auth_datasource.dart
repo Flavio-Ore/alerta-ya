@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:injectable/injectable.dart';
 
@@ -15,8 +16,9 @@ abstract class FirebaseAuthDataSource {
 
 @LazySingleton(as: FirebaseAuthDataSource)
 class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
-  const FirebaseAuthDataSourceImpl(this._auth);
+  FirebaseAuthDataSourceImpl(this._auth);
   final FirebaseAuth _auth;
+  final _googleSignIn = GoogleSignIn();
 
   @override
   Stream<UserModel?> get authStateChanges => _auth
@@ -60,8 +62,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   @override
   Future<UserModel> signInWithGoogle() async {
     try {
-      final googleSignIn = GoogleSignIn();
-      final googleAccount = await googleSignIn.signIn();
+      final googleAccount = await _googleSignIn.signIn();
       if (googleAccount == null) throw const UserCancelledException();
 
       final googleAuth = await googleAccount.authentication;
@@ -76,13 +77,19 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       rethrow;
     } on FirebaseAuthException catch (e) {
       throw _mapException(e);
+    } on PlatformException catch (e) {
+      if (e.code == 'sign_in_cancelled') throw const UserCancelledException();
+      throw ServerException(statusCode: 0, message: e.code);
     } catch (e) {
       throw ServerException(statusCode: 0, message: e.toString());
     }
   }
 
   @override
-  Future<void> signOut() => _auth.signOut();
+  Future<void> signOut() async {
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+  }
 
   Exception _mapException(FirebaseAuthException e) => switch (e.code) {
         'user-not-found' ||

@@ -23,6 +23,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isRegistering = false;
+  bool _isGoogleAuth = false;
 
   @override
   void dispose() {
@@ -42,6 +43,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    _isGoogleAuth = false;
     if (_isRegistering) {
       context.read<AuthBloc>().add(AuthEmailSignUpRequested(
             email: _emailController.text.trim(),
@@ -60,7 +62,21 @@ class _LoginPageState extends State<LoginPage> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          context.go('/map');
+          final message = _isGoogleAuth
+              ? '¡Sesión iniciada con Google!'
+              : _isRegistering
+                  ? '¡Cuenta creada! Bienvenido a AlertaYa'
+                  : '¡Bienvenido de vuelta!';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: AppColors.severityLow,
+              duration: const Duration(milliseconds: 1500),
+            ),
+          );
+          Future.delayed(const Duration(milliseconds: 400), () {
+            if (context.mounted) context.go('/map');
+          });
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -128,9 +144,12 @@ class _LoginPageState extends State<LoginPage> {
                       _SocialButton(
                         label: 'Continuar con Google',
                         icon: Icons.g_mobiledata,
-                        onPressed: () => context
-                            .read<AuthBloc>()
-                            .add(const AuthGoogleSignInRequested()),
+                        onPressed: () {
+                          _isGoogleAuth = true;
+                          context
+                              .read<AuthBloc>()
+                              .add(const AuthGoogleSignInRequested());
+                        },
                       ),
                       const SizedBox(height: 24),
                       const Row(
@@ -322,11 +341,14 @@ class _LoginPageState extends State<LoginPage> {
     if (raw.contains('weak-password')) {
       return 'La contraseña es muy débil. Usa mínimo 6 caracteres';
     }
-    if (raw.contains('network') || raw.contains('Network')) {
+    if (raw.contains('network_error') || raw.contains('network') || raw.contains('Network')) {
       return 'Sin conexión. Verifica tu internet';
     }
     if (raw.contains('rateLimit') || raw.contains('RateLimit')) {
       return 'Demasiados intentos. Espera unos minutos';
+    }
+    if (raw.contains('sign_in_failed') || raw.contains('DEVELOPER_ERROR')) {
+      return 'Error al iniciar sesión con Google. Verifica tu conexión o intenta más tarde';
     }
     return 'Ocurrió un error. Intenta de nuevo';
   }
