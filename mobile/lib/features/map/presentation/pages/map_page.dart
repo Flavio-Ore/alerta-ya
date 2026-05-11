@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -27,9 +28,12 @@ class _MapPageState extends State<MapPage> {
   static const double _defaultZoom = 14.0;
 
   late final MapController _mapController;
+  final _searchController = TextEditingController();
+
   double _userLat = _defaultLat;
   double _userLng = _defaultLng;
   String? _selectedId;
+  bool _searchLoading = false;
 
   @override
   void initState() {
@@ -41,6 +45,7 @@ class _MapPageState extends State<MapPage> {
   @override
   void dispose() {
     _mapController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -53,7 +58,6 @@ class _MapPageState extends State<MapPage> {
     });
     _mapController.move(LatLng(lat, lng), _defaultZoom);
     await getIt<SocketClient>().connect(lat: lat, lng: lng);
-
     if (!mounted) return;
     context.read<IncidentsBloc>().add(const IncidentsStarted());
   }
@@ -82,6 +86,25 @@ class _MapPageState extends State<MapPage> {
     context.push('/map/incident/${incident.id}').then((_) {
       if (mounted) setState(() => _selectedId = null);
     });
+  }
+
+  Future<void> _onSearchSubmit(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return;
+    setState(() => _searchLoading = true);
+    try {
+      final locations = await locationFromAddress('$q, Lima, Perú');
+      if (locations.isNotEmpty && mounted) {
+        _mapController.move(
+          LatLng(locations.first.latitude, locations.first.longitude),
+          _defaultZoom,
+        );
+      }
+    } catch (_) {
+      // Dirección no encontrada — no interrumpir al usuario
+    } finally {
+      if (mounted) setState(() => _searchLoading = false);
+    }
   }
 
   double _markerSize(Severity s) => switch (s) {
@@ -122,7 +145,6 @@ class _MapPageState extends State<MapPage> {
                   ),
                   MarkerLayer(
                     markers: [
-                      // Marcador de posición del usuario
                       Marker(
                         point: LatLng(_userLat, _userLng),
                         width: 20,
@@ -131,12 +153,11 @@ class _MapPageState extends State<MapPage> {
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             shape: BoxShape.circle,
-                            border:
-                                Border.all(color: AppColors.bgLight, width: 2),
+                            border: Border.all(
+                                color: AppColors.bgLight, width: 2),
                           ),
                         ),
                       ),
-                      // Marcadores de incidentes
                       ...incidents.map((incident) {
                         final size = _markerSize(incident.severity);
                         return Marker(
@@ -156,7 +177,33 @@ class _MapPageState extends State<MapPage> {
                 ],
               ),
 
-              // Banner de confirmación de zona (llega por WebSocket)
+              // Indicador de carga inicial
+              if (state is IncidentsLoading)
+                const Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: LinearProgressIndicator(
+                    color: AppColors.accent,
+                    backgroundColor: Colors.transparent,
+                  ),
+                ),
+
+              // Overlay: búsqueda + riesgo de zona
+              _SearchOverlay(
+                controller: _searchController,
+                isLoading: _searchLoading,
+                onSubmit: _onSearchSubmit,
+                incidents: incidents,
+                userLat: _userLat,
+                userLng: _userLng,
+                onRouteTap: () => context.push(
+                  '/map/routes',
+                  extra: LatLng(_userLat, _userLng),
+                ),
+              ),
+
+              // Banner de confirmación de zona (WebSocket) — siempre encima del overlay
               if (state is IncidentsLoaded &&
                   state.pendingConfirmRequest != null)
                 _ConfirmRequestBanner(
@@ -177,18 +224,6 @@ class _MapPageState extends State<MapPage> {
                       .read<IncidentsBloc>()
                       .add(const ConfirmRequestDismissed()),
                 ),
-
-              // Indicador de carga inicial de incidentes
-              if (state is IncidentsLoading)
-                const Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: LinearProgressIndicator(
-                    color: AppColors.accent,
-                    backgroundColor: Colors.transparent,
-                  ),
-                ),
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
@@ -207,6 +242,208 @@ class _MapPageState extends State<MapPage> {
     );
   }
 }
+
+// ─── Search + Risk overlay ─────────────────────────────────────────────────────
+
+class _SearchOverlay extends StatelessWidget {
+  const _SearchOverlay({
+    required this.controller,
+    required this.isLoading,
+    required this.onSubmit,
+    required this.incidents,
+    required this.userLat,
+    required this.userLng,
+    required this.onRouteTap,
+  });
+
+  final TextEditingController controller;
+  final bool isLoading;
+  final ValueChanged<String> onSubmit;
+  final List<IncidentEntity> incidents;
+  final double userLat;
+  final double userLng;
+  final VoidCallback onRouteTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    final zoneRisk = _computeZoneRisk(incidents, userLat, userLng);
+
+    return Positioned(
+      top: topPadding + 8,
+      left: 12,
+      right: 12,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(16),
+            color: AppColors.bgLight,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      RichText(
+                        text: TextSpan(children: [
+                          TextSpan(
+                              text: 'Alerta',
+                              style: AppTextStyles.logoAlerta
+                                  .copyWith(fontSize: 18)),
+                          TextSpan(
+                              text: 'Ya',
+                              style:
+                                  AppTextStyles.logoYa.copyWith(fontSize: 18)),
+                        ]),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.route_outlined,
+                            color: AppColors.primary),
+                        tooltip: 'Comparar rutas',
+                        onPressed: onRouteTap,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined,
+                            color: AppColors.textSecondary),
+                        tooltip: 'Alertas',
+                        onPressed: () => context.go('/alerts'),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.bgGray,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 10),
+                        const Icon(Icons.search,
+                            color: AppColors.textSecondary, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: controller,
+                            decoration: InputDecoration(
+                              hintText: 'Buscar dirección o zona...',
+                              hintStyle: AppTextStyles.bodySecondary
+                                  .copyWith(fontSize: 13),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                              suffixIcon: isLoading
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(10),
+                                      child: SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            style:
+                                AppTextStyles.body.copyWith(fontSize: 13),
+                            onSubmitted: onSubmit,
+                            textInputAction: TextInputAction.search,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _ZoneRiskChip(risk: zoneRisk),
+        ],
+      ),
+    );
+  }
+
+  _ZoneRisk _computeZoneRisk(
+      List<IncidentEntity> incidents, double lat, double lng) {
+    const distance = Distance();
+    const radiusMeters = 600.0;
+    final nearby = incidents.where((i) {
+      return distance(LatLng(lat, lng), LatLng(i.lat, i.lng)) <=
+          radiusMeters;
+    }).toList();
+
+    if (nearby.isEmpty) return _ZoneRisk.clear;
+    if (nearby.any((i) => i.severity == Severity.high)) {
+      return _ZoneRisk.critical;
+    }
+    if (nearby.any((i) => i.severity == Severity.medium)) {
+      return _ZoneRisk.moderate;
+    }
+    return _ZoneRisk.low;
+  }
+}
+
+enum _ZoneRisk { clear, low, moderate, critical }
+
+class _ZoneRiskChip extends StatelessWidget {
+  const _ZoneRiskChip({required this.risk});
+
+  final _ZoneRisk risk;
+
+  @override
+  Widget build(BuildContext context) {
+    if (risk == _ZoneRisk.clear) return const SizedBox.shrink();
+
+    final (color, label) = switch (risk) {
+      _ZoneRisk.low => (AppColors.severityLow, 'Zona: LEVE'),
+      _ZoneRisk.moderate => (AppColors.severityModerate, 'Zona: MODERADO'),
+      _ZoneRisk.critical => (AppColors.severityCritical, 'Zona: CRÍTICO'),
+      _ZoneRisk.clear => (AppColors.textMuted, ''),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration:
+                BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTextStyles.label.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Zone confirm banner (WebSocket) ──────────────────────────────────────────
 
 class _ConfirmRequestBanner extends StatelessWidget {
   const _ConfirmRequestBanner({
