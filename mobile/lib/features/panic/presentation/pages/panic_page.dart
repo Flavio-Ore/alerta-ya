@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_constants.dart';
@@ -114,38 +115,51 @@ class _PanicPageState extends State<PanicPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<PanicBloc, PanicState>(
-      listener: (context, state) {
-        if (state is PanicActive) {
-          _startTimer(state.session.startedAt);
-        } else {
-          _stopTimer();
-          _pinController.clear();
-        }
-        if (state is PanicError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.severityCritical,
-            ),
-          );
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        final s = context.read<PanicBloc>().state;
+        if (s is! PanicActive && s is! PanicActivating && s is! PanicDeactivating) {
+          context.go('/map');
         }
       },
-      builder: (context, state) {
-        if (state is PanicActivating || state is PanicDeactivating) {
-          return const _LoadingView();
-        }
-        if (state is PanicActive) {
-          return _ActiveView(
-            state: state,
-            elapsed: _elapsed,
-            pinController: _pinController,
-            canDeactivate: _pinController.text.length == 4,
-            onDeactivate: _submitDeactivation,
+      child: BlocConsumer<PanicBloc, PanicState>(
+        listener: (context, state) {
+          if (state is PanicActive) {
+            _startTimer(state.session.startedAt);
+          } else {
+            _stopTimer();
+            _pinController.clear();
+          }
+          if (state is PanicError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.severityCritical,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          if (state is PanicActivating || state is PanicDeactivating) {
+            return const _LoadingView();
+          }
+          if (state is PanicActive) {
+            return _ActiveView(
+              state: state,
+              elapsed: _elapsed,
+              pinController: _pinController,
+              canDeactivate: _pinController.text.length == 4,
+              onDeactivate: _submitDeactivation,
+            );
+          }
+          return _IdleView(
+            onPanicTap: _showPinSetupSheet,
+            onBack: () => context.go('/map'),
           );
-        }
-        return _IdleView(onPanicTap: _showPinSetupSheet);
-      },
+        },
+      ),
     );
   }
 }
@@ -153,18 +167,21 @@ class _PanicPageState extends State<PanicPage> {
 // ─── S09: Idle ────────────────────────────────────────────────────────────────
 
 class _IdleView extends StatelessWidget {
-  const _IdleView({required this.onPanicTap});
+  const _IdleView({required this.onPanicTap, required this.onBack});
   final VoidCallback onPanicTap;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+        child: Stack(
+          children: [
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
               const Text(
                 'BOTÓN DE PÁNICO',
                 style: TextStyle(
@@ -225,7 +242,17 @@ class _IdleView extends StatelessWidget {
             ],
           ),
         ),
-      ),
+        Positioned(
+          top: 4,
+          left: 4,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
+            onPressed: onBack,
+          ),
+        ),
+      ],
+    ),
+  ),
     );
   }
 }
