@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/widgets/alertaya_button.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class ReportConfirmationPage extends StatefulWidget {
   const ReportConfirmationPage({super.key});
@@ -40,11 +41,16 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
       appBar: AppBar(
         backgroundColor: AppColors.bgLight,
         elevation: 0,
-        leading: const SizedBox.shrink(),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => context.go('/map'),
+        ),
         title: Row(
           children: [
-            Text('Alerta', style: AppTextStyles.logoAlerta.copyWith(fontSize: 18)),
-            Text('Ya', style: AppTextStyles.logoYa.copyWith(fontSize: 18)),
+            SvgPicture.asset(
+              'assets/images/logo/alertaya_logo_horizontal.svg',
+              height: 28,
+            )
           ],
         ),
       ),
