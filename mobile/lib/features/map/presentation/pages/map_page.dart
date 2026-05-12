@@ -227,16 +227,8 @@ class _MapPageState extends State<MapPage> {
                 ),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
+          floatingActionButton: _AnimatedReportFab(
             onPressed: () => context.push('/report/type'),
-            backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.bgLight,
-            elevation: 0,
-            icon: const Icon(Icons.add_alert_outlined),
-            label: Text(
-              'Reportar',
-              style: AppTextStyles.buttonLabel.copyWith(fontSize: 14),
-            ),
           ),
         );
       },
@@ -508,6 +500,77 @@ class _ConfirmRequestBanner extends StatelessWidget {
                 onPressed: onDismiss,
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Animated report FAB ───────────────────────────────────────────────────────
+
+class _AnimatedReportFab extends StatefulWidget {
+  const _AnimatedReportFab({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  State<_AnimatedReportFab> createState() => _AnimatedReportFabState();
+}
+
+class _AnimatedReportFabState extends State<_AnimatedReportFab> {
+  // Static: survives navigation, resets only on full app restart.
+  static bool _hasAnimated = false;
+
+  bool _extended = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_hasAnimated) {
+      _hasAnimated = true;
+      _extended = true;
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _extended = false);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primary,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 4,
+      child: InkWell(
+        onTap: widget.onPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SizedBox(
+            height: 56,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.add_alert_outlined, color: AppColors.bgLight),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeInOut,
+                  child: _extended
+                      ? Row(
+                          children: [
+                            const SizedBox(width: 8),
+                            Text(
+                              'Reportar incidencias',
+                              style: AppTextStyles.buttonLabel
+                                  .copyWith(fontSize: 14, color: AppColors.bgLight),
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
           ),
         ),
       ),
