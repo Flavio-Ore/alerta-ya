@@ -14,6 +14,7 @@ import 'package:alertaya/core/realtime/socket_client.dart';
 import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
 import 'package:alertaya/features/incidents/presentation/bloc/incidents_bloc.dart';
 import 'package:alertaya/features/map/presentation/widgets/incident_marker.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -287,17 +288,9 @@ class _SearchOverlay extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      RichText(
-                        text: TextSpan(children: [
-                          TextSpan(
-                              text: 'Alerta',
-                              style: AppTextStyles.logoAlerta
-                                  .copyWith(fontSize: 18)),
-                          TextSpan(
-                              text: 'Ya',
-                              style:
-                                  AppTextStyles.logoYa.copyWith(fontSize: 18)),
-                        ]),
+                      SvgPicture.asset(
+                        'assets/images/logo/alertaya_logo_horizontal.svg',
+                        height: 28,
                       ),
                       const Spacer(),
                       IconButton(
