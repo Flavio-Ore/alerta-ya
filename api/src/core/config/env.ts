@@ -27,6 +27,15 @@ const envSchema = z.object({
 
   // JWT
   JWT_SECRET: z.string().min(32),
+
+  // Jobs — secret que Cloud Scheduler manda en X-Job-Secret
+  JOB_SECRET: z.string().min(16).default('dev-job-secret-change-in-prod'),
+
+  // Cloudinary — evidencia de imágenes/videos en reportes
+  CLOUDINARY_CLOUD_NAME: z.string(),
+  CLOUDINARY_API_KEY: z.string(),
+  CLOUDINARY_API_SECRET: z.string(),
+  CLOUDINARY_UPLOAD_PRESET: z.string().default('alertaya_evidence'),
 });
 
 const parsed = envSchema.safeParse(process.env);

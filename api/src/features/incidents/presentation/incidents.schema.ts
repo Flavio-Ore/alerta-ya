@@ -1,0 +1,46 @@
+import { z } from 'zod';
+import { IncidentType, IncidentStatus, Severity } from '@prisma/client';
+
+export const createReportSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  type: z.nativeEnum(IncidentType),
+  formData: z.record(z.unknown()),
+  // URLs de evidencia subidas desde el dispositivo (Firebase Storage o GCS)
+  // El cliente sube primero, luego manda las URLs aquí
+  mediaUrls: z.array(z.string().url()).max(5).default([]),
+});
+
+export const listIncidentsQuerySchema = z.object({
+  severity: z.nativeEnum(Severity).optional(),
+  district: z.string().optional(),
+  since: z.string().datetime().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const idParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const confirmSchema = z.object({
+  vote: z.enum(['yes', 'no']),
+});
+
+// Solo para autoridades — actualizar estado + mensaje de feedback al ciudadano
+export const updateStatusSchema = z.object({
+  status: z.nativeEnum(IncidentStatus),
+  feedback: z.string().max(200).optional(),
+});
+
+// Mini-alert: respuesta del ciudadano al "¿viste algo?"
+export const zoneConfirmSchema = z.object({
+  zoneKey: z.string().min(1),           // "threshold:-11.980:-77.005:ROBBERY"
+  response: z.enum(['yes', 'no']),
+});
+
+export type CreateReportInput = z.infer<typeof createReportSchema>;
+export type ListIncidentsQuery = z.infer<typeof listIncidentsQuerySchema>;
+export type ConfirmInput = z.infer<typeof confirmSchema>;
+export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;
+export type ZoneConfirmInput = z.infer<typeof zoneConfirmSchema>;
