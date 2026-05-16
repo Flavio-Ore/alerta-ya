@@ -13,6 +13,13 @@ export interface IncidentFilters {
   severity?: Severity;
   district?: string;
   sinceISO?: string;
+  /**
+   * Filtro de status:
+   *   - undefined → default app móvil: solo ACTIVE no expirados
+   *   - IncidentStatus → filtra por ese status exacto (panel autoridad)
+   *   - 'ALL' → trae todos los status sin filtro de expiración (panel autoridad)
+   */
+  status?: IncidentStatus | 'ALL';
   page?: number;
   pageSize?: number;
 }

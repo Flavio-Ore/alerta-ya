@@ -15,6 +15,8 @@ export const listIncidentsQuerySchema = z.object({
   severity: z.nativeEnum(Severity).optional(),
   district: z.string().optional(),
   since: z.string().datetime().optional(),
+  // 'ALL' = traer todos los status (panel autoridad). Si se omite → solo ACTIVE no expirados (móvil ciudadano)
+  status: z.union([z.nativeEnum(IncidentStatus), z.literal('ALL')]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
