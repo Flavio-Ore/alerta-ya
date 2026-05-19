@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  permission_handler: ^11.3.1
   flutter_localizations:
     sdk: flutter
 
@@ -42,6 +43,7 @@ dependencies:
   flutter_local_notifications: ^17.2.1
   flutter_foreground_task: ^6.1.6
   # record — se agrega en FASE 5 (botón de pánico) con versión validada contra el AGP del momento
+  record: ^6.0.0
 
   # Seguridad
   flutter_secure_storage: ^9.0.0

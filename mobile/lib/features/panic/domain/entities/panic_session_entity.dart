@@ -11,5 +11,7 @@ class PanicSessionEntity with _$PanicSessionEntity {
     required DateTime startedAt,
     DateTime? endedAt,
     @Default('ACTIVE') String status,
+    @Default(1) int currentBlock,
+    @Default([]) List<String> recordingPaths,
   }) = _PanicSessionEntity;
 }

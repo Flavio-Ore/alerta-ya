@@ -154,8 +154,8 @@ class _MapPageState extends State<MapPage> {
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             shape: BoxShape.circle,
-                            border: Border.all(
-                                color: AppColors.bgLight, width: 2),
+                            border:
+                                Border.all(color: AppColors.bgLight, width: 2),
                           ),
                         ),
                       ),
@@ -274,8 +274,7 @@ class _SearchOverlay extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             color: AppColors.bgLight,
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Column(
                 children: [
                   Row(
@@ -339,8 +338,7 @@ class _SearchOverlay extends StatelessWidget {
                                     )
                                   : null,
                             ),
-                            style:
-                                AppTextStyles.body.copyWith(fontSize: 13),
+                            style: AppTextStyles.body.copyWith(fontSize: 13),
                             onSubmitted: onSubmit,
                             textInputAction: TextInputAction.search,
                           ),
@@ -365,8 +363,7 @@ class _SearchOverlay extends StatelessWidget {
     const distance = Distance();
     const radiusMeters = 600.0;
     final nearby = incidents.where((i) {
-      return distance(LatLng(lat, lng), LatLng(i.lat, i.lng)) <=
-          radiusMeters;
+      return distance(LatLng(lat, lng), LatLng(i.lat, i.lng)) <= radiusMeters;
     }).toList();
 
     if (nearby.isEmpty) return _ZoneRisk.clear;
@@ -411,8 +408,7 @@ class _ZoneRiskChip extends StatelessWidget {
           Container(
             width: 7,
             height: 7,
-            decoration:
-                BoxDecoration(color: color, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 6),
           Text(
@@ -562,8 +558,8 @@ class _AnimatedReportFabState extends State<_AnimatedReportFab> {
                             const SizedBox(width: 8),
                             Text(
                               'Reportar incidencias',
-                              style: AppTextStyles.buttonLabel
-                                  .copyWith(fontSize: 14, color: AppColors.bgLight),
+                              style: AppTextStyles.buttonLabel.copyWith(
+                                  fontSize: 14, color: AppColors.bgLight),
                             ),
                           ],
                         )

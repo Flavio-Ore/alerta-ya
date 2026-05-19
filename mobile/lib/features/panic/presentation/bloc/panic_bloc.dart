@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/constants/app_constants.dart';
 import 'package:alertaya/core/storage/secure_storage_service.dart';
+import 'package:alertaya/features/panic/data/services/audio_recording_service.dart';
 import 'package:alertaya/features/panic/domain/entities/panic_session_entity.dart';
 import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart';
 import 'package:alertaya/features/panic/domain/usecases/deactivate_panic_usecase.dart';
+import 'package:alertaya/features/panic/data/services/panic_channel_service.dart';
 
 part 'panic_event.dart';
 part 'panic_state.dart';
@@ -19,37 +23,52 @@ const _kLng = 'panic_lng';
 
 @lazySingleton
 class PanicBloc extends Bloc<PanicEvent, PanicState> {
-  PanicBloc(this._activate, this._deactivate, this._storage)
-      : super(const PanicIdle()) {
+  PanicBloc(
+    this._activate,
+    this._deactivate,
+    this._storage,
+    this._audioService,
+    this._channelService,
+  ) : super(const PanicIdle()) {
     on<PanicInitialized>(_onInitialized);
     on<PanicActivationRequested>(_onActivationRequested);
     on<PanicDeactivationRequested>(_onDeactivationRequested);
+    // Eventos internos del servicio de grabación
+    on<_PanicAmplitudeUpdated>(_onAmplitudeUpdated);
+    on<_PanicBlockCompleted>(_onBlockCompleted);
   }
 
   final ActivatePanicUseCase _activate;
   final DeactivatePanicUseCase _deactivate;
   final SecureStorageService _storage;
+  final AudioRecordingService _audioService;
+  final PanicChannelService _channelService;
+
+  StreamSubscription<double>? _amplitudeSub;
+  StreamSubscription<String>? _blockSub;
 
   Future<void> _onInitialized(
-      PanicInitialized event, Emitter<PanicState> emit) async {
+    PanicInitialized event,
+    Emitter<PanicState> emit,
+  ) async {
     final sessionId = await _storage.read(_kSessionId);
     if (sessionId == null) return;
 
-    // Sesión activa encontrada en storage — restaurar estado
     final startedAtStr = await _storage.read(_kStartedAt);
     final latStr = await _storage.read(_kLat);
     final lngStr = await _storage.read(_kLng);
-
     if (startedAtStr == null || latStr == null || lngStr == null) return;
 
-    emit(PanicActive(
-      session: PanicSessionEntity(
-        id: sessionId,
-        lat: double.parse(latStr),
-        lng: double.parse(lngStr),
-        startedAt: DateTime.parse(startedAtStr),
-      ),
-    ));
+    final session = PanicSessionEntity(
+      id: sessionId,
+      lat: double.parse(latStr),
+      lng: double.parse(lngStr),
+      startedAt: DateTime.parse(startedAtStr),
+    );
+
+    emit(PanicActive(session: session));
+    // Retomar grabación si la app se cerró con pánico activo
+    await _startRecording(session.id);
   }
 
   Future<void> _onActivationRequested(
@@ -65,7 +84,6 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     await result.fold(
       (failure) async => emit(PanicError(failure.toString())),
       (session) async {
-        // Persistir sesión y PIN en secure storage
         await Future.wait([
           _storage.write(_kSessionId, session.id),
           _storage.write(_kPin, event.pin),
@@ -74,6 +92,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
           _storage.write(_kLng, session.lng.toString()),
         ]);
         emit(PanicActive(session: session));
+        await _startRecording(session.id);
       },
     );
   }
@@ -84,28 +103,79 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   ) async {
     if (state is! PanicActive) return;
     final current = state as PanicActive;
-
     if (current.isPinLocked) return;
 
-    // Verificar PIN contra el almacenado
     final storedPin = await _storage.read(_kPin);
     if (storedPin != event.pin) {
-      final newAttempts = current.failedPinAttempts + 1;
-      emit(current.copyWith(failedPinAttempts: newAttempts));
+      emit(current.copyWith(failedPinAttempts: current.failedPinAttempts + 1));
       return;
     }
 
     emit(const PanicDeactivating());
+    await _stopRecording();
 
     final result = await _deactivate(current.session.id);
 
     await result.fold(
       (failure) async => emit(PanicError(failure.toString())),
       (_) async {
-        await _storage.deleteAll(
-            [_kSessionId, _kPin, _kStartedAt, _kLat, _kLng]);
+        await _storage
+            .deleteAll([_kSessionId, _kPin, _kStartedAt, _kLat, _kLng]);
         emit(const PanicIdle());
       },
     );
+  }
+
+  void _onAmplitudeUpdated(
+    _PanicAmplitudeUpdated event,
+    Emitter<PanicState> emit,
+  ) {
+    if (state is PanicActive) {
+      emit((state as PanicActive).copyWith(amplitude: event.amplitude));
+    }
+  }
+
+  void _onBlockCompleted(
+    _PanicBlockCompleted event,
+    Emitter<PanicState> emit,
+  ) {
+    if (state is! PanicActive) return;
+    final current = state as PanicActive;
+    final updatedPaths = [...current.session.recordingPaths, event.filePath];
+    emit(current.copyWith(
+      session: current.session.copyWith(
+        recordingPaths: updatedPaths,
+        currentBlock: current.session.currentBlock + 1,
+      ),
+    ));
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  Future<void> _startRecording(String sessionId) async {
+    await _audioService.start(sessionId);
+    await _channelService.startService(0);
+
+    _amplitudeSub = _audioService.amplitudeStream.listen(
+      (amp) => add(_PanicAmplitudeUpdated(amp)),
+    );
+    _blockSub = _audioService.blockCompletedStream.listen(
+      (path) => add(_PanicBlockCompleted(path)),
+    );
+  }
+
+  Future<void> _stopRecording() async {
+    await _amplitudeSub?.cancel();
+    await _blockSub?.cancel();
+    _amplitudeSub = null;
+    _blockSub = null;
+    await _audioService.stop();
+    await _channelService.stopService();
+  }
+
+  @override
+  Future<void> close() async {
+    await _stopRecording();
+    return super.close();
   }
 }

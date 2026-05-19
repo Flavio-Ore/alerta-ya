@@ -42,7 +42,7 @@ import 'package:alertaya/features/auth/domain/usecases/sign_in_with_email_usecas
 import 'package:alertaya/features/auth/domain/usecases/sign_out_usecase.dart'
     as _i290;
 import 'package:alertaya/features/auth/domain/usecases/sign_up_with_email_usecase.dart'
-    as _i929;
+    as _i141;
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart'
     as _i70;
 import 'package:alertaya/features/incidents/data/datasources/incident_remote_datasource.dart'
@@ -65,6 +65,10 @@ import 'package:alertaya/features/panic/data/datasources/panic_remote_datasource
     as _i973;
 import 'package:alertaya/features/panic/data/repositories/panic_repository_impl.dart'
     as _i432;
+import 'package:alertaya/features/panic/data/services/audio_recording_service.dart'
+    as _i42;
+import 'package:alertaya/features/panic/data/services/panic_channel_service.dart'
+    as _i419;
 import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart'
     as _i519;
 import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart'
@@ -111,8 +115,12 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i142.SecureStorageService>(
         () => const _i142.SecureStorageService());
+    gh.lazySingleton<_i419.PanicChannelService>(
+        () => _i419.PanicChannelService());
     gh.lazySingleton<_i238.NotificationRemoteDataSource>(
         () => _i238.NotificationRemoteDataSourceImpl(gh<_i361.Dio>()));
+    gh.lazySingleton<_i42.AudioRecordingService>(
+        () => _i42.AudioRecordingService(gh<_i142.SecureStorageService>()));
     gh.lazySingleton<_i973.PanicRemoteDataSource>(
         () => _i973.PanicRemoteDataSourceImpl(gh<_i361.Dio>()));
     gh.lazySingleton<_i658.ReportRepository>(
@@ -152,14 +160,16 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i1069.GetIncidentsUseCase(gh<_i512.IncidentRepository>()));
     gh.factory<_i125.GetIncidentDetailUseCase>(
         () => _i125.GetIncidentDetailUseCase(gh<_i512.IncidentRepository>()));
+    gh.lazySingleton<_i576.AuthRepository>(() => _i779.AuthRepositoryImpl(
+          gh<_i781.FirebaseAuthDataSource>(),
+          gh<_i852.OnboardingLocalDataSource>(),
+        ));
     gh.lazySingleton<_i776.PanicBloc>(() => _i776.PanicBloc(
           gh<_i947.ActivatePanicUseCase>(),
           gh<_i434.DeactivatePanicUseCase>(),
           gh<_i142.SecureStorageService>(),
-        ));
-    gh.lazySingleton<_i576.AuthRepository>(() => _i779.AuthRepositoryImpl(
-          gh<_i781.FirebaseAuthDataSource>(),
-          gh<_i852.OnboardingLocalDataSource>(),
+          gh<_i42.AudioRecordingService>(),
+          gh<_i419.PanicChannelService>(),
         ));
     gh.lazySingleton<_i328.NotificationRepository>(
         () => _i303.NotificationRepositoryImpl(
@@ -172,24 +182,24 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i586.IsFirstLaunchUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i351.SignInWithEmailUseCase>(
         () => _i351.SignInWithEmailUseCase(gh<_i576.AuthRepository>()));
-    gh.factory<_i929.SignUpWithEmailUseCase>(
-        () => _i929.SignUpWithEmailUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i290.SignOutUseCase>(
         () => _i290.SignOutUseCase(gh<_i576.AuthRepository>()));
-    gh.factory<_i70.AuthBloc>(() => _i70.AuthBloc(
-          gh<_i351.SignInWithEmailUseCase>(),
-          gh<_i929.SignUpWithEmailUseCase>(),
-          gh<_i290.SignOutUseCase>(),
-          gh<_i586.IsFirstLaunchUseCase>(),
-          gh<_i401.CompleteOnboardingUseCase>(),
-          gh<_i576.AuthRepository>(),
-        ));
+    gh.factory<_i141.SignUpWithEmailUseCase>(
+        () => _i141.SignUpWithEmailUseCase(gh<_i576.AuthRepository>()));
     gh.lazySingleton<_i352.IncidentsBloc>(() => _i352.IncidentsBloc(
           gh<_i1069.GetIncidentsUseCase>(),
           gh<_i125.GetIncidentDetailUseCase>(),
           gh<_i715.ConfirmIncidentUseCase>(),
           gh<_i414.ConfirmZoneUseCase>(),
           gh<_i635.SocketClient>(),
+        ));
+    gh.factory<_i70.AuthBloc>(() => _i70.AuthBloc(
+          gh<_i351.SignInWithEmailUseCase>(),
+          gh<_i141.SignUpWithEmailUseCase>(),
+          gh<_i290.SignOutUseCase>(),
+          gh<_i586.IsFirstLaunchUseCase>(),
+          gh<_i401.CompleteOnboardingUseCase>(),
+          gh<_i576.AuthRepository>(),
         ));
     gh.factory<_i750.GetNotificationsUseCase>(() =>
         _i750.GetNotificationsUseCase(gh<_i328.NotificationRepository>()));

@@ -4,12 +4,10 @@ abstract class PanicEvent {
   const PanicEvent();
 }
 
-// Chequea secure storage al iniciar la app — recupera sesión activa si existe
 class PanicInitialized extends PanicEvent {
   const PanicInitialized();
 }
 
-// El usuario presionó el botón de pánico y confirmó el PIN de 4 dígitos
 class PanicActivationRequested extends PanicEvent {
   const PanicActivationRequested({
     required this.lat,
@@ -18,11 +16,22 @@ class PanicActivationRequested extends PanicEvent {
   });
   final double lat;
   final double lng;
-  final String pin; // 4 dígitos — se almacena en secure storage
+  final String pin;
 }
 
-// El usuario ingresó su PIN para desactivar
 class PanicDeactivationRequested extends PanicEvent {
   const PanicDeactivationRequested(this.pin);
   final String pin;
+}
+
+// ── Eventos internos — solo el BLoC los dispara ──────────────────────────────
+
+class _PanicAmplitudeUpdated extends PanicEvent {
+  const _PanicAmplitudeUpdated(this.amplitude);
+  final double amplitude;
+}
+
+class _PanicBlockCompleted extends PanicEvent {
+  const _PanicBlockCompleted(this.filePath);
+  final String filePath;
 }

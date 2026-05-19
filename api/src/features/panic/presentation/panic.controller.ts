@@ -3,7 +3,6 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../../core/config/prisma';
 import { PrismaPanicRepository } from '../infrastructure/prisma-panic.repository';
 import { UserLookupService } from '../../incidents/infrastructure/user-lookup.service';
-import { generateSignedUrls } from '../infrastructure/gcs.client';
 import { startPanic } from '../domain/usecases/start-panic.usecase';
 import { stopPanic } from '../domain/usecases/stop-panic.usecase';
 import { AppError } from '../../../core/errors/AppError';
@@ -23,7 +22,7 @@ export async function startPanicSession(req: Request, res: Response, next: NextF
 
     const dto = await startPanic(
       { userId: user.id, lat: body.lat, lng: body.lng },
-      { panicRepo, generateUploadUrls: generateSignedUrls },
+      { panicRepo, generateUploadUrls: async () => [] },
     );
 
     res.status(201).json(dto);

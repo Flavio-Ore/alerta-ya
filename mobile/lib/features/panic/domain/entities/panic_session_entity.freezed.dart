@@ -22,6 +22,8 @@ mixin _$PanicSessionEntity {
   DateTime get startedAt => throw _privateConstructorUsedError;
   DateTime? get endedAt => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
+  int get currentBlock => throw _privateConstructorUsedError;
+  List<String> get recordingPaths => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $PanicSessionEntityCopyWith<PanicSessionEntity> get copyWith =>
@@ -40,7 +42,9 @@ abstract class $PanicSessionEntityCopyWith<$Res> {
       double lng,
       DateTime startedAt,
       DateTime? endedAt,
-      String status});
+      String status,
+      int currentBlock,
+      List<String> recordingPaths});
 }
 
 /// @nodoc
@@ -62,6 +66,8 @@ class _$PanicSessionEntityCopyWithImpl<$Res, $Val extends PanicSessionEntity>
     Object? startedAt = null,
     Object? endedAt = freezed,
     Object? status = null,
+    Object? currentBlock = null,
+    Object? recordingPaths = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -88,6 +94,14 @@ class _$PanicSessionEntityCopyWithImpl<$Res, $Val extends PanicSessionEntity>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as String,
+      currentBlock: null == currentBlock
+          ? _value.currentBlock
+          : currentBlock // ignore: cast_nullable_to_non_nullable
+              as int,
+      recordingPaths: null == recordingPaths
+          ? _value.recordingPaths
+          : recordingPaths // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ) as $Val);
   }
 }
@@ -106,7 +120,9 @@ abstract class _$$PanicSessionEntityImplCopyWith<$Res>
       double lng,
       DateTime startedAt,
       DateTime? endedAt,
-      String status});
+      String status,
+      int currentBlock,
+      List<String> recordingPaths});
 }
 
 /// @nodoc
@@ -126,6 +142,8 @@ class __$$PanicSessionEntityImplCopyWithImpl<$Res>
     Object? startedAt = null,
     Object? endedAt = freezed,
     Object? status = null,
+    Object? currentBlock = null,
+    Object? recordingPaths = null,
   }) {
     return _then(_$PanicSessionEntityImpl(
       id: null == id
@@ -152,6 +170,14 @@ class __$$PanicSessionEntityImplCopyWithImpl<$Res>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as String,
+      currentBlock: null == currentBlock
+          ? _value.currentBlock
+          : currentBlock // ignore: cast_nullable_to_non_nullable
+              as int,
+      recordingPaths: null == recordingPaths
+          ? _value._recordingPaths
+          : recordingPaths // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ));
   }
 }
@@ -165,7 +191,10 @@ class _$PanicSessionEntityImpl implements _PanicSessionEntity {
       required this.lng,
       required this.startedAt,
       this.endedAt,
-      this.status = 'ACTIVE'});
+      this.status = 'ACTIVE',
+      this.currentBlock = 1,
+      final List<String> recordingPaths = const []})
+      : _recordingPaths = recordingPaths;
 
   @override
   final String id;
@@ -180,10 +209,21 @@ class _$PanicSessionEntityImpl implements _PanicSessionEntity {
   @override
   @JsonKey()
   final String status;
+  @override
+  @JsonKey()
+  final int currentBlock;
+  final List<String> _recordingPaths;
+  @override
+  @JsonKey()
+  List<String> get recordingPaths {
+    if (_recordingPaths is EqualUnmodifiableListView) return _recordingPaths;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_recordingPaths);
+  }
 
   @override
   String toString() {
-    return 'PanicSessionEntity(id: $id, lat: $lat, lng: $lng, startedAt: $startedAt, endedAt: $endedAt, status: $status)';
+    return 'PanicSessionEntity(id: $id, lat: $lat, lng: $lng, startedAt: $startedAt, endedAt: $endedAt, status: $status, currentBlock: $currentBlock, recordingPaths: $recordingPaths)';
   }
 
   @override
@@ -197,12 +237,24 @@ class _$PanicSessionEntityImpl implements _PanicSessionEntity {
             (identical(other.startedAt, startedAt) ||
                 other.startedAt == startedAt) &&
             (identical(other.endedAt, endedAt) || other.endedAt == endedAt) &&
-            (identical(other.status, status) || other.status == status));
+            (identical(other.status, status) || other.status == status) &&
+            (identical(other.currentBlock, currentBlock) ||
+                other.currentBlock == currentBlock) &&
+            const DeepCollectionEquality()
+                .equals(other._recordingPaths, _recordingPaths));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, lat, lng, startedAt, endedAt, status);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      lat,
+      lng,
+      startedAt,
+      endedAt,
+      status,
+      currentBlock,
+      const DeepCollectionEquality().hash(_recordingPaths));
 
   @JsonKey(ignore: true)
   @override
@@ -219,7 +271,9 @@ abstract class _PanicSessionEntity implements PanicSessionEntity {
       required final double lng,
       required final DateTime startedAt,
       final DateTime? endedAt,
-      final String status}) = _$PanicSessionEntityImpl;
+      final String status,
+      final int currentBlock,
+      final List<String> recordingPaths}) = _$PanicSessionEntityImpl;
 
   @override
   String get id;
@@ -233,6 +287,10 @@ abstract class _PanicSessionEntity implements PanicSessionEntity {
   DateTime? get endedAt;
   @override
   String get status;
+  @override
+  int get currentBlock;
+  @override
+  List<String> get recordingPaths;
   @override
   @JsonKey(ignore: true)
   _$$PanicSessionEntityImplCopyWith<_$PanicSessionEntityImpl> get copyWith =>

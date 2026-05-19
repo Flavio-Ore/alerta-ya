@@ -6,9 +6,9 @@ class PanicSessionModel {
         id: json['id'] as String,
         lat: (json['lat'] as num).toDouble(),
         lng: (json['lng'] as num).toDouble(),
-        startedAt: DateTime.parse(json['startedAt'] as String),
+        startedAt: DateTime.parse(json['startedAt'] as String).toLocal(),
         endedAt: json['endedAt'] != null
-            ? DateTime.parse(json['endedAt'] as String)
+            ? DateTime.parse(json['endedAt'] as String).toLocal()
             : null,
         status: json['status'] as String? ?? 'ACTIVE',
       );
