@@ -33,15 +33,6 @@ class MainActivity : FlutterActivity() {
                     startService(intent)
                     result.success(null)
                 }
-                "updateElapsed" -> {
-                    val elapsed = call.argument<Int>("elapsedSeconds") ?: 0
-                    val intent = Intent(this, PanicForegroundService::class.java).apply {
-                        action = PanicForegroundService.ACTION_START
-                        putExtra(PanicForegroundService.EXTRA_ELAPSED, elapsed.toLong())
-                    }
-                    startService(intent)
-                    result.success(null)
-                }
                 else -> result.notImplemented()
             }
         }

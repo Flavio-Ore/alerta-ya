@@ -29,14 +29,4 @@ class PanicChannelService {
     }
   }
 
-  /// Actualiza el timer en la notificación persistente
-  Future<void> updateElapsed(int elapsedSeconds) async {
-    try {
-      await _channel.invokeMethod('updateElapsed', {
-        'elapsedSeconds': elapsedSeconds,
-      });
-    } on PlatformException {
-      // Silenciar — actualizaciones frecuentes pueden fallar sin problema
-    }
-  }
 }

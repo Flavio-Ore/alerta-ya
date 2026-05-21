@@ -6,7 +6,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 
 class PanicForegroundService : Service() {
@@ -19,6 +21,21 @@ class PanicForegroundService : Service() {
         const val EXTRA_ELAPSED = "elapsed_seconds"
     }
 
+    private val handler = Handler(Looper.getMainLooper())
+    private var elapsedSeconds = 0L
+
+    private val tickRunnable = object : Runnable {
+        override fun run() {
+            elapsedSeconds++
+            notificationManager.notify(NOTIFICATION_ID, buildNotification(elapsedSeconds))
+            handler.postDelayed(this, 1000)
+        }
+    }
+
+    private val notificationManager by lazy {
+        getSystemService(NotificationManager::class.java)
+    }
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -28,14 +45,17 @@ class PanicForegroundService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 try {
-                    val elapsed = intent.getLongExtra(EXTRA_ELAPSED, 0L)
-                    startForeground(NOTIFICATION_ID, buildNotification(elapsed))
+                    elapsedSeconds = intent.getLongExtra(EXTRA_ELAPSED, 0L)
+                    handler.removeCallbacks(tickRunnable)
+                    startForeground(NOTIFICATION_ID, buildNotification(elapsedSeconds))
+                    handler.postDelayed(tickRunnable, 1000)
                 } catch (e: SecurityException) {
                     // Permiso de micrófono no concedido — continuar sin FGS
                     stopSelf()
                 }
             }
             ACTION_STOP -> {
+                handler.removeCallbacks(tickRunnable)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -43,10 +63,14 @@ class PanicForegroundService : Service() {
         return START_STICKY
     }
 
+    override fun onDestroy() {
+        handler.removeCallbacks(tickRunnable)
+        super.onDestroy()
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun buildNotification(elapsedSeconds: Long): Notification {
-        // Intent para abrir la app al tocar la notificación
         val openIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -63,7 +87,7 @@ class PanicForegroundService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("🚨 MODO PÁNICO ACTIVO")
             .setContentText("Grabando · $timeStr · Toca para desactivar")
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -80,7 +104,6 @@ class PanicForegroundService : Service() {
             description = "Notificación persistente durante emergencia activa"
             setShowBadge(true)
         }
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        notificationManager.createNotificationChannel(channel)
     }
 }
