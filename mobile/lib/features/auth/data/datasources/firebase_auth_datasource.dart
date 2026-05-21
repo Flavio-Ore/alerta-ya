@@ -12,6 +12,7 @@ abstract class FirebaseAuthDataSource {
   Future<UserModel> signUpWithEmail({required String email, required String password});
   Future<UserModel> signInWithGoogle();
   Future<void> signOut();
+  Future<void> deleteAccount();
 }
 
 @LazySingleton(as: FirebaseAuthDataSource)
@@ -89,6 +90,15 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      await _auth.currentUser!.delete();
+    } on FirebaseAuthException catch (e) {
+      throw _mapException(e);
+    }
   }
 
   Exception _mapException(FirebaseAuthException e) => switch (e.code) {

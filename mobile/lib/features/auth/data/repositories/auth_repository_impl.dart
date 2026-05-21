@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/exceptions.dart';
@@ -10,10 +11,11 @@ import 'package:alertaya/features/auth/data/datasources/onboarding_local_datasou
 
 @LazySingleton(as: AuthRepository)
 class AuthRepositoryImpl implements AuthRepository {
-  const AuthRepositoryImpl(this._authDataSource, this._onboardingDataSource);
+  AuthRepositoryImpl(this._authDataSource, this._onboardingDataSource, this._dio);
 
   final FirebaseAuthDataSource _authDataSource;
   final OnboardingLocalDataSource _onboardingDataSource;
+  final Dio _dio;
 
   @override
   Stream<UserEntity?> get authStateChanges =>
@@ -105,6 +107,24 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _onboardingDataSource.completeOnboarding();
       return const Right(unit);
+    } catch (e) {
+      return Left(Failure.unknown(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> deleteAccount() async {
+    try {
+      await _dio.delete('/auth/account');
+      await _authDataSource.deleteAccount();
+      return const Right(unit);
+    } on UnauthorizedException {
+      return const Left(Failure.unauthorized());
+    } on DioException catch (e) {
+      return Left(Failure.server(
+        statusCode: e.response?.statusCode ?? 0,
+        message: e.message,
+      ));
     } catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }

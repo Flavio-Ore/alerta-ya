@@ -35,6 +35,8 @@ import 'package:alertaya/features/auth/domain/repositories/auth_repository.dart'
     as _i576;
 import 'package:alertaya/features/auth/domain/usecases/complete_onboarding_usecase.dart'
     as _i401;
+import 'package:alertaya/features/auth/domain/usecases/delete_account_usecase.dart'
+    as _i222;
 import 'package:alertaya/features/auth/domain/usecases/is_first_launch_usecase.dart'
     as _i586;
 import 'package:alertaya/features/auth/domain/usecases/sign_in_with_email_usecase.dart'
@@ -69,6 +71,10 @@ import 'package:alertaya/features/panic/data/services/audio_recording_service.da
     as _i42;
 import 'package:alertaya/features/panic/data/services/panic_channel_service.dart'
     as _i419;
+import 'package:alertaya/features/panic/data/services/panic_upload_service.dart'
+    as _i705;
+import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart'
+    as _i321;
 import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart'
     as _i519;
 import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart'
@@ -117,6 +123,10 @@ extension GetItInjectableX on _i174.GetIt {
         () => const _i142.SecureStorageService());
     gh.lazySingleton<_i419.PanicChannelService>(
         () => _i419.PanicChannelService());
+    gh.lazySingleton<_i705.PanicUploadService>(
+        () => _i705.PanicUploadService());
+    gh.lazySingleton<_i321.TrustedContactService>(
+        () => _i321.TrustedContactService(gh<_i142.SecureStorageService>()));
     gh.lazySingleton<_i238.NotificationRemoteDataSource>(
         () => _i238.NotificationRemoteDataSourceImpl(gh<_i361.Dio>()));
     gh.lazySingleton<_i42.AudioRecordingService>(
@@ -152,6 +162,15 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i947.ActivatePanicUseCase(gh<_i519.PanicRepository>()));
     gh.factory<_i434.DeactivatePanicUseCase>(
         () => _i434.DeactivatePanicUseCase(gh<_i519.PanicRepository>()));
+    gh.lazySingleton<_i776.PanicBloc>(() => _i776.PanicBloc(
+          gh<_i947.ActivatePanicUseCase>(),
+          gh<_i434.DeactivatePanicUseCase>(),
+          gh<_i142.SecureStorageService>(),
+          gh<_i42.AudioRecordingService>(),
+          gh<_i419.PanicChannelService>(),
+          gh<_i705.PanicUploadService>(),
+          gh<_i321.TrustedContactService>(),
+        ));
     gh.factory<_i715.ConfirmIncidentUseCase>(
         () => _i715.ConfirmIncidentUseCase(gh<_i512.IncidentRepository>()));
     gh.factory<_i414.ConfirmZoneUseCase>(
@@ -163,13 +182,7 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i576.AuthRepository>(() => _i779.AuthRepositoryImpl(
           gh<_i781.FirebaseAuthDataSource>(),
           gh<_i852.OnboardingLocalDataSource>(),
-        ));
-    gh.lazySingleton<_i776.PanicBloc>(() => _i776.PanicBloc(
-          gh<_i947.ActivatePanicUseCase>(),
-          gh<_i434.DeactivatePanicUseCase>(),
-          gh<_i142.SecureStorageService>(),
-          gh<_i42.AudioRecordingService>(),
-          gh<_i419.PanicChannelService>(),
+          gh<_i361.Dio>(),
         ));
     gh.lazySingleton<_i328.NotificationRepository>(
         () => _i303.NotificationRepositoryImpl(
@@ -178,6 +191,8 @@ extension GetItInjectableX on _i174.GetIt {
             ));
     gh.factory<_i401.CompleteOnboardingUseCase>(
         () => _i401.CompleteOnboardingUseCase(gh<_i576.AuthRepository>()));
+    gh.factory<_i222.DeleteAccountUseCase>(
+        () => _i222.DeleteAccountUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i586.IsFirstLaunchUseCase>(
         () => _i586.IsFirstLaunchUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i351.SignInWithEmailUseCase>(

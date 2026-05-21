@@ -24,4 +24,6 @@ abstract class AuthRepository {
   Future<Either<Failure, bool>> isFirstLaunch();
 
   Future<Either<Failure, Unit>> completeOnboarding();
+
+  Future<Either<Failure, Unit>> deleteAccount();
 }
