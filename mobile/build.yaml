@@ -1,0 +1,5 @@
+# build.yaml — Configuración de build_runner para AlertaYa Mobile
+#
+# retrofit y retrofit_generator removidos del proyecto hasta FASE 2 (Sprint 2).
+# En ese momento se decide: retrofit vs Dio puro para los API clients REST.
+# Ver mobile/PLAN.md § FASE 2 para contexto.

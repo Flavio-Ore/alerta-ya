@@ -25,8 +25,9 @@ export async function listIncidents(req: Request, res: Response, next: NextFunct
     const query = req.query as {
       severity?: string;
       district?: string;
-      since?: string;
-      page?: string;
+      since?:    string;
+      status?:   string;
+      page?:     string;
       pageSize?: string;
     };
 
@@ -35,7 +36,8 @@ export async function listIncidents(req: Request, res: Response, next: NextFunct
         severity: query.severity as Parameters<typeof getIncidents>[0]['severity'],
         district: query.district,
         sinceISO: query.since,
-        page: query.page ? parseInt(query.page, 10) : 1,
+        status:   query.status as Parameters<typeof getIncidents>[0]['status'],
+        page:     query.page ? parseInt(query.page, 10) : 1,
         pageSize: query.pageSize ? parseInt(query.pageSize, 10) : 20,
       },
       incidentRepo,

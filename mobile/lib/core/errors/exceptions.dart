@@ -14,7 +14,9 @@ class RateLimitException implements Exception {
   final String? message;
 }
 
-class UnauthorizedException implements Exception {}
+class UnauthorizedException implements Exception {
+  const UnauthorizedException();
+}
 
 class CacheException implements Exception {
   const CacheException([this.message]);

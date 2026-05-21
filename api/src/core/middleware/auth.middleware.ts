@@ -3,13 +3,18 @@ import { getAuth } from "firebase-admin/auth";
 
 import { AppError } from "../errors/AppError";
 
+export type AuthorityRole = 'AUTHORITY' | 'ADMIN';
+const KNOWN_ROLES: readonly AuthorityRole[] = ['AUTHORITY', 'ADMIN'];
+
 // Extiende Request para incluir el usuario autenticado
 declare global {
   namespace Express {
     interface Request {
       user?: {
-        uid: string;
-        authority?: boolean; // Firebase custom claim — solo cuentas de autoridad
+        uid:       string;
+        role?:     AuthorityRole | null; // Firebase custom claim — null si es ciudadano
+        // Compat legacy — algunos tokens viejos podrían usar `authority: true`
+        authority?: boolean;
       };
     }
   }
@@ -17,6 +22,7 @@ declare global {
 
 /**
  * Middleware de autenticación — verifica token Firebase en cada request.
+ * Lee custom claim `role` (AUTHORITY|ADMIN) o el legacy `authority: true`.
  * No exponer el uid en respuestas públicas.
  */
 export const authMiddleware = async (
@@ -34,9 +40,16 @@ export const authMiddleware = async (
 
   try {
     const decodedToken = await getAuth().verifyIdToken(token);
+
+    const rawRole = decodedToken['role'];
+    const role = typeof rawRole === 'string' && KNOWN_ROLES.includes(rawRole as AuthorityRole)
+      ? (rawRole as AuthorityRole)
+      : null;
+
     req.user = {
-      uid: decodedToken.uid,
-      authority: decodedToken['authority'] === true,
+      uid:       decodedToken.uid,
+      role,
+      authority: decodedToken['authority'] === true || role !== null,
     };
     next();
   } catch {

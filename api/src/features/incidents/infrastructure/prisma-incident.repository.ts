@@ -19,9 +19,19 @@ export class PrismaIncidentRepository implements IncidentRepository {
     const skip = (page - 1) * pageSize;
     const now = new Date();
 
+    // Status filter — comportamiento según valor:
+    //   - 'ALL'      → trae todos los status, sin filtro de expiración (panel autoridad)
+    //   - <enum>     → filtra por ese status exacto, sin filtro de expiración
+    //   - undefined  → solo ACTIVE no expirados (default app móvil)
+    const statusWhere =
+      filters.status === 'ALL'
+        ? {}
+        : filters.status
+          ? { status: filters.status }
+          : { status: IncidentStatus.ACTIVE, expiresAt: { gt: now } };
+
     const where = {
-      status: IncidentStatus.ACTIVE,
-      expiresAt: { gt: now },
+      ...statusWhere,
       ...(filters.severity && { severity: filters.severity }),
       ...(filters.district && { district: { contains: filters.district, mode: 'insensitive' as const } }),
       ...(filters.sinceISO && { createdAt: { gte: new Date(filters.sinceISO) } }),
