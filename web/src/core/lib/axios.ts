@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 import { API_BASE_URL } from '../constants/api';
+import { firebaseAuthRepository } from '../../features/auth/infrastructure/firebase-auth.repository';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -10,20 +11,22 @@ export const apiClient = axios.create({
   },
 });
 
-// Request interceptor — agregar token Firebase
 apiClient.interceptors.request.use(async (config) => {
-  // TODO(auth): obtener token Firebase del store y agregarlo
-  // const token = store.getState().auth.token;
-  // if (token) config.headers.Authorization = `Bearer ${token}`;
+  const token = await firebaseAuthRepository.getIdToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
-// Response interceptor — manejo centralizado de errores
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      // TODO(auth): redirigir a login
+      await firebaseAuthRepository.signOut();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
     }
     return Promise.reject(error);
   },

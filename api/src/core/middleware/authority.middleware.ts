@@ -2,17 +2,18 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors/AppError';
 
 /**
- * Middleware que verifica que el usuario autenticado es una autoridad.
+ * Middleware que verifica que el usuario autenticado es una autoridad o admin.
  *
  * Requiere que authMiddleware haya corrido antes (req.user debe existir).
  *
- * Cómo funciona:
- * - Firebase Admin SDK permite agregar custom claims a un token: { authority: true }
- * - El panel web de autoridades usa cuentas Firebase con ese claim seteado
- * - Cualquier ciudadano autenticado sin ese claim recibe 403
+ * Convención de custom claims (Firebase):
+ *   - role: 'AUTHORITY' → autoridad operativa (PNP, Serenazgo, Municipalidad)
+ *   - role: 'ADMIN'     → super-usuario del sistema
+ *   - sin claim         → ciudadano común (rechazado por este middleware)
  *
- * Para setear el claim en una cuenta (solo admin puede hacerlo):
- *   await admin.auth().setCustomUserClaims(uid, { authority: true })
+ * Para setear el claim usar el script: api/scripts/set-role.ts
+ *
+ * Compat legacy: tokens con `authority: true` (sin role) también se aceptan.
  */
 export function authorityMiddleware(
   req: Request,
@@ -24,10 +25,10 @@ export function authorityMiddleware(
     return;
   }
 
-  // El auth middleware ya verificó el token y decodificó los custom claims
-  const claims = req.user as { uid: string; authority?: boolean };
+  const hasRole = req.user.role === 'AUTHORITY' || req.user.role === 'ADMIN';
+  const hasLegacyAuthority = req.user.authority === true;
 
-  if (!claims.authority) {
+  if (!hasRole && !hasLegacyAuthority) {
     next(new AppError(403, 'Acceso restringido a autoridades'));
     return;
   }
