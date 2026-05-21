@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 
@@ -20,6 +22,7 @@ const _kPin = 'panic_pin';
 const _kStartedAt = 'panic_started_at';
 const _kLat = 'panic_lat';
 const _kLng = 'panic_lng';
+const _kFailedAttempts = 'panic_failed_attempts';
 
 @lazySingleton
 class PanicBloc extends Bloc<PanicEvent, PanicState> {
@@ -60,6 +63,9 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     final lngStr = await _storage.read(_kLng);
     if (startedAtStr == null || latStr == null || lngStr == null) return;
 
+    final failedStr = await _storage.read(_kFailedAttempts);
+    final failedAttempts = int.tryParse(failedStr ?? '0') ?? 0;
+
     final session = PanicSessionEntity(
       id: sessionId,
       lat: double.parse(latStr),
@@ -67,7 +73,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
       startedAt: DateTime.parse(startedAtStr),
     );
 
-    emit(PanicActive(session: session));
+    emit(PanicActive(session: session, failedPinAttempts: failedAttempts));
     // Retomar grabación si la app se cerró con pánico activo
     await _startRecording(session.id, session.startedAt);
   }
@@ -87,7 +93,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
       (session) async {
         await Future.wait([
           _storage.write(_kSessionId, session.id),
-          _storage.write(_kPin, event.pin),
+          _storage.write(_kPin, _hashPin(event.pin)),
           _storage.write(_kStartedAt, session.startedAt.toIso8601String()),
           _storage.write(_kLat, session.lat.toString()),
           _storage.write(_kLng, session.lng.toString()),
@@ -107,8 +113,10 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     if (current.isPinLocked) return;
 
     final storedPin = await _storage.read(_kPin);
-    if (storedPin != event.pin) {
-      emit(current.copyWith(failedPinAttempts: current.failedPinAttempts + 1));
+    if (storedPin != _hashPin(event.pin)) {
+      final newAttempts = current.failedPinAttempts + 1;
+      await _storage.write(_kFailedAttempts, newAttempts.toString());
+      emit(current.copyWith(failedPinAttempts: newAttempts));
       return;
     }
 
@@ -120,8 +128,9 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     await result.fold(
       (failure) async => emit(PanicError(failure.toString())),
       (_) async {
-        await _storage
-            .deleteAll([_kSessionId, _kPin, _kStartedAt, _kLat, _kLng]);
+        await _storage.deleteAll(
+          [_kSessionId, _kPin, _kStartedAt, _kLat, _kLng, _kFailedAttempts],
+        );
         emit(const PanicIdle());
       },
     );
@@ -183,6 +192,9 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     await _audioService.stop();
     await _channelService.stopService();
   }
+
+  String _hashPin(String pin) =>
+      sha256.convert(utf8.encode(pin)).toString();
 
   @override
   Future<void> close() async {
