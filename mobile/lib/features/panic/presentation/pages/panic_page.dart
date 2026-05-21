@@ -117,7 +117,7 @@ class _PanicPageState extends State<PanicPage> {
           backgroundColor: AppColors.accent,
           behavior: SnackBarBehavior.floating,
           action: gpsDeniedForever
-              ? SnackBarAction(
+              ? const SnackBarAction(
                   label: 'Configuración',
                   textColor: Colors.white,
                   onPressed: Geolocator.openAppSettings,

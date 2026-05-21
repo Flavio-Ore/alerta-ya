@@ -37,7 +37,7 @@ class RouteRemoteDatasource {
       final label = String.fromCharCode(65 + entry.key); // A, B, C...
       final route = entry.value as Map<String, dynamic>;
 
-      final coords = (route['geometry']['coordinates'] as List<dynamic>)
+      final coords = ((route['geometry'] as Map<String, dynamic>)['coordinates'] as List<dynamic>)
           .map((c) {
             final pair = c as List<dynamic>;
             return LatLng(pair[1] as double, pair[0] as double);

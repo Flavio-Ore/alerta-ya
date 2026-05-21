@@ -63,7 +63,7 @@ class AudioRecordingService {
 
     // Rotar bloque cada 10 minutos
     _blockTimer = Timer.periodic(
-      Duration(minutes: AppConstants.panicBlockMinutes),
+      const Duration(minutes: AppConstants.panicBlockMinutes),
       (_) => _rotateBlock(),
     );
 

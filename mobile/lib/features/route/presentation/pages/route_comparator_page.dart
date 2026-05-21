@@ -278,7 +278,7 @@ class _InputCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Tu ubicación actual',
+                    const Text('Tu ubicación actual',
                         style: AppTextStyles.bodySecondary),
                     const SizedBox(height: 4),
                     const Divider(height: 1),
@@ -288,7 +288,7 @@ class _InputCard extends StatelessWidget {
                         Expanded(
                           child: TextField(
                             controller: controller,
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               hintText: 'Destino...',
                               hintStyle: AppTextStyles.bodySecondary,
                               border: InputBorder.none,
@@ -360,7 +360,7 @@ class _BottomPanel extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Comparar Rutas', style: AppTextStyles.h2),
+                  const Text('Comparar Rutas', style: AppTextStyles.h2),
                   if (state is RouteLoaded)
                     Text(TimeOfDay.now().format(context),
                         style: AppTextStyles.caption),
@@ -384,12 +384,12 @@ class _PanelContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state is RouteInitial) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
         child: Column(
           children: [
-            const Icon(Icons.route_outlined, size: 44, color: AppColors.textMuted),
-            const SizedBox(height: 10),
+            Icon(Icons.route_outlined, size: 44, color: AppColors.textMuted),
+            SizedBox(height: 10),
             Text(
               'Ingresá un destino para comparar las rutas más seguras',
               style: AppTextStyles.bodySecondary,

@@ -43,7 +43,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
         service: _contactService,
       ),
     );
-    if (saved == true) _loadContact();
+    if (saved == true) await _loadContact();
   }
 
   @override
