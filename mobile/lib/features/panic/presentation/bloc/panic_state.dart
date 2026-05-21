@@ -17,13 +17,13 @@ class PanicActive extends PanicState {
     required this.session,
     this.failedPinAttempts = 0,
     this.amplitude = 0.0,
+    this.trustedContactName,
   });
 
   final PanicSessionEntity session;
   final int failedPinAttempts;
-  // Nivel de amplitud del micrófono — 0.0 (silencio) a 1.0 (máximo)
-  // Se actualiza cada 100ms desde AudioRecordingService
   final double amplitude;
+  final String? trustedContactName;
 
   bool get isPinLocked => failedPinAttempts >= AppConstants.panicPinMaxAttempts;
 
@@ -36,6 +36,7 @@ class PanicActive extends PanicState {
         session: session ?? this.session,
         failedPinAttempts: failedPinAttempts ?? this.failedPinAttempts,
         amplitude: amplitude ?? this.amplitude,
+        trustedContactName: trustedContactName,
       );
 }
 

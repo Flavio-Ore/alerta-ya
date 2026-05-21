@@ -85,6 +85,8 @@ class _PanicPageState extends State<PanicPage> {
   Future<void> _activatePanic(String pin) async {
     double lat = -12.0464;
     double lng = -77.0428;
+    bool gpsUnavailable = false;
+    bool gpsDeniedForever = false;
 
     try {
       var permission = await Geolocator.checkPermission();
@@ -98,10 +100,33 @@ class _PanicPageState extends State<PanicPage> {
         );
         lat = position.latitude;
         lng = position.longitude;
+      } else {
+        gpsUnavailable = true;
+        gpsDeniedForever = permission == LocationPermission.deniedForever;
       }
     } catch (_) {
-      // Lima centro como fallback si falla el GPS
+      gpsUnavailable = true;
     }
+
+    if (gpsUnavailable && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Sin acceso a tu ubicación. Se usará Lima centro como referencia.',
+          ),
+          backgroundColor: AppColors.accent,
+          behavior: SnackBarBehavior.floating,
+          action: gpsDeniedForever
+              ? SnackBarAction(
+                  label: 'Configuración',
+                  textColor: Colors.white,
+                  onPressed: Geolocator.openAppSettings,
+                )
+              : null,
+        ),
+      );
+    }
+
     // Solicitar permiso de micrófono antes de iniciar el servicio
     final micStatus = await Permission.microphone.request();
     if (!micStatus.isGranted) {
@@ -367,33 +392,7 @@ class _ActiveView extends StatelessWidget {
                     const SizedBox(height: 20),
 
                     // ── Chip GPS compartido ──────────────────────
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.severityLow.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(100),
-                        border: Border.all(
-                          color: AppColors.severityLow.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.location_on,
-                              color: AppColors.severityLow, size: 14),
-                          SizedBox(width: 6),
-                          Text(
-                            'GPS en vivo compartido con Mamá',
-                            style: TextStyle(
-                              color: AppColors.severityLow,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _GpsContactChip(contactName: state.trustedContactName),
 
                     const SizedBox(height: 32),
 
@@ -689,6 +688,49 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
+// ─── GPS Contact Chip ─────────────────────────────────────────────────────────
+
+class _GpsContactChip extends StatelessWidget {
+  const _GpsContactChip({required this.contactName});
+  final String? contactName;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasContact = contactName != null;
+    final color = hasContact ? AppColors.severityLow : AppColors.textMuted;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            hasContact ? Icons.location_on : Icons.location_off_outlined,
+            color: color,
+            size: 14,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            hasContact
+                ? 'GPS compartido con $contactName'
+                : 'Sin contacto de confianza configurado',
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Loading ──────────────────────────────────────────────────────────────────
 
 class _LoadingView extends StatelessWidget {
@@ -718,8 +760,6 @@ class _PinSetupSheet extends StatefulWidget {
 class _PinSetupSheetState extends State<_PinSetupSheet> {
   final _controller = TextEditingController();
 
-  bool get _ready => _controller.text.length == 4;
-
   @override
   void initState() {
     super.initState();
@@ -735,6 +775,9 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
 
   void _onPinChanged() {
     if (mounted) setState(() {});
+    if (_controller.text.length == 4) {
+      widget.onConfirm(_controller.text);
+    }
   }
 
   @override
@@ -782,27 +825,6 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
               hintText: '••••',
               hintStyle: const TextStyle(
                   color: Colors.white24, fontSize: 36, letterSpacing: 20),
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed:
-                  _ready ? () => widget.onConfirm(_controller.text) : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.severityCritical,
-                disabledBackgroundColor: Colors.white12,
-                foregroundColor: Colors.white,
-                disabledForegroundColor: Colors.white38,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text(
-                'Activar alarma',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
             ),
           ),
         ],

@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:async' show StreamSubscription, unawaited;
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
@@ -8,10 +8,12 @@ import 'package:injectable/injectable.dart';
 import 'package:alertaya/core/constants/app_constants.dart';
 import 'package:alertaya/core/storage/secure_storage_service.dart';
 import 'package:alertaya/features/panic/data/services/audio_recording_service.dart';
+import 'package:alertaya/features/panic/data/services/panic_channel_service.dart';
+import 'package:alertaya/features/panic/data/services/panic_upload_service.dart';
+import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart';
 import 'package:alertaya/features/panic/domain/entities/panic_session_entity.dart';
 import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart';
 import 'package:alertaya/features/panic/domain/usecases/deactivate_panic_usecase.dart';
-import 'package:alertaya/features/panic/data/services/panic_channel_service.dart';
 
 part 'panic_event.dart';
 part 'panic_state.dart';
@@ -23,6 +25,7 @@ const _kStartedAt = 'panic_started_at';
 const _kLat = 'panic_lat';
 const _kLng = 'panic_lng';
 const _kFailedAttempts = 'panic_failed_attempts';
+const _kUploadUrls = 'panic_upload_urls';
 
 @lazySingleton
 class PanicBloc extends Bloc<PanicEvent, PanicState> {
@@ -32,6 +35,8 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     this._storage,
     this._audioService,
     this._channelService,
+    this._uploadService,
+    this._contactService,
   ) : super(const PanicIdle()) {
     on<PanicInitialized>(_onInitialized);
     on<PanicActivationRequested>(_onActivationRequested);
@@ -46,10 +51,12 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   final SecureStorageService _storage;
   final AudioRecordingService _audioService;
   final PanicChannelService _channelService;
+  final PanicUploadService _uploadService;
+  final TrustedContactService _contactService;
 
   StreamSubscription<double>? _amplitudeSub;
   StreamSubscription<String>? _blockSub;
-  Timer? _elapsedTimer;
+  List<String> _uploadUrls = [];
 
   Future<void> _onInitialized(
     PanicInitialized event,
@@ -66,6 +73,12 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     final failedStr = await _storage.read(_kFailedAttempts);
     final failedAttempts = int.tryParse(failedStr ?? '0') ?? 0;
 
+    final uploadUrlsStr = await _storage.read(_kUploadUrls);
+    if (uploadUrlsStr != null) {
+      _uploadUrls =
+          List<String>.from(jsonDecode(uploadUrlsStr) as List<dynamic>);
+    }
+
     final session = PanicSessionEntity(
       id: sessionId,
       lat: double.parse(latStr),
@@ -73,7 +86,12 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
       startedAt: DateTime.parse(startedAtStr),
     );
 
-    emit(PanicActive(session: session, failedPinAttempts: failedAttempts));
+    final contact = await _contactService.getContact();
+    emit(PanicActive(
+      session: session,
+      failedPinAttempts: failedAttempts,
+      trustedContactName: contact?.name,
+    ));
     // Retomar grabación si la app se cerró con pánico activo
     await _startRecording(session.id, session.startedAt);
   }
@@ -90,16 +108,22 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
 
     await result.fold(
       (failure) async => emit(PanicError(failure.toString())),
-      (session) async {
+      (startResult) async {
+        _uploadUrls = startResult.uploadUrls;
+        final contact = await _contactService.getContact();
         await Future.wait([
-          _storage.write(_kSessionId, session.id),
+          _storage.write(_kSessionId, startResult.session.id),
           _storage.write(_kPin, _hashPin(event.pin)),
-          _storage.write(_kStartedAt, session.startedAt.toIso8601String()),
-          _storage.write(_kLat, session.lat.toString()),
-          _storage.write(_kLng, session.lng.toString()),
+          _storage.write(_kStartedAt, startResult.session.startedAt.toIso8601String()),
+          _storage.write(_kLat, startResult.session.lat.toString()),
+          _storage.write(_kLng, startResult.session.lng.toString()),
+          _storage.write(_kUploadUrls, jsonEncode(_uploadUrls)),
         ]);
-        emit(PanicActive(session: session));
-        await _startRecording(session.id, session.startedAt);
+        emit(PanicActive(
+          session: startResult.session,
+          trustedContactName: contact?.name,
+        ));
+        await _startRecording(startResult.session.id, startResult.session.startedAt);
       },
     );
   }
@@ -121,16 +145,23 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     }
 
     emit(const PanicDeactivating());
-    await _stopRecording();
+    await _stopRecording(current);
 
     final result = await _deactivate(current.session.id);
 
     await result.fold(
       (failure) async => emit(PanicError(failure.toString())),
       (_) async {
-        await _storage.deleteAll(
-          [_kSessionId, _kPin, _kStartedAt, _kLat, _kLng, _kFailedAttempts],
-        );
+        _uploadUrls = [];
+        await _storage.deleteAll([
+          _kSessionId,
+          _kPin,
+          _kStartedAt,
+          _kLat,
+          _kLng,
+          _kFailedAttempts,
+          _kUploadUrls,
+        ]);
         emit(const PanicIdle());
       },
     );
@@ -151,6 +182,17 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   ) {
     if (state is! PanicActive) return;
     final current = state as PanicActive;
+
+    final urlIndex = current.session.currentBlock - 1;
+    if (urlIndex >= 0 && urlIndex < _uploadUrls.length) {
+      // Fire-and-forget: el bloque siguiente graba mientras este se sube
+      unawaited(
+        _uploadService
+            .uploadBlock(_uploadUrls[urlIndex], event.filePath)
+            .catchError((_) {}),
+      );
+    }
+
     final updatedPaths = [...current.session.recordingPaths, event.filePath];
     emit(current.copyWith(
       session: current.session.copyWith(
@@ -167,13 +209,6 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     final initialElapsed = DateTime.now().difference(startedAt).inSeconds;
     await _channelService.startService(initialElapsed);
 
-    _elapsedTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => _channelService.updateElapsed(
-        DateTime.now().difference(startedAt).inSeconds,
-      ),
-    );
-
     _amplitudeSub = _audioService.amplitudeStream.listen(
       (amp) => add(_PanicAmplitudeUpdated(amp)),
     );
@@ -182,14 +217,26 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     );
   }
 
-  Future<void> _stopRecording() async {
-    _elapsedTimer?.cancel();
-    _elapsedTimer = null;
+  Future<void> _stopRecording([PanicActive? activeState]) async {
     await _amplitudeSub?.cancel();
     await _blockSub?.cancel();
     _amplitudeSub = null;
     _blockSub = null;
-    await _audioService.stop();
+
+    final finalPaths = await _audioService.stop();
+
+    // Subir el bloque parcial final si la desactivación fue intencional
+    if (activeState != null && finalPaths.isNotEmpty) {
+      final urlIndex = activeState.session.currentBlock - 1;
+      if (urlIndex >= 0 && urlIndex < _uploadUrls.length) {
+        try {
+          await _uploadService
+              .uploadBlock(_uploadUrls[urlIndex], finalPaths.first)
+              .timeout(const Duration(seconds: 10));
+        } catch (_) {}
+      }
+    }
+
     await _channelService.stopService();
   }
 
