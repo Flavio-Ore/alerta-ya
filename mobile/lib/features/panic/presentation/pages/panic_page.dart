@@ -50,8 +50,9 @@ class _PanicPageState extends State<PanicPage> {
     _timer?.cancel();
     _elapsed = DateTime.now().difference(startedAt);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => _elapsed = DateTime.now().difference(startedAt));
+      }
     });
   }
 
@@ -143,6 +144,15 @@ class _PanicPageState extends State<PanicPage> {
         }
       },
       child: BlocConsumer<PanicBloc, PanicState>(
+        listenWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
+        buildWhen: (prev, curr) {
+          if (prev is PanicActive && curr is PanicActive) {
+            return prev.failedPinAttempts != curr.failedPinAttempts ||
+                prev.session != curr.session ||
+                prev.isPinLocked != curr.isPinLocked;
+          }
+          return true;
+        },
         listener: (context, state) {
           if (state is PanicActive) {
             _startTimer(state.session.startedAt);
@@ -373,12 +383,12 @@ class _ActiveView extends StatelessWidget {
                     const SizedBox(height: 32),
 
                     // ── Visualizador de audio ────────────────────
-                    _AudioVisualizer(amplitude: state.amplitude),
+                    const _AmplitudeVisualizer(),
 
                     const SizedBox(height: 16),
 
                     // ── Label GRABANDO ───────────────────────────
-                    Text(
+                    const Text(
                       'GRABANDO',
                       style: TextStyle(
                         color: AppColors.severityCritical,
@@ -481,6 +491,20 @@ class _ActiveView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─── Wrapper de amplitud aislado ──────────────────────────────────────────────
+
+class _AmplitudeVisualizer extends StatelessWidget {
+  const _AmplitudeVisualizer();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<PanicBloc, PanicState, double>(
+      selector: (s) => s is PanicActive ? s.amplitude : 0.0,
+      builder: (_, amp) => _AudioVisualizer(amplitude: amp),
     );
   }
 }
@@ -589,7 +613,10 @@ class _PinDotsState extends State<_PinDots> {
         ),
         // Dots visuales encima — tocar abre el teclado
         GestureDetector(
-          onTap: () => _focusNode.requestFocus(),
+          onTap: () {
+            _focusNode.requestFocus();
+            SystemChannels.textInput.invokeMethod('TextInput.show');
+          },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(4, (i) {

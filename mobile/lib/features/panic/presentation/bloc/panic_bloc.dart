@@ -46,6 +46,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
 
   StreamSubscription<double>? _amplitudeSub;
   StreamSubscription<String>? _blockSub;
+  Timer? _elapsedTimer;
 
   Future<void> _onInitialized(
     PanicInitialized event,
@@ -68,7 +69,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
 
     emit(PanicActive(session: session));
     // Retomar grabación si la app se cerró con pánico activo
-    await _startRecording(session.id);
+    await _startRecording(session.id, session.startedAt);
   }
 
   Future<void> _onActivationRequested(
@@ -92,7 +93,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
           _storage.write(_kLng, session.lng.toString()),
         ]);
         emit(PanicActive(session: session));
-        await _startRecording(session.id);
+        await _startRecording(session.id, session.startedAt);
       },
     );
   }
@@ -152,9 +153,17 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  Future<void> _startRecording(String sessionId) async {
+  Future<void> _startRecording(String sessionId, DateTime startedAt) async {
     await _audioService.start(sessionId);
-    await _channelService.startService(0);
+    final initialElapsed = DateTime.now().difference(startedAt).inSeconds;
+    await _channelService.startService(initialElapsed);
+
+    _elapsedTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _channelService.updateElapsed(
+        DateTime.now().difference(startedAt).inSeconds,
+      ),
+    );
 
     _amplitudeSub = _audioService.amplitudeStream.listen(
       (amp) => add(_PanicAmplitudeUpdated(amp)),
@@ -165,6 +174,8 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   }
 
   Future<void> _stopRecording() async {
+    _elapsedTimer?.cancel();
+    _elapsedTimer = null;
     await _amplitudeSub?.cancel();
     await _blockSub?.cancel();
     _amplitudeSub = null;

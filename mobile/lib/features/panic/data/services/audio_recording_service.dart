@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -49,14 +50,12 @@ class AudioRecordingService {
     // Generar o recuperar clave AES-256 de esta sesión
     final stored = await _storage.read(_kEncryptionKey);
     if (stored != null) {
-      _encryptionKey = Uint8List.fromList(
-        stored.codeUnits,
-      );
+      _encryptionKey = Uint8List.fromList(base64Decode(stored));
     } else {
       _encryptionKey = EncryptionUtil.generateKey();
       await _storage.write(
         _kEncryptionKey,
-        String.fromCharCodes(_encryptionKey),
+        base64Encode(_encryptionKey),
       );
     }
 
