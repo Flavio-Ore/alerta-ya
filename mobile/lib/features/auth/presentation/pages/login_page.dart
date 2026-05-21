@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/widgets/alertaya_button.dart';
-import '../bloc/auth_bloc.dart';
+import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -19,23 +19,42 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  bool _isRegistering = false;
+  bool _isGoogleAuth = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _toggleMode() {
+    setState(() {
+      _isRegistering = !_isRegistering;
+      _formKey.currentState?.reset();
+      _confirmPasswordController.clear();
+    });
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    context.read<AuthBloc>().add(
-          AuthEmailSignInRequested(
+    _isGoogleAuth = false;
+    if (_isRegistering) {
+      context.read<AuthBloc>().add(AuthEmailSignUpRequested(
             email: _emailController.text.trim(),
             password: _passwordController.text,
-          ),
-        );
+          ));
+    } else {
+      context.read<AuthBloc>().add(AuthEmailSignInRequested(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          ));
+    }
   }
 
   @override
@@ -43,12 +62,27 @@ class _LoginPageState extends State<LoginPage> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          context.go('/map');
+          final message = _isGoogleAuth
+              ? '¡Sesión iniciada con Google!'
+              : _isRegistering
+                  ? '¡Cuenta creada! Bienvenido a AlertaYa'
+                  : '¡Bienvenido de vuelta!';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: AppColors.severityLow,
+              duration: const Duration(milliseconds: 1500),
+            ),
+          );
+          Future.delayed(const Duration(milliseconds: 400), () {
+            if (context.mounted) context.go('/map');
+          });
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(_mapError(state.message)),
               backgroundColor: AppColors.severityCritical,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
@@ -79,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
                               width: 48,
                             ),
                             const SizedBox(height: 8),
-                            Row(
+                            const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text('Alerta', style: AppTextStyles.logoAlerta),
@@ -90,31 +124,42 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 40),
-                      Text('Ingresá a tu cuenta', style: AppTextStyles.h2, textAlign: TextAlign.center),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Text(
+                          _isRegistering ? 'Crea tu cuenta' : 'Ingresa a tu cuenta',
+                          key: ValueKey(_isRegistering),
+                          style: AppTextStyles.h2,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Anónimo para todos, seguro para vos.',
+                      const Text(
+                        'Anónimo para todos, más seguro para ti.',
                         style: AppTextStyles.bodySecondary,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 32),
-                      // Google (próximamente)
+                      // Google
                       _SocialButton(
                         label: 'Continuar con Google',
                         icon: Icons.g_mobiledata,
-                        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Google Sign-In disponible próximamente')),
-                        ),
+                        onPressed: () {
+                          _isGoogleAuth = true;
+                          context
+                              .read<AuthBloc>()
+                              .add(const AuthGoogleSignInRequested());
+                        },
                       ),
                       const SizedBox(height: 24),
-                      Row(
+                      const Row(
                         children: [
-                          const Expanded(child: Divider()),
+                          Expanded(child: Divider()),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: EdgeInsets.symmetric(horizontal: 12),
                             child: Text('o', style: AppTextStyles.bodySecondary),
                           ),
-                          const Expanded(child: Divider()),
+                          Expanded(child: Divider()),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -124,11 +169,11 @@ class _LoginPageState extends State<LoginPage> {
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         decoration: _inputDecoration(
-                          hint: 'tu@correo.com',
+                          hint: 'correo@gmail.com',
                           icon: Icons.mail_outline,
                         ),
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Ingresá tu email';
+                          if (v == null || v.trim().isEmpty) return 'Ingresa tu email';
                           if (!v.contains('@')) return 'Email inválido';
                           return null;
                         },
@@ -138,29 +183,67 @@ class _LoginPageState extends State<LoginPage> {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _submit(),
+                        textInputAction: _isRegistering
+                            ? TextInputAction.next
+                            : TextInputAction.done,
+                        onFieldSubmitted: _isRegistering ? null : (_) => _submit(),
                         decoration: _inputDecoration(
                           hint: 'Contraseña',
                           icon: Icons.lock_outline,
                           suffix: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
                               color: AppColors.textSecondary,
                             ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            onPressed: () =>
+                                setState(() => _obscurePassword = !_obscurePassword),
                           ),
                         ),
                         validator: (v) {
-                          if (v == null || v.isEmpty) return 'Ingresá tu contraseña';
+                          if (v == null || v.isEmpty) return 'Ingresa tu contraseña';
                           if (v.length < 6) return 'Mínimo 6 caracteres';
                           return null;
                         },
                       ),
+                      // Confirmar contraseña — solo en registro
+                      if (_isRegistering) ...[
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _confirmPasswordController,
+                          obscureText: _obscureConfirmPassword,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) => _submit(),
+                          decoration: _inputDecoration(
+                            hint: 'Confirma tu contraseña',
+                            icon: Icons.lock_outline,
+                            suffix: IconButton(
+                              icon: Icon(
+                                _obscureConfirmPassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: AppColors.textSecondary,
+                              ),
+                              onPressed: () => setState(() =>
+                                  _obscureConfirmPassword = !_obscureConfirmPassword),
+                            ),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.isEmpty) {
+                              return 'Confirma tu contraseña';
+                            }
+                            if (v != _passwordController.text) {
+                              return 'Las contraseñas no coinciden';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) => AlertaYaButton(
-                          label: 'Ingresar',
+                          label: _isRegistering ? 'Crear cuenta' : 'Ingresar',
                           onPressed: state is AuthLoading ? null : _submit,
                           isLoading: state is AuthLoading,
                         ),
@@ -168,14 +251,18 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 16),
                       Center(
                         child: TextButton(
-                          onPressed: () {},
+                          onPressed: _toggleMode,
                           child: RichText(
                             text: TextSpan(
                               style: AppTextStyles.bodySecondary,
                               children: [
-                                const TextSpan(text: '¿No tenés cuenta? '),
                                 TextSpan(
-                                  text: 'Registrate',
+                                  text: _isRegistering
+                                      ? '¿Ya tienes cuenta? '
+                                      : '¿No tienes cuenta? ',
+                                ),
+                                TextSpan(
+                                  text: _isRegistering ? 'Ingresar' : 'Regístrate',
                                   style: AppTextStyles.bodySecondary.copyWith(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.w700,
@@ -189,8 +276,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const Spacer(),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
                         child: Text(
                           'Tu identidad es anónima para otros usuarios y autoridades.',
                           style: AppTextStyles.caption,
@@ -240,20 +327,30 @@ class _LoginPageState extends State<LoginPage> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.severityCritical),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       );
 
   String _mapError(String raw) {
     if (raw.contains('unauthorized') || raw.contains('Unauthorized')) {
       return 'Email o contraseña incorrectos';
     }
-    if (raw.contains('network') || raw.contains('Network')) {
-      return 'Sin conexión. Verificá tu internet';
+    if (raw.contains('email-already-in-use')) {
+      return 'Ya existe una cuenta con ese email';
+    }
+    if (raw.contains('weak-password')) {
+      return 'La contraseña es muy débil. Usa mínimo 6 caracteres';
+    }
+    if (raw.contains('network_error') || raw.contains('network') || raw.contains('Network')) {
+      return 'Sin conexión. Verifica tu internet';
     }
     if (raw.contains('rateLimit') || raw.contains('RateLimit')) {
-      return 'Demasiados intentos. Esperá unos minutos';
+      return 'Demasiados intentos. Espera unos minutos';
     }
-    return 'Ocurrió un error. Intentá de nuevo';
+    if (raw.contains('sign_in_failed') || raw.contains('DEVELOPER_ERROR')) {
+      return 'Error al iniciar sesión con Google. Verifica tu conexión o intenta más tarde';
+    }
+    return 'Ocurrió un error. Intenta de nuevo';
   }
 }
 

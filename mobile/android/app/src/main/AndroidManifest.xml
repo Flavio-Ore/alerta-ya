@@ -1,6 +1,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Permisos -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+
+    <!-- Android < 13 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
+    <!-- Ubicación — requerido por geolocator -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    
+    <!-- Micrófono — save modo offline -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+
     <application
-        android:label="alertaya"
+        android:label="AlertaYa"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -30,6 +49,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <service
+        android:name=".PanicForegroundService"
+        android:foregroundServiceType="microphone"
+        android:exported="false"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

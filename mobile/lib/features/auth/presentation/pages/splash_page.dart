@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
-import '../bloc/auth_bloc.dart';
+import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -68,7 +68,7 @@ class _SplashPageState extends State<SplashPage>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text('Alerta', style: AppTextStyles.logoAlerta.copyWith(color: AppColors.textWhite)),
-                        Text('Ya', style: AppTextStyles.logoYa),
+                        const Text('Ya', style: AppTextStyles.logoYa),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -92,7 +92,7 @@ class _SplashPageState extends State<SplashPage>
                         animation: _progressController,
                         builder: (context, _) => LinearProgressIndicator(
                           value: _progressController.value,
-                          backgroundColor: AppColors.textMuted.withOpacity(0.3),
+                          backgroundColor: AppColors.textMuted.withValues(alpha: 0.3),
                           valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                           borderRadius: BorderRadius.circular(1),
                         ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/widgets/alertaya_button.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class ReportConfirmationPage extends StatefulWidget {
   const ReportConfirmationPage({super.key});
@@ -15,6 +16,7 @@ class ReportConfirmationPage extends StatefulWidget {
 class _ReportConfirmationPageState extends State<ReportConfirmationPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _spinController;
+  late final Animation<double> _spinAnimation;
 
   @override
   void initState() {
@@ -23,6 +25,7 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+    _spinAnimation = Tween<double>(begin: 0, end: -1).animate(_spinController);
   }
 
   @override
@@ -38,11 +41,16 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
       appBar: AppBar(
         backgroundColor: AppColors.bgLight,
         elevation: 0,
-        leading: const SizedBox.shrink(),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => context.go('/map'),
+        ),
         title: Row(
           children: [
-            Text('Alerta', style: AppTextStyles.logoAlerta.copyWith(fontSize: 18)),
-            Text('Ya', style: AppTextStyles.logoYa.copyWith(fontSize: 18)),
+            SvgPicture.asset(
+              'assets/images/logo/alertaya_logo_horizontal.svg',
+              height: 28,
+            )
           ],
         ),
       ),
@@ -63,18 +71,18 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
                 child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
               ),
               const SizedBox(height: 20),
-              Text('Reporte Enviado', style: AppTextStyles.h1),
+              const Text('Reporte Enviado', style: AppTextStyles.h1),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
+                  const Text(
                     'La IA está verificando coherencia...',
                     style: AppTextStyles.bodySecondary,
                   ),
                   const SizedBox(width: 6),
                   RotationTransition(
-                    turns: _spinController,
+                    turns: _spinAnimation,
                     child: const Icon(Icons.sync, color: AppColors.primary, size: 16),
                   ),
                 ],
@@ -104,7 +112,7 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
               ),
               const SizedBox(height: 32),
               // Timeline de estado
-              _StatusTimeline(spinController: _spinController),
+              _StatusTimeline(spinAnimation: _spinAnimation),
               const SizedBox(height: 24),
               // Nota de threshold
               Container(
@@ -158,8 +166,8 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
 }
 
 class _StatusTimeline extends StatelessWidget {
-  const _StatusTimeline({required this.spinController});
-  final AnimationController spinController;
+  const _StatusTimeline({required this.spinAnimation});
+  final Animation<double> spinAnimation;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +185,7 @@ class _StatusTimeline extends StatelessWidget {
         ),
         _TimelineItem(
           customIcon: RotationTransition(
-            turns: spinController,
+            turns: spinAnimation,
             child: const Icon(Icons.sync, color: AppColors.accent, size: 14),
           ),
           circleBg: AppColors.bgGray,
@@ -189,7 +197,7 @@ class _StatusTimeline extends StatelessWidget {
           lineColor: AppColors.textMuted.withValues(alpha: 0.3),
           isDone: false,
         ),
-        _TimelineItem(
+        const _TimelineItem(
           circleBg: AppColors.bgGray,
           circleBorder: AppColors.textMuted,
           title: 'Publicando en el mapa',

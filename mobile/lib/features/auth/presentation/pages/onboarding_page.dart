@@ -5,7 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/widgets/alertaya_button.dart';
-import '../bloc/auth_bloc.dart';
+import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 
 class _Slide {
   const _Slide({required this.headline, required this.body, required this.icon});

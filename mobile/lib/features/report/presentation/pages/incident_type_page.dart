@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/widgets/alertaya_button.dart';
 import 'package:alertaya/features/report/domain/entities/incident_type.dart';
-import '../bloc/report_bloc.dart';
+import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart';
 
 class IncidentTypePage extends StatefulWidget {
   const IncidentTypePage({super.key});
@@ -52,7 +54,7 @@ class _IncidentTypePageState extends State<IncidentTypePage> {
       ),
       body: Column(
         children: [
-          _ProgressBar(step: 1),
+          const _ProgressBar(step: 1),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -129,25 +131,97 @@ class _ProgressBar extends StatelessWidget {
   }
 }
 
-class _GpsChip extends StatelessWidget {
+class _GpsChip extends StatefulWidget {
   const _GpsChip();
 
   @override
+  State<_GpsChip> createState() => _GpsChipState();
+}
+
+class _GpsChipState extends State<_GpsChip> {
+  // null = cargando, '' = fallback, non-empty = ubicación real
+  String? _location;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveLocation();
+  }
+
+  Future<void> _resolveLocation() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _setLocation('');
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      final placemarks =
+          await placemarkFromCoordinates(pos.latitude, pos.longitude);
+
+      if (placemarks.isEmpty) {
+        _setLocation('');
+        return;
+      }
+
+      final p = placemarks.first;
+      final label = _pickLabel(p);
+      _setLocation(label);
+    } catch (_) {
+      _setLocation('');
+    }
+  }
+
+  String _pickLabel(Placemark p) {
+    final district =
+        p.subLocality?.isNotEmpty == true ? p.subLocality! : null;
+    final city = p.locality?.isNotEmpty == true ? p.locality! : null;
+    return district ?? city ?? '';
+  }
+
+  void _setLocation(String value) {
+    if (mounted) setState(() => _location = value);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final loading = _location == null;
+    final label = loading
+        ? 'Obteniendo ubicación...'
+        : _location!.isNotEmpty
+            ? 'GPS activo · $_location'
+            : 'GPS activo · Lima, Perú';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.severityLow.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: AppColors.severityLow.withValues(alpha: 0.25)),
+        border:
+            Border.all(color: AppColors.severityLow.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.location_on, color: AppColors.severityLow, size: 16),
+          if (loading)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.severityLow,
+              ),
+            )
+          else
+            const Icon(Icons.location_on, color: AppColors.severityLow, size: 16),
           const SizedBox(width: 6),
           Text(
-            'GPS activo · Lima, Perú',
+            label,
             style: AppTextStyles.label.copyWith(
               color: AppColors.severityLow,
               fontWeight: FontWeight.w700,
@@ -266,7 +340,7 @@ class _InfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.bgGray,
         borderRadius: BorderRadius.circular(14),
-        border: Border(left: BorderSide(color: AppColors.accent, width: 3)),
+        border: const Border(left: BorderSide(color: AppColors.accent, width: 3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

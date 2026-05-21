@@ -3,9 +3,9 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../../core/config/prisma';
 import { PrismaPanicRepository } from '../infrastructure/prisma-panic.repository';
 import { UserLookupService } from '../../incidents/infrastructure/user-lookup.service';
-import { generateSignedUrls } from '../infrastructure/gcs.client';
 import { startPanic } from '../domain/usecases/start-panic.usecase';
 import { stopPanic } from '../domain/usecases/stop-panic.usecase';
+import { generateSignedUrls } from '../infrastructure/gcs.client';
 import { AppError } from '../../../core/errors/AppError';
 
 const panicRepo = new PrismaPanicRepository(prisma);

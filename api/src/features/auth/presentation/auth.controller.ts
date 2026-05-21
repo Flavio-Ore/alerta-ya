@@ -50,6 +50,59 @@ export async function registerDeviceToken(
 }
 
 /**
+ * DELETE /auth/account
+ * Elimina la cuenta del usuario: borra datos en Postgres, limpia Redis.
+ * El cliente elimina el usuario de Firebase Auth después de recibir 204.
+ */
+export async function deleteAccount(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user?.uid) {
+      next(new AppError(401, 'No autenticado'));
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { firebaseUid: req.user.uid },
+      include: { deviceTokens: { select: { token: true, district: true } } },
+    });
+
+    if (!user) {
+      res.status(204).send();
+      return;
+    }
+
+    await prisma.$transaction([
+      prisma.notification.deleteMany({ where: { userId: user.id } }),
+      prisma.deviceToken.deleteMany({ where: { userId: user.id } }),
+      prisma.panicSession.deleteMany({ where: { userId: user.id } }),
+      prisma.report.deleteMany({ where: { userId: user.id } }),
+      prisma.user.delete({ where: { id: user.id } }),
+    ]);
+
+    try {
+      await Promise.all(
+        user.deviceTokens.map((dt) =>
+          (redis as Redis).srem(
+            `${REDIS_DISTRICT_TOKENS_PREFIX}:${dt.district}:tokens`,
+            dt.token,
+          ),
+        ),
+      );
+    } catch {
+      // Fail open
+    }
+
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * DELETE /auth/device-token
  * Elimina el token FCM al hacer logout.
  * El usuario deja de recibir push notifications.

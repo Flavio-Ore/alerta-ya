@@ -32,6 +32,7 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
       lat: event.lat,
       lng: event.lng,
       formData: event.formData,
+      mediaPaths: event.mediaPaths,
     ));
 
     result.fold(

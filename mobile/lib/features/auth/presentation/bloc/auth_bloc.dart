@@ -7,6 +7,7 @@ import 'package:alertaya/features/auth/domain/usecases/complete_onboarding_useca
 import 'package:alertaya/features/auth/domain/usecases/is_first_launch_usecase.dart';
 import 'package:alertaya/features/auth/domain/usecases/sign_in_with_email_usecase.dart';
 import 'package:alertaya/features/auth/domain/usecases/sign_out_usecase.dart';
+import 'package:alertaya/features/auth/domain/usecases/sign_up_with_email_usecase.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -15,6 +16,7 @@ part 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc(
     this._signInWithEmail,
+    this._signUpWithEmail,
     this._signOut,
     this._isFirstLaunch,
     this._completeOnboarding,
@@ -22,11 +24,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onCheckRequested);
     on<AuthEmailSignInRequested>(_onEmailSignIn);
+    on<AuthEmailSignUpRequested>(_onEmailSignUp);
+    on<AuthGoogleSignInRequested>(_onGoogleSignIn);
     on<AuthSignOutRequested>(_onSignOut);
     on<AuthOnboardingCompleted>(_onOnboardingCompleted);
   }
 
   final SignInWithEmailUseCase _signInWithEmail;
+  final SignUpWithEmailUseCase _signUpWithEmail;
   final SignOutUseCase _signOut;
   final IsFirstLaunchUseCase _isFirstLaunch;
   final CompleteOnboardingUseCase _completeOnboarding;
@@ -41,7 +46,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final firstResult = await _isFirstLaunch();
     final isFirst = firstResult.fold((_) => false, (v) => v);
 
-    // Firebase emite el estado actual inmediatamente al suscribirse
     final user = await _repository.authStateChanges.first;
 
     if (user != null) {
@@ -63,6 +67,42 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) => emit(AuthError(failure.toString())),
+      (user) => emit(AuthAuthenticated(user)),
+    );
+  }
+
+  Future<void> _onEmailSignUp(
+    AuthEmailSignUpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+
+    final result = await _signUpWithEmail(
+      SignUpWithEmailParams(email: event.email, password: event.password),
+    );
+
+    result.fold(
+      (failure) => emit(AuthError(failure.toString())),
+      (user) => emit(AuthAuthenticated(user)),
+    );
+  }
+
+  Future<void> _onGoogleSignIn(
+    AuthGoogleSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+
+    final result = await _repository.signInWithGoogle();
+
+    result.fold(
+      (failure) {
+        if (failure.toString().contains('sign_in_cancelled')) {
+          emit(const AuthUnauthenticated(isFirstLaunch: false));
+        } else {
+          emit(AuthError(failure.toString()));
+        }
+      },
       (user) => emit(AuthAuthenticated(user)),
     );
   }
