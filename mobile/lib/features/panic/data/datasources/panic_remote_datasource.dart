@@ -2,11 +2,11 @@ import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/exceptions.dart';
-import 'package:alertaya/features/panic/domain/entities/panic_session_entity.dart';
+import 'package:alertaya/features/panic/domain/entities/panic_start_result.dart';
 import 'package:alertaya/features/panic/data/models/panic_session_model.dart';
 
 abstract class PanicRemoteDataSource {
-  Future<PanicSessionEntity> startSession({
+  Future<PanicStartResult> startSession({
     required double lat,
     required double lng,
   });
@@ -19,7 +19,7 @@ class PanicRemoteDataSourceImpl implements PanicRemoteDataSource {
   final Dio _dio;
 
   @override
-  Future<PanicSessionEntity> startSession({
+  Future<PanicStartResult> startSession({
     required double lat,
     required double lng,
   }) async {
@@ -28,7 +28,7 @@ class PanicRemoteDataSourceImpl implements PanicRemoteDataSource {
         '/panic/sessions',
         data: {'lat': lat, 'lng': lng},
       );
-      return PanicSessionModel.fromJson(response.data!);
+      return PanicSessionModel.fromJsonFull(response.data!);
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) throw const UnauthorizedException();
       throw ServerException(

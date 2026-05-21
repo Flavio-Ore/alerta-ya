@@ -4,7 +4,7 @@ import 'package:injectable/injectable.dart';
 import 'package:alertaya/core/errors/exceptions.dart';
 import 'package:alertaya/core/errors/failures.dart';
 import 'package:alertaya/core/network/network_info.dart';
-import 'package:alertaya/features/panic/domain/entities/panic_session_entity.dart';
+import 'package:alertaya/features/panic/domain/entities/panic_start_result.dart';
 import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart';
 import 'package:alertaya/features/panic/data/datasources/panic_remote_datasource.dart';
 
@@ -15,7 +15,7 @@ class PanicRepositoryImpl implements PanicRepository {
   final NetworkInfo _networkInfo;
 
   @override
-  Future<Either<Failure, PanicSessionEntity>> startSession({
+  Future<Either<Failure, PanicStartResult>> startSession({
     required double lat,
     required double lng,
   }) async {
