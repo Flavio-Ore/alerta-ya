@@ -27,12 +27,13 @@ class PanicForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                val elapsed = intent.getLongExtra(EXTRA_ELAPSED, 0L)
-                startForeground(NOTIFICATION_ID, buildNotification(elapsed))
+                try {
+                    val elapsed = intent.getLongExtra(EXTRA_ELAPSED, 0L)
+                    startForeground(NOTIFICATION_ID, buildNotification(elapsed))
                 } catch (e: SecurityException) {
-                // Permiso de micrófono no concedido — continuar sin FGS
-                stopSelf()
-            }
+                    // Permiso de micrófono no concedido — continuar sin FGS
+                    stopSelf()
+                }
             }
             ACTION_STOP -> {
                 stopForeground(STOP_FOREGROUND_REMOVE)
