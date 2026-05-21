@@ -184,6 +184,7 @@ class _PanicPageState extends State<PanicPage> {
           return _IdleView(
             onPanicTap: _showPinSetupSheet,
             onBack: () => context.go('/map'),
+            onSettings: () => context.push('/panic/settings'),
           );
         },
       ),
@@ -194,9 +195,14 @@ class _PanicPageState extends State<PanicPage> {
 // ─── S09: Idle ────────────────────────────────────────────────────────────────
 
 class _IdleView extends StatelessWidget {
-  const _IdleView({required this.onPanicTap, required this.onBack});
+  const _IdleView({
+    required this.onPanicTap,
+    required this.onBack,
+    required this.onSettings,
+  });
   final VoidCallback onPanicTap;
   final VoidCallback onBack;
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -279,6 +285,15 @@ class _IdleView extends StatelessWidget {
                 onPressed: onBack,
               ),
             ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IconButton(
+                icon: const Icon(Icons.settings_outlined,
+                    color: AppColors.textSecondary),
+                onPressed: onSettings,
+              ),
+            ),
           ],
         ),
       ),
@@ -313,7 +328,7 @@ class _ActiveView extends StatelessWidget {
     final locked = state.isPinLocked;
     final attempts = state.failedPinAttempts;
     final block = state.session.currentBlock;
-    final maxBlocks =
+    const maxBlocks =
         AppConstants.panicMaxRecordingMinutes ~/ AppConstants.panicBlockMinutes;
 
     return Scaffold(

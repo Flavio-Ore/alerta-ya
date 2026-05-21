@@ -10,6 +10,7 @@ import 'package:alertaya/features/auth/presentation/pages/splash_page.dart';
 import 'package:alertaya/features/incidents/presentation/pages/incident_detail_page.dart';
 import 'package:alertaya/features/map/presentation/pages/map_page.dart';
 import 'package:alertaya/features/panic/presentation/pages/panic_page.dart';
+import 'package:alertaya/features/panic/presentation/pages/panic_settings_page.dart';
 import 'package:alertaya/features/route/presentation/pages/route_comparator_page.dart';
 import 'package:alertaya/features/profile/presentation/pages/profile_page.dart';
 import 'package:alertaya/features/report/presentation/pages/dynamic_form_page.dart';
@@ -42,6 +43,12 @@ GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
       GoRoute(
         path: '/panic',
         builder: (context, state) => const PanicPage(),
+        routes: [
+          GoRoute(
+            path: 'settings',
+            builder: (context, state) => const PanicSettingsPage(),
+          ),
+        ],
       ),
 
       // Flujo de reporte — modal flow iniciado desde el FAB en /map
