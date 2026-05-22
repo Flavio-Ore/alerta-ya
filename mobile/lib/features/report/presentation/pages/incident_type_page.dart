@@ -36,18 +36,18 @@ class _IncidentTypePageState extends State<IncidentTypePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        backgroundColor: AppColors.bgLight,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
           onPressed: () => context.pop(),
         ),
-        title: Text('Reportar Incidente', style: AppTextStyles.h2.copyWith(fontSize: 17)),
+        title: Text('Reportar Incidente', style: AppTextStyles.headlineMd.copyWith(fontSize: 17)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.close, color: AppColors.textPrimary),
+            icon: const Icon(Icons.close, color: AppColors.onSurface),
             onPressed: () => context.go('/map'),
           ),
         ],
@@ -63,8 +63,8 @@ class _IncidentTypePageState extends State<IncidentTypePage> {
                 children: [
                   Text(
                     'Paso 1 de 3 — ¿Qué está pasando?',
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textSecondary,
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: AppColors.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -124,7 +124,7 @@ class _ProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return LinearProgressIndicator(
       value: step / 3,
-      backgroundColor: AppColors.bgGray,
+      backgroundColor: AppColors.surfaceContainerLow,
       valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
       minHeight: 3,
     );
@@ -220,11 +220,15 @@ class _GpsChipState extends State<_GpsChip> {
           else
             const Icon(Icons.location_on, color: AppColors.severityLow, size: 16),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: AppTextStyles.label.copyWith(
-              color: AppColors.severityLow,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelMd.copyWith(
+                color: AppColors.severityLow,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -251,15 +255,15 @@ class _TypeCard extends StatelessWidget {
     final bgColor = isSelected
         ? AppColors.primary
         : isEnabled
-            ? AppColors.bgLight
-            : AppColors.bgGray;
-    final borderColor = isSelected ? AppColors.primary : AppColors.textMuted;
+            ? AppColors.surface
+            : AppColors.surfaceContainerLow;
+    final borderColor = isSelected ? AppColors.primary : AppColors.outline;
     final iconColor = isSelected
-        ? AppColors.bgLight
+        ? AppColors.surface
         : isEnabled
             ? config.color
-            : AppColors.textMuted;
-    final labelColor = isSelected ? AppColors.bgLight : AppColors.textPrimary;
+            : AppColors.outline;
+    final labelColor = isSelected ? AppColors.surface : AppColors.onSurface;
 
     return GestureDetector(
       onTap: onTap,
@@ -286,8 +290,8 @@ class _TypeCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               type.label,
-              style: AppTextStyles.body.copyWith(
-                color: isEnabled ? labelColor : AppColors.textMuted,
+              style: AppTextStyles.bodyLg.copyWith(
+                color: isEnabled ? labelColor : AppColors.outline,
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
@@ -297,12 +301,12 @@ class _TypeCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.textMuted.withValues(alpha: 0.15),
+                  color: AppColors.outline.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(100),
                 ),
                 child: Text(
                   'Próximamente',
-                  style: AppTextStyles.label.copyWith(color: AppColors.textMuted),
+                  style: AppTextStyles.labelMd.copyWith(color: AppColors.outline),
                 ),
               ),
             ],
@@ -318,7 +322,7 @@ class _TypeCard extends StatelessWidget {
         IncidentType.accident =>
           const _CardConfig(icon: Icons.car_crash_outlined, color: AppColors.severityModerate),
         IncidentType.suspicious =>
-          const _CardConfig(icon: Icons.visibility_outlined, color: AppColors.textSecondary),
+          const _CardConfig(icon: Icons.visibility_outlined, color: AppColors.onSurfaceVariant),
         IncidentType.harassment =>
           const _CardConfig(icon: Icons.warning_amber_outlined, color: AppColors.severityModerate),
         IncidentType.extortion =>
@@ -338,19 +342,19 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgGray,
+        color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
-        border: const Border(left: BorderSide(color: AppColors.accent, width: 3)),
+        border: const Border(left: BorderSide(color: AppColors.secondary, width: 3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, color: AppColors.accent, size: 20),
+          const Icon(Icons.info_outline, color: AppColors.secondary, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               'Seleccionar la categoría correcta ayuda a las unidades de respuesta a prepararse antes de llegar.',
-              style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.labelMd.copyWith(color: AppColors.onSurfaceVariant),
             ),
           ),
         ],

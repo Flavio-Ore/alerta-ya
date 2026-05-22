@@ -10,6 +10,7 @@ import { getIncidents } from '../domain/usecases/get-incidents.usecase';
 import { getIncidentById } from '../domain/usecases/get-incident-by-id.usecase';
 import { confirmIncident } from '../domain/usecases/confirm-incident.usecase';
 import { updateIncidentStatus } from '../domain/usecases/update-incident-status.usecase';
+import { getMyReports } from '../domain/usecases/get-my-reports.usecase';
 import { PrismaNotificationRepository } from '../../notifications/infrastructure/prisma-notification.repository';
 import { AppError } from '../../../core/errors/AppError';
 import { IncidentType, IncidentStatus } from '@prisma/client';
@@ -75,6 +76,10 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
       mediaUrls: string[];
     };
 
+    console.log(
+      `[REPORT] 📝 new report uid=${req.user.uid} type=${body.type} lat=${body.lat} lng=${body.lng}`,
+    );
+
     const dto = await createReport(
       {
         uid: req.user.uid,
@@ -86,6 +91,10 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
         mediaUrls: body.mediaUrls ?? [],
       },
       { incidentRepo, reportRepo, redis },
+    );
+
+    console.log(
+      `[REPORT] ${dto ? '✓ publicado como incident' : '⏳ pendiente — primer reporte, esperando confirm'} (${dto ? 'incidentId=' + dto.id : 'no incident'})`,
     );
 
     res.status(dto ? 201 : 200).json({ incident: dto });
@@ -136,6 +145,57 @@ export async function patchIncidentStatus(
     );
 
     res.json(dto);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listMyReports(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user?.uid) {
+      next(new AppError(401, 'No autenticado'));
+      return;
+    }
+
+    const user = await userLookup.findOrCreate(req.user.uid);
+
+    const query = req.query as { page?: string | number; pageSize?: string | number };
+    const page = typeof query.page === 'number' ? query.page : parseInt(String(query.page ?? '1'), 10);
+    const pageSize =
+      typeof query.pageSize === 'number'
+        ? query.pageSize
+        : parseInt(String(query.pageSize ?? '20'), 10);
+
+    const result = await getMyReports(
+      { userId: user.id, page, pageSize },
+      reportRepo,
+    );
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function cancelReport(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user?.uid) {
+      next(new AppError(401, 'No autenticado'));
+      return;
+    }
+
+    const user = await userLookup.findOrCreate(req.user.uid);
+    await reportRepo.cancelReport(req.params['reportId']!, user.id);
+
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

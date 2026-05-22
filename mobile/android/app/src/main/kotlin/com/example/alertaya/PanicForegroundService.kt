@@ -6,6 +6,10 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -19,10 +23,12 @@ class PanicForegroundService : Service() {
         const val ACTION_START = "START_PANIC"
         const val ACTION_STOP = "STOP_PANIC"
         const val EXTRA_ELAPSED = "elapsed_seconds"
+        const val EXTRA_ALARM_SOUND = "alarm_sound"
     }
 
     private val handler = Handler(Looper.getMainLooper())
     private var elapsedSeconds = 0L
+    private var mediaPlayer: MediaPlayer? = null
 
     private val tickRunnable = object : Runnable {
         override fun run() {
@@ -46,9 +52,11 @@ class PanicForegroundService : Service() {
             ACTION_START -> {
                 try {
                     elapsedSeconds = intent.getLongExtra(EXTRA_ELAPSED, 0L)
+                    val alarmSound = intent.getBooleanExtra(EXTRA_ALARM_SOUND, true)
                     handler.removeCallbacks(tickRunnable)
                     startForeground(NOTIFICATION_ID, buildNotification(elapsedSeconds))
                     handler.postDelayed(tickRunnable, 1000)
+                    if (alarmSound) startAlarmSound()
                 } catch (e: SecurityException) {
                     // Permiso de micrófono no concedido — continuar sin FGS
                     stopSelf()
@@ -56,6 +64,7 @@ class PanicForegroundService : Service() {
             }
             ACTION_STOP -> {
                 handler.removeCallbacks(tickRunnable)
+                stopAlarmSound()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -65,10 +74,46 @@ class PanicForegroundService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(tickRunnable)
+        stopAlarmSound()
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    // ── Alarma sonora — usa STREAM_ALARM que ignora silent/vibrate ────────────
+
+    private fun startAlarmSound() {
+        try {
+            val alarmUri: Uri =
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                    ?: return
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                setDataSource(applicationContext, alarmUri)
+                isLooping = true
+                prepare()
+                start()
+            }
+        } catch (_: Exception) {
+            // Fail silencioso — la grabación y el servicio siguen activos
+        }
+    }
+
+    private fun stopAlarmSound() {
+        try {
+            mediaPlayer?.let {
+                if (it.isPlaying) it.stop()
+                it.release()
+            }
+        } catch (_: Exception) {}
+        mediaPlayer = null
+    }
 
     private fun buildNotification(elapsedSeconds: Long): Notification {
         val openIntent = Intent(this, MainActivity::class.java).apply {

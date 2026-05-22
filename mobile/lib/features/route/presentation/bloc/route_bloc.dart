@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
@@ -22,18 +21,9 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
       RouteRequested event, Emitter<RouteState> emit) async {
     emit(const RouteLoading());
     try {
-      final locations = await locationFromAddress(event.destinationQuery);
-      if (locations.isEmpty) {
-        emit(const RouteFailure('No se encontró la dirección ingresada.'));
-        return;
-      }
-      final dest = LatLng(
-        locations.first.latitude,
-        locations.first.longitude,
-      );
       final result = await _compareRoutes(CompareRoutesParams(
         origin: event.origin,
-        destination: dest,
+        destination: event.destination,
         incidents: event.incidents,
       ));
       result.fold(
@@ -49,7 +39,7 @@ class RouteBloc extends Bloc<RouteEvent, RouteState> {
           emit(RouteLoaded(
             options: sorted,
             selectedIndex: 0,
-            destination: dest,
+            destination: event.destination,
           ));
         },
       );

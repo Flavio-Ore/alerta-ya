@@ -18,12 +18,17 @@ class PanicActive extends PanicState {
     this.failedPinAttempts = 0,
     this.amplitude = 0.0,
     this.trustedContactName,
+    this.recordAudio = true,
+    this.alarmSound = true,
   });
 
   final PanicSessionEntity session;
   final int failedPinAttempts;
   final double amplitude;
   final String? trustedContactName;
+  // Snapshot de la elección del usuario al activar — no se actualiza durante la sesión.
+  final bool recordAudio;
+  final bool alarmSound;
 
   bool get isPinLocked => failedPinAttempts >= AppConstants.panicPinMaxAttempts;
 
@@ -37,6 +42,8 @@ class PanicActive extends PanicState {
         failedPinAttempts: failedPinAttempts ?? this.failedPinAttempts,
         amplitude: amplitude ?? this.amplitude,
         trustedContactName: trustedContactName,
+        recordAudio: recordAudio,
+        alarmSound: alarmSound,
       );
 }
 

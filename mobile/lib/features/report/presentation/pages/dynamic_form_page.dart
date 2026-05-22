@@ -34,6 +34,13 @@ class _DynamicFormPageState extends State<DynamicFormPage> {
   final Map<String, String> _answers = {};
   final List<XFile> _selectedMedia = [];
   final _picker = ImagePicker();
+  final _notesController = TextEditingController();
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -66,6 +73,7 @@ class _DynamicFormPageState extends State<DynamicFormPage> {
     }
 
     if (!mounted) return;
+    final notes = _notesController.text.trim();
     context.read<ReportBloc>().add(ReportSubmitted(
           type: _type,
           lat: lat,
@@ -74,13 +82,14 @@ class _DynamicFormPageState extends State<DynamicFormPage> {
           mediaPaths: _selectedMedia.isEmpty
               ? null
               : _selectedMedia.map((f) => f.path).toList(),
+          notes: notes.isEmpty ? null : notes,
         ));
   }
 
   void _showPickerSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -93,7 +102,7 @@ class _DynamicFormPageState extends State<DynamicFormPage> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textMuted,
+                color: AppColors.outline,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -182,18 +191,18 @@ class _DynamicFormPageState extends State<DynamicFormPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bgLight,
+        backgroundColor: AppColors.surface,
         appBar: AppBar(
-          backgroundColor: AppColors.bgLight,
+          backgroundColor: AppColors.surface,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
             onPressed: () => context.pop(),
           ),
-          title: Text(_type.label, style: AppTextStyles.h2.copyWith(fontSize: 17)),
+          title: Text(_type.label, style: AppTextStyles.headlineMd.copyWith(fontSize: 17)),
           actions: [
             IconButton(
-              icon: const Icon(Icons.close, color: AppColors.textPrimary),
+              icon: const Icon(Icons.close, color: AppColors.onSurface),
               onPressed: () => context.go('/map'),
             ),
           ],
@@ -210,8 +219,8 @@ class _DynamicFormPageState extends State<DynamicFormPage> {
                   children: [
                     Text(
                       'Paso 2 de 3 — Cuenta qué pasó',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textSecondary,
+                      style: AppTextStyles.labelMd.copyWith(
+                        color: AppColors.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -237,9 +246,11 @@ class _DynamicFormPageState extends State<DynamicFormPage> {
                       onRemove: _removeMedia,
                     ),
                     const SizedBox(height: 16),
+                    _NotesField(controller: _notesController),
+                    const SizedBox(height: 16),
                     Text(
                       'Tu información es procesada inmediatamente por el centro de monitoreo de Lima. Procura ser lo más preciso posible.',
-                      style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
+                      style: AppTextStyles.labelMd.copyWith(color: AppColors.outline),
                     ),
                     const SizedBox(height: 100),
                   ],
@@ -276,7 +287,7 @@ class _ProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return LinearProgressIndicator(
       value: step / 3,
-      backgroundColor: AppColors.bgGray,
+      backgroundColor: AppColors.surfaceContainerLow,
       valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
       minHeight: 3,
     );
@@ -288,16 +299,16 @@ class _UrgencyBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: AppColors.accent.withValues(alpha: 0.08),
+      color: AppColors.secondary.withValues(alpha: 0.08),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
         children: [
-          const Icon(Icons.timer_outlined, color: AppColors.accent, size: 16),
+          const Icon(Icons.timer_outlined, color: AppColors.secondary, size: 16),
           const SizedBox(width: 8),
           Text(
             'Completa en menos de 10 segundos',
-            style: AppTextStyles.label.copyWith(
-              color: AppColors.accent,
+            style: AppTextStyles.labelMd.copyWith(
+              color: AppColors.secondary,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.04,
             ),
@@ -326,7 +337,7 @@ class _EvidencePickerSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgGray,
+        color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -337,13 +348,13 @@ class _EvidencePickerSection extends StatelessWidget {
               Text(
                 'Adjuntar evidencia',
                 style:
-                    AppTextStyles.body.copyWith(fontWeight: FontWeight.w700),
+                    AppTextStyles.bodyLg.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(width: 6),
               Text(
                 'opcional',
-                style: AppTextStyles.caption
-                    .copyWith(color: AppColors.textSecondary),
+                style: AppTextStyles.labelMd
+                    .copyWith(color: AppColors.onSurfaceVariant),
               ),
             ],
           ),
@@ -371,8 +382,8 @@ class _EvidencePickerSection extends StatelessWidget {
                       ? 'Adjuntar foto o video'
                       : 'Agregar otro'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                    side: const BorderSide(color: AppColors.textMuted),
+                    foregroundColor: AppColors.onSurfaceVariant,
+                    side: const BorderSide(color: AppColors.outline),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(100),
                     ),
@@ -384,8 +395,8 @@ class _EvidencePickerSection extends StatelessWidget {
                 )
               : Text(
                   'Máximo $_maxMediaFiles archivos alcanzado',
-                  style: AppTextStyles.caption
-                      .copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.labelMd
+                      .copyWith(color: AppColors.onSurfaceVariant),
                 ),
         ],
       ),
@@ -414,10 +425,10 @@ class _MediaThumbnail extends StatelessWidget {
               ? Container(
                   width: 80,
                   height: 80,
-                  color: AppColors.dark.withValues(alpha: 0.08),
+                  color: AppColors.surface.withValues(alpha: 0.08),
                   child: const Icon(
                     Icons.play_circle_outline,
-                    color: AppColors.textSecondary,
+                    color: AppColors.onSurfaceVariant,
                     size: 32,
                   ),
                 )
@@ -437,7 +448,7 @@ class _MediaThumbnail extends StatelessWidget {
               width: 20,
               height: 20,
               decoration: BoxDecoration(
-                color: AppColors.dark.withValues(alpha: 0.65),
+                color: AppColors.surface.withValues(alpha: 0.65),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.close, color: Colors.white, size: 12),
@@ -445,6 +456,77 @@ class _MediaThumbnail extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _NotesField extends StatelessWidget {
+  const _NotesField({required this.controller});
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Detalles adicionales',
+                style:
+                    AppTextStyles.bodyLg.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'opcional',
+                style: AppTextStyles.labelMd
+                    .copyWith(color: AppColors.onSurfaceVariant),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            minLines: 3,
+            maxLines: 5,
+            maxLength: 500,
+            textInputAction: TextInputAction.newline,
+            style: AppTextStyles.bodyLg,
+            decoration: InputDecoration(
+              hintText: 'Describe brevemente lo ocurrido…',
+              hintStyle: AppTextStyles.bodyLg
+                  .copyWith(color: AppColors.onSurfaceVariant),
+              filled: true,
+              fillColor: AppColors.surface,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.outline),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.outline),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+              counterStyle: AppTextStyles.labelMd
+                  .copyWith(color: AppColors.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -464,7 +546,7 @@ class _SheetOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: AppColors.primary),
-      title: Text(label, style: AppTextStyles.body),
+      title: Text(label, style: AppTextStyles.bodyLg),
       onTap: onTap,
     );
   }
@@ -485,13 +567,13 @@ class _QuestionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgGray,
+        color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(question.text, style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w700)),
+          Text(question.text, style: AppTextStyles.bodyLg.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -504,18 +586,18 @@ class _QuestionCard extends StatelessWidget {
                   duration: const Duration(milliseconds: 120),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : AppColors.bgLight,
+                    color: isSelected ? AppColors.primary : AppColors.surface,
                     borderRadius: BorderRadius.circular(100),
                     border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.textMuted,
+                      color: isSelected ? AppColors.primary : AppColors.outline,
                     ),
                   ),
                   child: Text(
                     option.label,
-                    style: AppTextStyles.body.copyWith(
+                    style: AppTextStyles.bodyLg.copyWith(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: isSelected ? AppColors.bgLight : AppColors.textSecondary,
+                      color: isSelected ? AppColors.surface : AppColors.onSurfaceVariant,
                     ),
                   ),
                 ),

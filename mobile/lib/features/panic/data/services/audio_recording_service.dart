@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -114,25 +115,41 @@ class AudioRecordingService {
         encoder: AudioEncoder.aacLc,
         bitRate: 64000,
         sampleRate: 44100,
+        // Mono: menor tamaño de archivo, reduce captación de la alarma
+        numChannels: 1,
+        // Filtros de Android AcousticEchoCanceler / NoiseSuppressor
+        // para atenuar el sonido de alarma del altavoz en la grabación
+        echoCancel: true,
+        noiseSuppress: true,
+        autoGain: true,
       ),
       path: rawPath,
     );
   }
 
   Future<String?> _stopCurrentBlock() async {
-    if (!await _recorder.isRecording()) return null;
+    final isRec = await _recorder.isRecording();
+    debugPrint('[AudioRecording] _stopCurrentBlock — isRecording=$isRec');
+    if (!isRec) return null;
+
     final rawPath = await _recorder.stop();
+    debugPrint('[AudioRecording] recorder.stop() → $rawPath');
     if (rawPath == null) return null;
 
+    final rawFile = File(rawPath);
+    final rawSize = rawFile.existsSync() ? rawFile.lengthSync() : -1;
+    debugPrint('[AudioRecording] Raw AAC size: $rawSize bytes');
+
     // Cifrar el bloque grabado con AES-256
-    final rawBytes = await File(rawPath).readAsBytes();
+    final rawBytes = await rawFile.readAsBytes();
     final encrypted = EncryptionUtil.encrypt(rawBytes, _encryptionKey);
 
     final encPath = rawPath.replaceFirst('_raw.aac', '_enc.bin');
     await File(encPath).writeAsBytes(encrypted);
+    debugPrint('[AudioRecording] Cifrado OK → $encPath (${encrypted.length} bytes)');
 
     // Eliminar el archivo raw para no dejar audio sin cifrar en disco
-    await File(rawPath).delete();
+    await rawFile.delete();
 
     return encPath;
   }

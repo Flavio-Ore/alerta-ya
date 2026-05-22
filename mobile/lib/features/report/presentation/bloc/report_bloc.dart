@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 
+import 'package:alertaya/core/errors/failures.dart';
+import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
 import 'package:alertaya/features/report/domain/entities/incident_type.dart';
 import 'package:alertaya/features/report/domain/entities/report_entity.dart';
 import 'package:alertaya/features/report/domain/usecases/create_report_usecase.dart';
@@ -33,11 +35,31 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
       lng: event.lng,
       formData: event.formData,
       mediaPaths: event.mediaPaths,
+      notes: event.notes,
     ));
 
     result.fold(
-      (failure) => emit(ReportFailure(failure.toString())),
-      (_) => emit(const ReportSuccess()),
+      (failure) => emit(ReportFailure(_messageFor(failure))),
+      (submitResult) => emit(ReportSuccess(
+        isPublished: submitResult.isPublished,
+        incident: submitResult.incident,
+      )),
     );
   }
+
+  String _messageFor(Failure failure) => failure.when(
+        network: (msg) =>
+            msg ?? 'Sin conexión. Verifica tu internet e intenta de nuevo.',
+        server: (statusCode, msg) =>
+            msg ?? 'Error del servidor ($statusCode). Intenta más tarde.',
+        rateLimit: (msg) =>
+            msg ?? 'Llegaste al límite de 3 reportes por hora.',
+        unauthorized: () =>
+            'Tu sesión expiró. Vuelve a iniciar sesión para reportar.',
+        forbidden: () => 'No tenés permisos para realizar esta acción.',
+        notFound: () => 'Recurso no encontrado.',
+        validation: (msg) => msg,
+        unknown: (msg) =>
+            msg ?? 'Ocurrió un error inesperado. Intenta de nuevo.',
+      );
 }

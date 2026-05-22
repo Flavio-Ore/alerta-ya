@@ -17,8 +17,8 @@ enum IncidentType {
 
 enum Severity {
   low('LOW', 'Leve'),
-  medium('MEDIUM', 'Moderado'),
-  high('HIGH', 'Crítico');
+  moderate('MODERATE', 'Moderado'),
+  critical('CRITICAL', 'Crítico');
 
   const Severity(this.value, this.label);
   final String value;
@@ -29,10 +29,9 @@ enum Severity {
 }
 
 enum IncidentStatus {
-  pending('PENDING', 'Pendiente'),
   active('ACTIVE', 'Activo'),
-  attended('ATTENDED', 'Atendido'),
-  dismissed('DISMISSED', 'Descartado');
+  inAttention('IN_ATTENTION', 'En atención'),
+  closed('CLOSED', 'Cerrado');
 
   const IncidentStatus(this.value, this.label);
   final String value;

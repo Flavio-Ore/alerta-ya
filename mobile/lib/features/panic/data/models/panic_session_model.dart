@@ -13,7 +13,11 @@ class PanicSessionModel {
           : null,
       status: json['status'] as String? ?? 'ACTIVE',
     );
-    final urls = (json['uploadUrls'] as List<dynamic>?)?.cast<String>() ?? [];
-    return PanicStartResult(session: entity, uploadUrls: urls);
+
+    final params = (json['uploadParams'] as List<dynamic>? ?? [])
+        .map((e) => CloudinaryUploadParams.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    return PanicStartResult(session: entity, uploadParams: params);
   }
 }

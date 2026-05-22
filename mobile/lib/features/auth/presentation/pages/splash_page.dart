@@ -50,7 +50,7 @@ class _SplashPageState extends State<SplashPage>
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bgDark,
+        backgroundColor: AppColors.surface,
         body: SafeArea(
           child: Column(
             children: [
@@ -59,23 +59,14 @@ class _SplashPageState extends State<SplashPage>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SvgPicture.asset(
-                      'assets/images/logo/alertaya_isotipo.svg',
-                      width: 72,
+                      'assets/images/logo/alertaya_logo_horizontal_white.svg',
                       height: 72,
                     ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Alerta', style: AppTextStyles.logoAlerta.copyWith(color: AppColors.textWhite)),
-                        const Text('Ya', style: AppTextStyles.logoYa),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     Text(
                       'Tu barrio, en tiempo real.',
-                      style: AppTextStyles.bodySecondary.copyWith(
-                        color: AppColors.textMuted,
+                      style: AppTextStyles.bodyMd.copyWith(
+                        color: AppColors.outline,
                       ),
                     ),
                   ],
@@ -92,7 +83,7 @@ class _SplashPageState extends State<SplashPage>
                         animation: _progressController,
                         builder: (context, _) => LinearProgressIndicator(
                           value: _progressController.value,
-                          backgroundColor: AppColors.textMuted.withValues(alpha: 0.3),
+                          backgroundColor: AppColors.outline.withValues(alpha: 0.3),
                           valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                           borderRadius: BorderRadius.circular(1),
                         ),
@@ -101,8 +92,8 @@ class _SplashPageState extends State<SplashPage>
                     const SizedBox(height: 20),
                     Text(
                       'LIMA, PERÚ',
-                      style: AppTextStyles.label.copyWith(
-                        color: AppColors.textMuted,
+                      style: AppTextStyles.labelMd.copyWith(
+                        color: AppColors.outline,
                         letterSpacing: 0.2,
                       ),
                     ),

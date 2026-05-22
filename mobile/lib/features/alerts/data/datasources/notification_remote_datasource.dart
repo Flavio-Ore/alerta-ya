@@ -35,8 +35,9 @@ class NotificationRemoteDataSourceImpl
           'pageSize': pageSize,
         },
       );
-      final data = response.data!['data'] as List<dynamic>;
-      return data
+      // API devuelve { items: [...], total, unreadCount }
+      final items = (response.data?['items'] as List<dynamic>?) ?? [];
+      return items
           .cast<Map<String, dynamic>>()
           .map(NotificationModel.fromJson)
           .toList();

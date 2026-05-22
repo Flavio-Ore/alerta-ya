@@ -17,7 +17,7 @@ class IncidentMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (severity == Severity.high) {
+    if (severity == Severity.critical) {
       return _CriticalMarker(isSelected: isSelected, onTap: onTap);
     }
 

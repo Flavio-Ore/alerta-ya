@@ -76,6 +76,27 @@ export async function evaluateThreshold(
   const elapsed = ctx.now - firstAt;
   const within15min = elapsed < WINDOW_15_MIN_MS;
 
+  // ── DEMO MODE ─────────────────────────────────────────────────────────────
+  // Bypass de umbrales: el primer reporte ya publica al panel.
+  // Severidad inicial MODERATE; las flags del propio reporte la pueden subir
+  // a CRITICAL. Útil para demos y QA — NO usar en producción.
+  if (process.env.DEMO_MODE === "true") {
+    let severity = Severity.MODERATE;
+    let alertPolice = false;
+    if (flags.weapon) severity = Severity.CRITICAL;
+    if (flags.injured) {
+      severity = Severity.CRITICAL;
+      alertPolice = true;
+    }
+    return {
+      publish: true,
+      severity,
+      push: true,
+      alertPolice,
+      extendExpiryMinutes: flags.stillHere ? 30 : undefined,
+    };
+  }
+
   if (count === 1) {
     return { publish: false };
   }

@@ -31,3 +31,8 @@ class CacheException implements Exception {
 class UserCancelledException implements Exception {
   const UserCancelledException();
 }
+
+class ValidationException implements Exception {
+  const ValidationException([this.message]);
+  final String? message;
+}

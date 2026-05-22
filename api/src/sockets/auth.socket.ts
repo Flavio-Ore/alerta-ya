@@ -21,7 +21,10 @@ export function registerSocketAuth(io: Server): void {
     }
 
     try {
-      await getAuth().verifyIdToken(token);
+      const decoded = await getAuth().verifyIdToken(token);
+      // Guardar el uid en socket.data — incident.socket.ts lo usa para
+      // suscribir al room privado del usuario (user:{firebaseUid})
+      socket.data['firebaseUid'] = decoded.uid;
       next();
     } catch {
       next(new Error("Token inválido"));

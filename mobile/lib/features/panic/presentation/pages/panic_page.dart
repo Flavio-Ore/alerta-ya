@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,10 +7,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_constants.dart';
+import 'package:alertaya/core/constants/app_text_styles.dart';
+import 'package:alertaya/core/widgets/alertaya_button.dart';
+import 'package:alertaya/core/widgets/alertaya_card.dart';
+import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart';
 import 'package:alertaya/features/panic/presentation/bloc/panic_bloc.dart';
+import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 
 class PanicPage extends StatefulWidget {
   const PanicPage({super.key});
@@ -66,7 +74,7 @@ class _PanicPageState extends State<PanicPage> {
     final pin = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: AppColors.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -75,8 +83,6 @@ class _PanicPageState extends State<PanicPage> {
       ),
     );
 
-    // Activar DESPUÉS de que el sheet esté cerrado y solo si esta página
-    // sigue montada. El controller del sheet vive y muere dentro del sheet.
     if (pin != null && mounted) {
       await _activatePanic(pin);
     }
@@ -114,7 +120,7 @@ class _PanicPageState extends State<PanicPage> {
           content: const Text(
             'Sin acceso a tu ubicación. Se usará Lima centro como referencia.',
           ),
-          backgroundColor: AppColors.accent,
+          backgroundColor: AppColors.secondary,
           behavior: SnackBarBehavior.floating,
           action: gpsDeniedForever
               ? const SnackBarAction(
@@ -127,7 +133,6 @@ class _PanicPageState extends State<PanicPage> {
       );
     }
 
-    // Solicitar permiso de micrófono antes de iniciar el servicio
     final micStatus = await Permission.microphone.request();
     if (!micStatus.isGranted) {
       if (mounted) {
@@ -135,16 +140,30 @@ class _PanicPageState extends State<PanicPage> {
           const SnackBar(
             content:
                 Text('Se necesita permiso de micrófono para activar el pánico'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.severityCritical,
           ),
         );
       }
       return;
     }
 
+    // Solicitar permiso de SMS para notificar al contacto de confianza.
+    // No bloqueamos la activación si se deniega — el pánico funciona igual,
+    // solo no se enviará el SMS automático.
+    await Permission.sms.request();
+
     if (!mounted) return;
+    // Leer prefs actuales del ProfileBloc — defaults true si aún no cargó (seguridad primero)
+    final profileState = context.read<ProfileBloc>().state;
+    final prefs = profileState is ProfileData ? profileState.preferences : null;
     context.read<PanicBloc>().add(
-          PanicActivationRequested(lat: lat, lng: lng, pin: pin),
+          PanicActivationRequested(
+            lat: lat,
+            lng: lng,
+            pin: pin,
+            recordAudio: prefs?.panicRecordAudio ?? true,
+            alarmSound: prefs?.panicAlarmSound ?? true,
+          ),
         );
   }
 
@@ -165,7 +184,12 @@ class _PanicPageState extends State<PanicPage> {
         if (s is! PanicActive &&
             s is! PanicActivating &&
             s is! PanicDeactivating) {
-          context.go('/map');
+          // Usar pop() porque /panic se pushea sobre el shell
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/map');
+          }
         }
       },
       child: BlocConsumer<PanicBloc, PanicState>(
@@ -181,6 +205,10 @@ class _PanicPageState extends State<PanicPage> {
         listener: (context, state) {
           if (state is PanicActive) {
             _startTimer(state.session.startedAt);
+            // Limpiar el PIN después de cada intento fallido
+            if (state.failedPinAttempts > 0) {
+              _pinController.clear();
+            }
           } else {
             _stopTimer();
             _pinController.clear();
@@ -208,7 +236,13 @@ class _PanicPageState extends State<PanicPage> {
           }
           return _IdleView(
             onPanicTap: _showPinSetupSheet,
-            onBack: () => context.go('/map'),
+            onBack: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/map');
+              }
+            },
             onSettings: () => context.push('/panic/settings'),
           );
         },
@@ -217,7 +251,7 @@ class _PanicPageState extends State<PanicPage> {
   }
 }
 
-// ─── S09: Idle ────────────────────────────────────────────────────────────────
+// ─── S09: Idle — SOS Panic Button ────────────────────────────────────────────
 
 class _IdleView extends StatelessWidget {
   const _IdleView({
@@ -232,91 +266,337 @@ class _IdleView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
+          onPressed: onBack,
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.settings_outlined,
+              color: AppColors.onSurfaceVariant,
+            ),
+            onPressed: onSettings,
+          ),
+        ],
+      ),
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'BOTÓN DE PÁNICO',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 12,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 52),
-                  GestureDetector(
-                    onTap: onPanicTap,
-                    child: Container(
-                      width: AppConstants.panicScreenButtonDiameter,
-                      height: AppConstants.panicScreenButtonDiameter,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.severityCritical,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.severityCritical.withAlpha(100),
-                            blurRadius: 48,
-                            spreadRadius: 12,
-                          ),
-                        ],
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.warning_rounded,
-                              color: Colors.white, size: 56),
-                          SizedBox(height: 8),
-                          Text(
-                            'PÁNICO',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 4,
-                            ),
-                          ),
-                        ],
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      'Botón de Pánico',
+                      style: AppTextStyles.titleLg.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.onSurface,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 52),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 48),
-                    child: Text(
-                      'Activa una alarma de emergencia y comparte tu ubicación.\n'
-                      'Necesitarás un PIN de 4 dígitos para desactivarla.',
+                    const SizedBox(height: 8),
+                    Text(
+                      'Mantén presionado 3 segundos para activar',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 14,
-                        height: 1.6,
+                      style: AppTextStyles.bodyMd.copyWith(
+                        color: AppColors.onSurfaceVariant,
                       ),
                     ),
+                    const SizedBox(height: 32),
+                    _PanicHeroButton(onTap: onPanicTap),
+                    const SizedBox(height: 32),
+                    const _ComingSoonHint(text: 'o usa el volumen físico 3 veces'),
+                    const SizedBox(height: 6),
+                    const _ComingSoonHint(text: 'o di tu palabra clave'),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: _TrustedContactStatusCard(
+                onTapWhenEmpty: () => context.push('/panic/settings'),
+                onTapWhenSet: () => context.push('/panic/settings'),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: _PanicStatusPillsRow(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PanicHeroButton extends StatefulWidget {
+  const _PanicHeroButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  State<_PanicHeroButton> createState() => _PanicHeroButtonState();
+}
+
+class _PanicHeroButtonState extends State<_PanicHeroButton> {
+  bool _pressing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    const buttonSize = AppConstants.panicScreenButtonDiameter;
+    const ringSize = buttonSize + 56;
+
+    return SizedBox(
+      width: ringSize,
+      height: ringSize,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Anillo punteado decorativo.
+          CustomPaint(
+            size: const Size(ringSize, ringSize),
+            painter: _DashedCirclePainter(
+              color: AppColors.severityCritical.withValues(alpha: 0.55),
+              strokeWidth: 1.5,
+              dashLength: 6,
+              gapLength: 8,
+            ),
+          ),
+          GestureDetector(
+            onLongPress: widget.onTap,
+            onTapDown: (_) => setState(() => _pressing = true),
+            onTapUp: (_) => setState(() => _pressing = false),
+            onTapCancel: () => setState(() => _pressing = false),
+            onLongPressStart: (_) => setState(() => _pressing = true),
+            onLongPressEnd: (_) => setState(() => _pressing = false),
+            child: AnimatedScale(
+              scale: _pressing ? 0.95 : 1.0,
+              duration: const Duration(milliseconds: 120),
+              child: Container(
+                width: buttonSize,
+                height: buttonSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.severityCritical.withValues(alpha: 0.18),
+                  border: Border.all(
+                    color: AppColors.severityCritical,
+                    width: 2,
                   ),
-                ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.severityCritical.withValues(alpha: 0.25),
+                      blurRadius: 48,
+                      spreadRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Transform.rotate(
+                      angle: math.pi / 4,
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: AppColors.severityCritical,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Transform.rotate(
+                          angle: -math.pi / 4,
+                          child: const Icon(
+                            Icons.priority_high_rounded,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'SOS',
+                      style: AppTextStyles.headlineMd.copyWith(
+                        color: AppColors.severityCritical,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 4,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            Positioned(
-              top: 4,
-              left: 4,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back,
-                    color: AppColors.textSecondary),
-                onPressed: onBack,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Anillo punteado decorativo ──────────────────────────────────────────────
+
+class _DashedCirclePainter extends CustomPainter {
+  _DashedCirclePainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.dashLength,
+    required this.gapLength,
+  });
+
+  final Color color;
+  final double strokeWidth;
+  final double dashLength;
+  final double gapLength;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final radius = math.min(size.width, size.height) / 2 - strokeWidth;
+    final center = Offset(size.width / 2, size.height / 2);
+    final circumference = 2 * math.pi * radius;
+    final dashAngle = (dashLength / circumference) * 2 * math.pi;
+    final gapAngle = (gapLength / circumference) * 2 * math.pi;
+
+    double start = 0;
+    while (start < 2 * math.pi) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        start,
+        dashAngle,
+        false,
+        paint,
+      );
+      start += dashAngle + gapAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCirclePainter old) =>
+      old.color != color ||
+      old.strokeWidth != strokeWidth ||
+      old.dashLength != dashLength ||
+      old.gapLength != gapLength;
+}
+
+// ─── Fila de pills de estado (Grabar / Alarma / GPS) ─────────────────────────
+
+class _PanicStatusPillsRow extends StatelessWidget {
+  const _PanicStatusPillsRow();
+
+  @override
+  Widget build(BuildContext context) {
+    // GPS no es configurable — siempre activo.
+    return BlocBuilder<ProfileBloc, ProfileState>(
+      builder: (context, state) {
+        final prefs = state is ProfileData ? state.preferences : null;
+        final recordOn = prefs?.panicRecordAudio ?? true;
+        final alarmOn = prefs?.panicAlarmSound ?? true;
+        return Row(
+          children: [
+            Expanded(
+              child: _PanicStatusPill(
+                icon: Icons.mic,
+                label: recordOn ? 'Grabar audio' : 'Sin grabar',
+                iconColor: AppColors.severityCritical,
+                enabled: recordOn,
               ),
             ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: IconButton(
-                icon: const Icon(Icons.settings_outlined,
-                    color: AppColors.textSecondary),
-                onPressed: onSettings,
+            const SizedBox(width: 10),
+            Expanded(
+              child: _PanicStatusPill(
+                icon: alarmOn
+                    ? Icons.notifications_active_outlined
+                    : Icons.notifications_off_outlined,
+                label: alarmOn ? 'Alarma sonora' : 'Alarma muda',
+                iconColor: AppColors.secondary,
+                enabled: alarmOn,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: _PanicStatusPill(
+                icon: Icons.location_on,
+                label: 'GPS en vivo',
+                iconColor: AppColors.primary,
+                enabled: true,
+                locked: true,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PanicStatusPill extends StatelessWidget {
+  const _PanicStatusPill({
+    required this.icon,
+    required this.label,
+    required this.iconColor,
+    required this.enabled,
+    this.locked = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color iconColor;
+  final bool enabled;
+  // Si locked, muestra un mini-ícono de candado para indicar "siempre activo, no configurable".
+  final bool locked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.55,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: enabled ? iconColor : AppColors.onSurfaceVariant,
+                  size: 20,
+                ),
+                if (locked)
+                  const Positioned(
+                    right: -10,
+                    bottom: -2,
+                    child: Icon(
+                      Icons.lock,
+                      color: AppColors.onSurfaceVariant,
+                      size: 10,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelSm.copyWith(
+                color: AppColors.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -326,7 +606,241 @@ class _IdleView extends StatelessWidget {
   }
 }
 
-// ─── S10: Active ──────────────────────────────────────────────────────────────
+class _ComingSoonHint extends StatelessWidget {
+  const _ComingSoonHint({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Flexible(
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMd.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.secondary.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            'PRÓXIMAMENTE',
+            style: AppTextStyles.labelSm.copyWith(
+              color: AppColors.secondary,
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Card sticky inferior — estado del contacto de confianza (idle screen).
+class _TrustedContactStatusCard extends StatelessWidget {
+  const _TrustedContactStatusCard({
+    required this.onTapWhenEmpty,
+    required this.onTapWhenSet,
+  });
+
+  final VoidCallback onTapWhenEmpty;
+  final VoidCallback onTapWhenSet;
+
+  @override
+  Widget build(BuildContext context) {
+    final service = getIt<TrustedContactService>();
+    return FutureBuilder<TrustedContact?>(
+      future: service.getContact(),
+      builder: (context, snap) {
+        final contact = snap.data;
+        final hasContact = contact != null;
+
+        return AlertaYaCard(
+          onTap: hasContact ? onTapWhenSet : onTapWhenEmpty,
+          child: hasContact
+              ? Row(
+                  children: [
+                    _ContactAvatar(name: contact.name),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  contact.name,
+                                  style: AppTextStyles.titleSm,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.success,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'ACTIVO',
+                                style: AppTextStyles.labelSm.copyWith(
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _maskPhone(contact.phone),
+                            style: AppTextStyles.bodySm,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.onSurfaceVariant,
+                      size: 20,
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.person_add_alt,
+                        color: AppColors.secondary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Configurá un contacto de confianza',
+                        style: AppTextStyles.titleSm,
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.onSurfaceVariant,
+                      size: 20,
+                    ),
+                  ],
+                ),
+        );
+      },
+    );
+  }
+}
+
+/// Botón compacto "LLAMAR" con padding reducido para encajar en la card.
+class _CallButton extends StatelessWidget {
+  const _CallButton({required this.phone, required this.onDial});
+  final String phone;
+  final VoidCallback onDial;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = phone.trim().isEmpty;
+    return Opacity(
+      opacity: disabled ? 0.4 : 1.0,
+      child: Material(
+        color: Colors.transparent,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: Ink(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.secondary, AppColors.secondaryContainer],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+          child: InkWell(
+            onTap: disabled ? null : onDial,
+            customBorder: const StadiumBorder(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.phone, size: 16, color: AppColors.onSecondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'LLAMAR',
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: AppColors.onSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ContactAvatar extends StatelessWidget {
+  const _ContactAvatar({required this.name, this.size = 40});
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.trim().isEmpty
+        ? '?'
+        : name.trim().substring(0, 1).toUpperCase();
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceContainerHighest,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: AppTextStyles.titleMd.copyWith(color: AppColors.onSurface),
+      ),
+    );
+  }
+}
+
+String _maskPhone(String phone) {
+  final digits = phone.trim();
+  if (digits.length < 4) return digits;
+  final visibleTail = digits.substring(digits.length - 2);
+  final visibleHead = digits.length > 4 ? digits.substring(0, 3) : '';
+  return '$visibleHead ** *** *$visibleTail'.trim();
+}
+
+// ─── S10: Active Panic Mode ──────────────────────────────────────────────────
 
 class _ActiveView extends StatelessWidget {
   const _ActiveView({
@@ -357,153 +871,479 @@ class _ActiveView extends StatelessWidget {
         AppConstants.panicMaxRecordingMinutes ~/ AppConstants.panicBlockMinutes;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A0000),
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Column(
           children: [
-            // ── Banner superior MODO PÁNICO ACTIVO ──────────────
-            Container(
-              width: double.infinity,
-              color: AppColors.severityCritical,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+            const _ActivePanicBanner(),
+            Expanded(
+              child: Stack(
                 children: [
-                  Icon(Icons.circle, color: Colors.white, size: 8),
-                  SizedBox(width: 8),
-                  Text(
-                    'MODO PÁNICO ACTIVO',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 2,
+                  // Overlay rojo sutil arriba.
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.center,
+                            colors: [
+                              AppColors.severityCritical
+                                  .withValues(alpha: 0.15),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+                        _GpsContactChip(contactName: state.trustedContactName),
+                        const SizedBox(height: 24),
+                        AlertaYaCard(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 24,
+                          ),
+                          child: Column(
+                            children: [
+                              if (state.recordAudio) ...[
+                                const _AmplitudeVisualizer(),
+                                const SizedBox(height: 16),
+                                const _RecordingLabel(),
+                              ] else ...[
+                                const _NoRecordingLabel(),
+                              ],
+                              const SizedBox(height: 12),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  _formatElapsed(elapsed),
+                                  style: const TextStyle(
+                                    fontFamily: 'DMSans',
+                                    fontWeight: FontWeight.w200,
+                                    fontSize: 64,
+                                    color: AppColors.onSurface,
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            if (state.recordAudio) ...[
+                              _StatusChip(
+                                label: 'Bloque $block/$maxBlocks · 10 min',
+                              ),
+                              const _StatusChip(label: 'AES-256'),
+                            ],
+                            const _StatusChip(label: 'GPS en vivo'),
+                            if (!state.alarmSound)
+                              const _StatusChip(label: 'Sin alarma'),
+                            const _StatusChip(label: 'Servidor OK'),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        _ActiveTrustedContactCard(
+                          contactName: state.trustedContactName,
+                        ),
+                        const SizedBox(height: 20),
+                        if (locked)
+                          const _PinLockedCard()
+                        else
+                          _DeactivateCard(
+                            controller: pinController,
+                            onComplete: onDeactivate,
+                            attempts: attempts,
+                          ),
+                        const SizedBox(height: 32),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-
-                    // ── Chip GPS compartido ──────────────────────
-                    _GpsContactChip(contactName: state.trustedContactName),
-
-                    const SizedBox(height: 32),
-
-                    // ── Visualizador de audio ────────────────────
-                    const _AmplitudeVisualizer(),
-
-                    const SizedBox(height: 16),
-
-                    // ── Label GRABANDO ───────────────────────────
-                    const Text(
-                      'GRABANDO',
-                      style: TextStyle(
-                        color: AppColors.severityCritical,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 3,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ── Timer ────────────────────────────────────
-                    Text(
-                      _formatElapsed(elapsed),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 52,
-                        fontWeight: FontWeight.w200,
-                        fontFeatures: [FontFeature.tabularFigures()],
-                        letterSpacing: 4,
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // ── Chips de estado ──────────────────────────
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        _StatusChip(label: 'Bloque $block/$maxBlocks · 10 min'),
-                        const _StatusChip(label: 'AES-256 cifrado'),
-                        const _StatusChip(label: 'SERVIDOR OK'),
-                      ],
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // ── Sección desactivar ───────────────────────
-                    if (!locked) ...[
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.04),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.08),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'PARA DESACTIVAR:',
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _PinDots(
-                              controller: pinController,
-                              onComplete: onDeactivate,
-                            ),
-                            if (attempts > 0) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                'PIN incorrecto · $attempts/${AppConstants.panicPinMaxAttempts} intentos',
-                                style: const TextStyle(
-                                  color: AppColors.severityCritical,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ] else ...[
-                      // Estado bloqueado
-                      const Icon(Icons.lock_outline,
-                          color: AppColors.accent, size: 32),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Alarma bloqueada · Llama al 105',
-                        style: TextStyle(
-                          color: AppColors.accent,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 32),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ActivePanicBanner extends StatefulWidget {
+  const _ActivePanicBanner();
+
+  @override
+  State<_ActivePanicBanner> createState() => _ActivePanicBannerState();
+}
+
+class _ActivePanicBannerState extends State<_ActivePanicBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.severityCritical,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FadeTransition(
+            opacity: Tween<double>(begin: 0.3, end: 1.0).animate(_ctrl),
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'MODO PÁNICO ACTIVO',
+            style: AppTextStyles.labelMd.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Label cuando el usuario desactivó la grabación en settings.
+// Reemplaza al visualizer + "GRABANDO" en la card del active view.
+class _NoRecordingLabel extends StatelessWidget {
+  const _NoRecordingLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Icon(
+          Icons.mic_off_outlined,
+          color: AppColors.onSurfaceVariant,
+          size: 36,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'SIN GRABACIÓN',
+          style: AppTextStyles.labelMd.copyWith(
+            color: AppColors.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 3,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecordingLabel extends StatefulWidget {
+  const _RecordingLabel();
+
+  @override
+  State<_RecordingLabel> createState() => _RecordingLabelState();
+}
+
+class _RecordingLabelState extends State<_RecordingLabel>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        FadeTransition(
+          opacity: Tween<double>(begin: 0.3, end: 1.0).animate(_ctrl),
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: AppColors.severityCritical,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'GRABANDO',
+          style: AppTextStyles.labelMd.copyWith(
+            color: AppColors.severityCritical,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 3,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActiveTrustedContactCard extends StatelessWidget {
+  const _ActiveTrustedContactCard({required this.contactName});
+  final String? contactName;
+
+  @override
+  Widget build(BuildContext context) {
+    final service = getIt<TrustedContactService>();
+    return FutureBuilder<TrustedContact?>(
+      future: service.getContact(),
+      builder: (context, snap) {
+        final contact = snap.data;
+        if (contact == null) {
+          return AlertaYaCard(
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.person_off_outlined,
+                    color: AppColors.secondary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sin contacto de confianza',
+                        style: AppTextStyles.titleSm,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Configurá uno desde Configuración Personal.',
+                        style: AppTextStyles.bodySm,
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/panic/settings'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.secondary,
+                  ),
+                  child: const Text('Configurar'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return AlertaYaCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _ContactAvatar(name: contact.name, size: 48),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(contact.name, style: AppTextStyles.titleMd),
+                        const SizedBox(height: 2),
+                        Text(contact.phone, style: AppTextStyles.bodySm),
+                      ],
+                    ),
+                  ),
+                  // Botón compacto con padding reducido para caber en la card
+                  _CallButton(
+                    phone: contact.phone,
+                    onDial: () => _dial(context, contact.phone),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.fiber_manual_record,
+                    color: AppColors.severityCritical,
+                    size: 8,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      contactName != null
+                          ? 'Tu contacto recibió tu ubicación'
+                          : 'Compartiendo ubicación…',
+                      style: AppTextStyles.bodySm,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+Future<void> _dial(BuildContext context, String phone) async {
+  final uri = Uri(scheme: 'tel', path: phone.trim());
+  final ok = await launchUrl(uri);
+  if (!ok && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No se pudo abrir el dialer del teléfono.'),
+        backgroundColor: AppColors.severityCritical,
+      ),
+    );
+  }
+}
+
+class _DeactivateCard extends StatelessWidget {
+  const _DeactivateCard({
+    required this.controller,
+    required this.onComplete,
+    required this.attempts,
+  });
+
+  final TextEditingController controller;
+  final VoidCallback onComplete;
+  final int attempts;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertaYaCard(
+      color: AppColors.surfaceContainerLow,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'PARA DESACTIVAR',
+            style: AppTextStyles.labelSm.copyWith(
+              color: AppColors.onSurfaceVariant,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: _PinDots(
+              controller: controller,
+              onComplete: onComplete,
+            ),
+          ),
+          if (attempts > 0) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  color: AppColors.severityCritical,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'PIN incorrecto · $attempts/${AppConstants.panicPinMaxAttempts} intentos',
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.severityCritical,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PinLockedCard extends StatelessWidget {
+  const _PinLockedCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertaYaCard(
+      color: AppColors.surfaceContainerLow,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.lock_outline,
+            color: AppColors.secondary,
+            size: 36,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Alarma bloqueada',
+            style: AppTextStyles.titleMd,
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Excediste los intentos de PIN. Llamá al 105 para que la policía te ayude.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMd,
+          ),
+          const SizedBox(height: 20),
+          AlertaYaButton(
+            label: 'Llamar al 105',
+            icon: Icons.local_police_outlined,
+            variant: AlertaYaButtonVariant.amberGlow,
+            onPressed: () => _dial(context, '105'),
+          ),
+        ],
       ),
     );
   }
@@ -529,8 +1369,7 @@ class _AudioVisualizer extends StatelessWidget {
   const _AudioVisualizer({required this.amplitude});
   final double amplitude;
 
-  // 5 barras con alturas relativas fijas — la amplitud las escala todas
-  static const _barRatios = [0.5, 0.75, 1.0, 0.75, 0.5];
+  static const _barRatios = [0.4, 0.7, 1.0, 0.7, 0.4];
 
   @override
   Widget build(BuildContext context) {
@@ -575,12 +1414,12 @@ class _PinDots extends StatefulWidget {
 
 class _PinDotsState extends State<_PinDots> {
   final _focusNode = FocusNode();
+  bool _submitted = false;
 
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_onChanged);
-    // Abrir teclado automáticamente al entrar a la pantalla
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
@@ -595,8 +1434,16 @@ class _PinDotsState extends State<_PinDots> {
 
   void _onChanged() {
     if (mounted) setState(() {});
-    if (widget.controller.text.length == 4) {
-      widget.onComplete();
+    if (widget.controller.text.length == 4 && !_submitted) {
+      _submitted = true;
+      // Postergar para no ejecutar lógica de negocio dentro del listener.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.onComplete();
+          // Resetear para permitir reintentos si el PIN fue incorrecto
+          _submitted = false;
+        }
+      });
     }
   }
 
@@ -607,25 +1454,33 @@ class _PinDotsState extends State<_PinDots> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // TextField real visible pero estilizado como parte del diseño
-        TextField(
-          controller: widget.controller,
-          focusNode: _focusNode,
-          keyboardType: TextInputType.number,
-          maxLength: 4,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          obscureText: true,
-          autofocus: true,
-          showCursor: false,
-          style: const TextStyle(color: Colors.transparent, fontSize: 1),
-          decoration: const InputDecoration(
-            counterText: '',
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.zero,
-            isDense: true,
+        // TextField invisible — captura el input del teclado sin mostrarse.
+        // Opacity(0) oculta cualquier decoración que pueda hacer overflow.
+        Opacity(
+          opacity: 0,
+          child: SizedBox(
+            height: 1,
+            child: TextField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              obscureText: true,
+              autofocus: true,
+              showCursor: false,
+              style: const TextStyle(color: Colors.transparent, fontSize: 1),
+              decoration: const InputDecoration(
+                counterText: '',
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
+            ),
           ),
         ),
-        // Dots visuales encima — tocar abre el teclado
         GestureDetector(
           onTap: () {
             _focusNode.requestFocus();
@@ -644,13 +1499,7 @@ class _PinDotsState extends State<_PinDots> {
                   shape: BoxShape.circle,
                   color: isFilled
                       ? AppColors.severityCritical
-                      : Colors.white.withValues(alpha: 0.1),
-                  border: Border.all(
-                    color: isFilled
-                        ? AppColors.severityCritical
-                        : Colors.white.withValues(alpha: 0.2),
-                    width: 1.5,
-                  ),
+                      : AppColors.surfaceContainerHighest,
                 ),
               );
             }),
@@ -670,17 +1519,15 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.07),
+        color: AppColors.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 11,
+        style: AppTextStyles.labelMd.copyWith(
+          color: AppColors.onSurfaceVariant,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -697,32 +1544,30 @@ class _GpsContactChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasContact = contactName != null;
-    final color = hasContact ? AppColors.severityLow : AppColors.textMuted;
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: AppColors.severityCritical.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            hasContact ? Icons.location_on : Icons.location_off_outlined,
-            color: color,
+          const Icon(
+            Icons.location_on,
+            color: AppColors.severityCritical,
             size: 14,
           ),
           const SizedBox(width: 6),
-          Text(
-            hasContact
-                ? 'GPS compartido con $contactName'
-                : 'Sin contacto de confianza configurado',
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              hasContact
+                  ? 'Compartiendo ubicación con $contactName'
+                  : 'Compartiendo ubicación',
+              style: AppTextStyles.labelMd.copyWith(
+                color: AppColors.severityCritical,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -739,7 +1584,7 @@ class _LoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: AppColors.surface,
       body: Center(
         child: CircularProgressIndicator(color: AppColors.severityCritical),
       ),
@@ -773,10 +1618,17 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
     super.dispose();
   }
 
+  bool _confirmed = false;
+
   void _onPinChanged() {
     if (mounted) setState(() {});
-    if (_controller.text.length == 4) {
-      widget.onConfirm(_controller.text);
+    if (_controller.text.length == 4 && !_confirmed) {
+      _confirmed = true;
+      // Postergar el pop fuera del ciclo de notificación del TextEditingController.
+      // Hacerlo dentro del listener puede causar errores de renderizado en Samsung.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onConfirm(_controller.text);
+      });
     }
   }
 
@@ -791,14 +1643,12 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
         children: [
           const Text(
             'Crear PIN de desactivación',
-            style: TextStyle(
-                color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+            style: AppTextStyles.titleLg,
           ),
           const SizedBox(height: 8),
           const Text(
             'Vas a necesitar este PIN de 4 dígitos para detener la alarma.',
-            style: TextStyle(
-                color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+            style: AppTextStyles.bodyMd,
           ),
           const SizedBox(height: 28),
           TextField(
@@ -810,21 +1660,24 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
             textAlign: TextAlign.center,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.onSurface,
               fontSize: 36,
               letterSpacing: 20,
             ),
             decoration: InputDecoration(
               counterText: '',
               filled: true,
-              fillColor: Colors.white10,
+              fillColor: AppColors.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
               hintText: '••••',
               hintStyle: const TextStyle(
-                  color: Colors.white24, fontSize: 36, letterSpacing: 20),
+                color: AppColors.outline,
+                fontSize: 36,
+                letterSpacing: 20,
+              ),
             ),
           ),
         ],

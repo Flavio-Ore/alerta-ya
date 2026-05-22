@@ -1,3 +1,5 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 /// Constantes del sistema AlertaYa
 class AppConstants {
   AppConstants._();
@@ -40,16 +42,13 @@ class AppConstants {
   static const double panicScreenButtonDiameter = 180;
   static const double fabSize = 56;
 
-  // Red — override con --dart-define=API_BASE_URL=http://... al correr la app
-  // 10.0.2.2 es el localhost del host visto desde el emulador Android
-  static const String apiBaseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000',
-  );
-  static const String wsUrl = String.fromEnvironment(
-    'WS_URL',
-    defaultValue: 'ws://10.0.2.2:3000',
-  );
+  // Red — se lee en runtime desde .env (flutter_dotenv).
+  // Emulador Android: API_BASE_URL=http://10.0.2.2:3000
+  // Device físico:    API_BASE_URL=http://<IP_LOCAL_DEL_HOST>:3000
+  static String get apiBaseUrl =>
+      dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:3000';
+  static String get wsUrl =>
+      dotenv.env['WS_URL'] ?? 'http://10.0.2.2:3000';
 
   // App
   static const String appName = 'AlertaYa';

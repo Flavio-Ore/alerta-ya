@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+
+import 'package:alertaya/core/services/photon_service.dart';
 
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
@@ -26,7 +30,6 @@ class RouteComparatorPage extends StatefulWidget {
 class _RouteComparatorPageState extends State<RouteComparatorPage> {
   late final RouteBloc _routeBloc;
   late final MapController _mapController;
-  final _destController = TextEditingController();
 
   @override
   void initState() {
@@ -43,20 +46,17 @@ class _RouteComparatorPageState extends State<RouteComparatorPage> {
   void dispose() {
     _routeBloc.close();
     _mapController.dispose();
-    _destController.dispose();
     super.dispose();
   }
 
-  void _searchRoute() {
-    final query = _destController.text.trim();
-    if (query.isEmpty) return;
+  void _onDestinationSelected(LatLng dest) {
     final incidentsState = context.read<IncidentsBloc>().state;
     final incidents = incidentsState is IncidentsLoaded
         ? incidentsState.incidents
         : <IncidentEntity>[];
     _routeBloc.add(RouteRequested(
       origin: widget.origin,
-      destinationQuery: '$query, Lima, Perú',
+      destination: dest,
       incidents: incidents,
     ));
   }
@@ -89,14 +89,14 @@ class _RouteComparatorPageState extends State<RouteComparatorPage> {
           if (state is RouteLoaded) _centerOnRoutes(state);
         },
         builder: (context, state) => Scaffold(
-          backgroundColor: AppColors.dark,
+          backgroundColor: AppColors.surface,
           appBar: AppBar(
-            backgroundColor: AppColors.dark,
-            foregroundColor: AppColors.textWhite,
+            backgroundColor: AppColors.surface,
+            foregroundColor: AppColors.onSurface,
             elevation: 0,
             title: Text(
               'Comparador de Rutas',
-              style: AppTextStyles.h2.copyWith(color: AppColors.textWhite),
+              style: AppTextStyles.headlineMd.copyWith(color: AppColors.onSurface),
             ),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -114,9 +114,10 @@ class _RouteComparatorPageState extends State<RouteComparatorPage> {
                       state: state,
                     ),
                     _InputCard(
-                      controller: _destController,
                       isLoading: state is RouteLoading,
-                      onSubmit: _searchRoute,
+                      onDestinationSelected: _onDestinationSelected,
+                      userLat: widget.origin.latitude,
+                      userLng: widget.origin.longitude,
                     ),
                   ],
                 ),
@@ -192,7 +193,7 @@ class _MapSection extends StatelessWidget {
           points: route.polyline,
           color: isSelected
               ? _polylineColor(route)
-              : AppColors.textMuted.withValues(alpha: 0.6),
+              : AppColors.outline.withValues(alpha: 0.6),
           strokeWidth: isSelected ? 5.0 : 3.0,
         ));
       }
@@ -237,16 +238,68 @@ class _MapSection extends StatelessWidget {
 
 // ─── Input card (floating over the map) ───────────────────────────────────────
 
-class _InputCard extends StatelessWidget {
+class _InputCard extends StatefulWidget {
   const _InputCard({
-    required this.controller,
     required this.isLoading,
-    required this.onSubmit,
+    required this.onDestinationSelected,
+    required this.userLat,
+    required this.userLng,
   });
 
-  final TextEditingController controller;
   final bool isLoading;
-  final VoidCallback onSubmit;
+  final ValueChanged<LatLng> onDestinationSelected;
+  final double userLat;
+  final double userLng;
+
+  @override
+  State<_InputCard> createState() => _InputCardState();
+}
+
+class _InputCardState extends State<_InputCard> {
+  final _controller = TextEditingController();
+  final _photon = PhotonService();
+  Timer? _debounce;
+  List<PhotonSuggestion> _suggestions = [];
+  bool _searching = false;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String value) {
+    _debounce?.cancel();
+    if (value.trim().length < 3) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      if (!mounted) return;
+      setState(() => _searching = true);
+      final result = await _photon.suggest(
+        value,
+        lat: widget.userLat,
+        lng: widget.userLng,
+      );
+      if (!mounted) return;
+      setState(() {
+        _searching = false;
+        _suggestions = switch (result) {
+          PhotonSuccess(:final suggestions) => suggestions,
+          PhotonNetworkError() => <PhotonSuggestion>[],
+        };
+      });
+    });
+  }
+
+  void _onSuggestionTap(PhotonSuggestion s) {
+    _controller.text = s.displayName;
+    setState(() => _suggestions = []);
+    FocusScope.of(context).unfocus();
+    widget.onDestinationSelected(LatLng(s.lat, s.lng));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -254,72 +307,98 @@ class _InputCard extends StatelessWidget {
       top: 12,
       left: 16,
       right: 16,
-      child: Material(
-        elevation: 6,
-        borderRadius: BorderRadius.circular(14),
-        color: AppColors.bgLight,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Material(
+            elevation: 6,
+            borderRadius: BorderRadius.circular(14),
+            color: AppColors.surfaceContainerHigh,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
                 children: [
-                  const Icon(Icons.circle, color: AppColors.primary, size: 10),
-                  Container(
-                      width: 1, height: 20, color: AppColors.textMuted),
-                  const Icon(Icons.location_on,
-                      color: AppColors.severityCritical, size: 16),
-                ],
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Tu ubicación actual',
-                        style: AppTextStyles.bodySecondary),
-                    const SizedBox(height: 4),
-                    const Divider(height: 1),
-                    const SizedBox(height: 6),
-                    Row(
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.circle, color: AppColors.primary, size: 10),
+                      Container(width: 1, height: 20, color: AppColors.outline),
+                      const Icon(Icons.location_on,
+                          color: AppColors.severityCritical, size: 16),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(
-                          child: TextField(
-                            controller: controller,
-                            decoration: const InputDecoration(
-                              hintText: 'Destino...',
-                              hintStyle: AppTextStyles.bodySecondary,
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
+                        Text('Tu ubicación actual',
+                            style: AppTextStyles.bodyMd),
+                        const SizedBox(height: 4),
+                        Divider(height: 1, color: AppColors.outline),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _controller,
+                                onChanged: _onChanged,
+                                decoration: InputDecoration(
+                                  hintText: 'Destino...',
+                                  hintStyle: AppTextStyles.bodyMd,
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                style: AppTextStyles.bodyLg,
+                                textInputAction: TextInputAction.search,
+                              ),
                             ),
-                            style: AppTextStyles.body,
-                            onSubmitted: (_) => onSubmit(),
-                            textInputAction: TextInputAction.search,
-                          ),
+                            if (widget.isLoading || _searching)
+                              const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            else
+                              const Icon(Icons.search,
+                                  color: AppColors.onSurfaceVariant, size: 20),
+                          ],
                         ),
-                        if (isLoading)
-                          const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        else
-                          GestureDetector(
-                            onTap: onSubmit,
-                            child: const Icon(Icons.search,
-                                color: AppColors.textSecondary, size: 20),
-                          ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          if (_suggestions.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Material(
+              elevation: 6,
+              borderRadius: BorderRadius.circular(12),
+              color: AppColors.surfaceContainerHigh,
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: _suggestions.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, indent: 16, color: AppColors.outline),
+                itemBuilder: (context, i) {
+                  final s = _suggestions[i];
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.location_on_outlined,
+                        size: 18, color: AppColors.onSurfaceVariant),
+                    title: Text(s.displayName, style: AppTextStyles.bodyMd),
+                    onTap: () => _onSuggestionTap(s),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -336,7 +415,7 @@ class _BottomPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: AppColors.bgLight,
+        color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SafeArea(
@@ -351,7 +430,7 @@ class _BottomPanel extends StatelessWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.textMuted,
+                    color: AppColors.outline,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -360,10 +439,10 @@ class _BottomPanel extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Comparar Rutas', style: AppTextStyles.h2),
+                  const Text('Comparar Rutas', style: AppTextStyles.headlineMd),
                   if (state is RouteLoaded)
                     Text(TimeOfDay.now().format(context),
-                        style: AppTextStyles.caption),
+                        style: AppTextStyles.labelMd),
                 ],
               ),
               const SizedBox(height: 16),
@@ -388,11 +467,11 @@ class _PanelContent extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Column(
           children: [
-            Icon(Icons.route_outlined, size: 44, color: AppColors.textMuted),
+            Icon(Icons.route_outlined, size: 44, color: AppColors.outline),
             SizedBox(height: 10),
             Text(
               'Ingresá un destino para comparar las rutas más seguras',
-              style: AppTextStyles.bodySecondary,
+              style: AppTextStyles.bodyMd,
               textAlign: TextAlign.center,
             ),
           ],
@@ -417,7 +496,7 @@ class _PanelContent extends StatelessWidget {
                 size: 40, color: AppColors.severityCritical),
             const SizedBox(height: 8),
             Text(msg,
-                style: AppTextStyles.bodySecondary,
+                style: AppTextStyles.bodyMd,
                 textAlign: TextAlign.center),
             const SizedBox(height: 12),
             TextButton(
@@ -466,7 +545,7 @@ class _PanelContent extends StatelessWidget {
             ),
             child: Text(
               'Iniciar Ruta ${loaded.selectedOption.label} — La más segura',
-              style: AppTextStyles.buttonLabel,
+              style: AppTextStyles.labelLg,
             ),
           ),
         ),
@@ -508,7 +587,7 @@ class _RouteCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               border: Border.all(
-                color: isSelected ? _riskColor : AppColors.textMuted,
+                color: isSelected ? _riskColor : AppColors.outline,
                 width: isSelected ? 2 : 1,
               ),
               borderRadius: BorderRadius.circular(12),
@@ -521,20 +600,20 @@ class _RouteCard extends StatelessWidget {
               children: [
                 Text(
                   'Ruta ${route.label}',
-                  style: AppTextStyles.body
+                  style: AppTextStyles.bodyLg
                       .copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   '${route.durationLabel} · ${route.distanceLabel}',
-                  style: AppTextStyles.caption,
+                  style: AppTextStyles.labelMd,
                 ),
                 const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: route.riskScore / 100,
-                    backgroundColor: AppColors.bgGray,
+                    backgroundColor: AppColors.surfaceContainerLow,
                     color: _riskColor,
                     minHeight: 5,
                   ),
@@ -542,7 +621,7 @@ class _RouteCard extends StatelessWidget {
                 const SizedBox(height: 5),
                 Text(
                   'Índice: ${route.riskScore}/100 · ${route.riskLabel}',
-                  style: AppTextStyles.label.copyWith(color: _riskColor),
+                  style: AppTextStyles.labelMd.copyWith(color: _riskColor),
                 ),
                 if (route.nearbyIncidents.isNotEmpty)
                   Padding(
@@ -555,7 +634,7 @@ class _RouteCard extends StatelessWidget {
                         const SizedBox(width: 3),
                         Text(
                           '${route.nearbyIncidents.length} incidente(s)',
-                          style: AppTextStyles.label
+                          style: AppTextStyles.labelMd
                               .copyWith(color: AppColors.severityCritical),
                         ),
                       ],
@@ -577,7 +656,7 @@ class _RouteCard extends StatelessWidget {
                 ),
                 child: Text(
                   'MÁS SEGURA',
-                  style: AppTextStyles.label.copyWith(
+                  style: AppTextStyles.labelMd.copyWith(
                     color: Colors.white,
                     fontSize: 9,
                     fontWeight: FontWeight.w800,

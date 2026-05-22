@@ -28,12 +28,24 @@ export async function registerDeviceToken(
       return;
     }
 
-    const { token, district } = req.body as { token: string; district: string };
+    const { token, district, lat, lng } = req.body as {
+      token: string;
+      district: string;
+      lat?: number;
+      lng?: number;
+    };
 
     const user = await userLookup.findOrCreate(req.user.uid);
 
+    // Calcular proxTile (~330m) si vienen coords. Misma fórmula que sockets:
+    // TILE_SIZE=0.003°. Permite filtrar push a testigos de un área específica.
+    const proxTile =
+      typeof lat === 'number' && typeof lng === 'number'
+        ? `prox:${Math.floor(lat / 0.003)}:${Math.floor(lng / 0.003)}`
+        : null;
+
     // Persistir en PostgreSQL — backup ante flush de Redis
-    await deviceTokenRepo.upsert({ userId: user.id, token, district });
+    await deviceTokenRepo.upsert({ userId: user.id, token, district, proxTile });
 
     // Sincronizar con Redis — índice rápido para push por zona
     // Fail open: si Redis falla el token ya quedó en Postgres

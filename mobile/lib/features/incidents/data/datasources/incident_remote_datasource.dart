@@ -42,8 +42,9 @@ class IncidentRemoteDataSourceImpl implements IncidentRemoteDataSource {
           'pageSize': pageSize,
         },
       );
-      final data = response.data!['data'] as List<dynamic>;
-      return data.cast<Map<String, dynamic>>().map(IncidentModel.fromJson).toList();
+      // El API devuelve { items, total, page } — antes esto buscaba 'data' y crasheaba.
+      final items = response.data!['items'] as List<dynamic>;
+      return items.cast<Map<String, dynamic>>().map(IncidentModel.fromJson).toList();
     } on DioException catch (e) {
       throw _mapError(e);
     }

@@ -12,6 +12,8 @@ import 'package:alertaya/core/di/firebase_module.dart' as _i1044;
 import 'package:alertaya/core/network/dio_module.dart' as _i197;
 import 'package:alertaya/core/network/network_info.dart' as _i857;
 import 'package:alertaya/core/realtime/socket_client.dart' as _i635;
+import 'package:alertaya/core/services/fcm_service.dart' as _i922;
+import 'package:alertaya/core/services/media_upload_service.dart' as _i846;
 import 'package:alertaya/core/storage/secure_storage_service.dart' as _i142;
 import 'package:alertaya/features/alerts/data/datasources/notification_remote_datasource.dart'
     as _i238;
@@ -36,7 +38,7 @@ import 'package:alertaya/features/auth/domain/repositories/auth_repository.dart'
 import 'package:alertaya/features/auth/domain/usecases/complete_onboarding_usecase.dart'
     as _i401;
 import 'package:alertaya/features/auth/domain/usecases/delete_account_usecase.dart'
-    as _i222;
+    as _i316;
 import 'package:alertaya/features/auth/domain/usecases/is_first_launch_usecase.dart'
     as _i586;
 import 'package:alertaya/features/auth/domain/usecases/sign_in_with_email_usecase.dart'
@@ -63,6 +65,20 @@ import 'package:alertaya/features/incidents/domain/usecases/get_incidents_usecas
     as _i1069;
 import 'package:alertaya/features/incidents/presentation/bloc/incidents_bloc.dart'
     as _i352;
+import 'package:alertaya/features/my_reports/data/datasources/my_reports_remote_datasource.dart'
+    as _i750;
+import 'package:alertaya/features/my_reports/data/repositories/my_reports_repository_impl.dart'
+    as _i97;
+import 'package:alertaya/features/my_reports/domain/repositories/my_reports_repository.dart'
+    as _i431;
+import 'package:alertaya/features/my_reports/domain/usecases/cancel_report_usecase.dart'
+    as _i333;
+import 'package:alertaya/features/my_reports/domain/usecases/get_my_reports_usecase.dart'
+    as _i56;
+import 'package:alertaya/features/my_reports/domain/usecases/watch_my_reports_usecase.dart'
+    as _i972;
+import 'package:alertaya/features/my_reports/presentation/bloc/my_reports_bloc.dart'
+    as _i250;
 import 'package:alertaya/features/panic/data/datasources/panic_remote_datasource.dart'
     as _i973;
 import 'package:alertaya/features/panic/data/repositories/panic_repository_impl.dart'
@@ -73,8 +89,10 @@ import 'package:alertaya/features/panic/data/services/panic_channel_service.dart
     as _i419;
 import 'package:alertaya/features/panic/data/services/panic_upload_service.dart'
     as _i705;
+import 'package:alertaya/features/panic/data/services/sms_service.dart'
+    as _i388;
 import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart'
-    as _i321;
+    as _i732;
 import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart'
     as _i519;
 import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart'
@@ -83,8 +101,14 @@ import 'package:alertaya/features/panic/domain/usecases/deactivate_panic_usecase
     as _i434;
 import 'package:alertaya/features/panic/presentation/bloc/panic_bloc.dart'
     as _i776;
-import 'package:alertaya/features/report/data/repositories/mock_report_repository.dart'
-    as _i594;
+import 'package:alertaya/features/profile/data/datasources/me_remote_datasource.dart'
+    as _i554;
+import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart'
+    as _i901;
+import 'package:alertaya/features/report/data/datasources/report_remote_datasource.dart'
+    as _i35;
+import 'package:alertaya/features/report/data/repositories/report_repository_impl.dart'
+    as _i1054;
 import 'package:alertaya/features/report/domain/repositories/report_repository.dart'
     as _i658;
 import 'package:alertaya/features/report/domain/usecases/create_report_usecase.dart'
@@ -115,34 +139,39 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i59.FirebaseAuth>(() => firebaseModule.firebaseAuth);
     gh.lazySingleton<_i895.Connectivity>(() => dioModule.connectivity);
     gh.lazySingleton<_i361.Dio>(() => dioModule.dio());
+    gh.lazySingleton<_i142.SecureStorageService>(
+        () => const _i142.SecureStorageService());
     gh.lazySingleton<_i635.SocketClient>(
       () => _i635.SocketClient(),
       dispose: (i) => i.dispose(),
     );
-    gh.lazySingleton<_i142.SecureStorageService>(
-        () => const _i142.SecureStorageService());
-    gh.lazySingleton<_i419.PanicChannelService>(
-        () => _i419.PanicChannelService());
+    gh.lazySingleton<_i922.FcmService>(
+        () => _i922.FcmService(gh<_i361.Dio>()));
+    gh.lazySingleton<_i846.MediaUploadService>(
+        () => _i846.MediaUploadService());
     gh.lazySingleton<_i705.PanicUploadService>(
         () => _i705.PanicUploadService());
-    gh.lazySingleton<_i321.TrustedContactService>(
-        () => _i321.TrustedContactService(gh<_i142.SecureStorageService>()));
+    gh.lazySingleton<_i419.PanicChannelService>(
+        () => _i419.PanicChannelService());
     gh.lazySingleton<_i238.NotificationRemoteDataSource>(
         () => _i238.NotificationRemoteDataSourceImpl(gh<_i361.Dio>()));
     gh.lazySingleton<_i42.AudioRecordingService>(
         () => _i42.AudioRecordingService(gh<_i142.SecureStorageService>()));
+    gh.lazySingleton<_i732.TrustedContactService>(
+        () => _i732.TrustedContactService(gh<_i142.SecureStorageService>()));
+    gh.lazySingleton<_i388.SmsService>(() => _i388.SmsService());
+    gh.lazySingleton<_i554.MeRemoteDataSource>(
+        () => _i554.MeRemoteDataSourceImpl(gh<_i361.Dio>()));
     gh.lazySingleton<_i973.PanicRemoteDataSource>(
         () => _i973.PanicRemoteDataSourceImpl(gh<_i361.Dio>()));
-    gh.lazySingleton<_i658.ReportRepository>(
-        () => _i594.MockReportRepository());
+    gh.lazySingleton<_i750.MyReportsRemoteDataSource>(
+        () => _i750.MyReportsRemoteDataSourceImpl(gh<_i361.Dio>()));
     gh.lazySingleton<_i852.OnboardingLocalDataSource>(
         () => _i852.OnboardingLocalDataSourceImpl());
     gh.lazySingleton<_i860.IncidentRemoteDataSource>(
         () => _i860.IncidentRemoteDataSourceImpl(gh<_i361.Dio>()));
-    gh.factory<_i280.CreateReportUseCase>(
-        () => _i280.CreateReportUseCase(gh<_i658.ReportRepository>()));
-    gh.factory<_i638.GetFormSchemaUseCase>(
-        () => _i638.GetFormSchemaUseCase(gh<_i658.ReportRepository>()));
+    gh.lazySingleton<_i35.ReportRemoteDataSource>(
+        () => _i35.ReportRemoteDataSourceImpl(gh<_i361.Dio>()));
     gh.lazySingleton<_i857.NetworkInfo>(
         () => _i857.NetworkInfoImpl(gh<_i895.Connectivity>()));
     gh.lazySingleton<_i512.IncidentRepository>(
@@ -150,18 +179,47 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i860.IncidentRemoteDataSource>(),
               gh<_i857.NetworkInfo>(),
             ));
-    gh.lazySingleton<_i108.ReportBloc>(
-        () => _i108.ReportBloc(gh<_i280.CreateReportUseCase>()));
+    gh.factory<_i901.ProfileBloc>(
+        () => _i901.ProfileBloc(gh<_i554.MeRemoteDataSource>()));
+    gh.lazySingleton<_i658.ReportRepository>(() => _i1054.ReportRepositoryImpl(
+          gh<_i35.ReportRemoteDataSource>(),
+          gh<_i846.MediaUploadService>(),
+          gh<_i59.FirebaseAuth>(),
+        ));
+    gh.lazySingleton<_i431.MyReportsRepository>(
+        () => _i97.MyReportsRepositoryImpl(
+              gh<_i750.MyReportsRemoteDataSource>(),
+              gh<_i857.NetworkInfo>(),
+              gh<_i635.SocketClient>(),
+            ));
     gh.lazySingleton<_i781.FirebaseAuthDataSource>(
         () => _i781.FirebaseAuthDataSourceImpl(gh<_i59.FirebaseAuth>()));
     gh.lazySingleton<_i519.PanicRepository>(() => _i432.PanicRepositoryImpl(
           gh<_i973.PanicRemoteDataSource>(),
           gh<_i857.NetworkInfo>(),
         ));
-    gh.factory<_i947.ActivatePanicUseCase>(
-        () => _i947.ActivatePanicUseCase(gh<_i519.PanicRepository>()));
     gh.factory<_i434.DeactivatePanicUseCase>(
         () => _i434.DeactivatePanicUseCase(gh<_i519.PanicRepository>()));
+    gh.factory<_i947.ActivatePanicUseCase>(
+        () => _i947.ActivatePanicUseCase(gh<_i519.PanicRepository>()));
+    gh.lazySingleton<_i576.AuthRepository>(() => _i779.AuthRepositoryImpl(
+          gh<_i781.FirebaseAuthDataSource>(),
+          gh<_i852.OnboardingLocalDataSource>(),
+          gh<_i361.Dio>(),
+        ));
+    gh.factory<_i125.GetIncidentDetailUseCase>(
+        () => _i125.GetIncidentDetailUseCase(gh<_i512.IncidentRepository>()));
+    gh.factory<_i414.ConfirmZoneUseCase>(
+        () => _i414.ConfirmZoneUseCase(gh<_i512.IncidentRepository>()));
+    gh.factory<_i1069.GetIncidentsUseCase>(
+        () => _i1069.GetIncidentsUseCase(gh<_i512.IncidentRepository>()));
+    gh.factory<_i715.ConfirmIncidentUseCase>(
+        () => _i715.ConfirmIncidentUseCase(gh<_i512.IncidentRepository>()));
+    gh.lazySingleton<_i328.NotificationRepository>(
+        () => _i303.NotificationRepositoryImpl(
+              gh<_i238.NotificationRemoteDataSource>(),
+              gh<_i857.NetworkInfo>(),
+            ));
     gh.lazySingleton<_i776.PanicBloc>(() => _i776.PanicBloc(
           gh<_i947.ActivatePanicUseCase>(),
           gh<_i434.DeactivatePanicUseCase>(),
@@ -169,38 +227,38 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i42.AudioRecordingService>(),
           gh<_i419.PanicChannelService>(),
           gh<_i705.PanicUploadService>(),
-          gh<_i321.TrustedContactService>(),
+          gh<_i732.TrustedContactService>(),
+          gh<_i388.SmsService>(),
         ));
-    gh.factory<_i715.ConfirmIncidentUseCase>(
-        () => _i715.ConfirmIncidentUseCase(gh<_i512.IncidentRepository>()));
-    gh.factory<_i414.ConfirmZoneUseCase>(
-        () => _i414.ConfirmZoneUseCase(gh<_i512.IncidentRepository>()));
-    gh.factory<_i1069.GetIncidentsUseCase>(
-        () => _i1069.GetIncidentsUseCase(gh<_i512.IncidentRepository>()));
-    gh.factory<_i125.GetIncidentDetailUseCase>(
-        () => _i125.GetIncidentDetailUseCase(gh<_i512.IncidentRepository>()));
-    gh.lazySingleton<_i576.AuthRepository>(() => _i779.AuthRepositoryImpl(
-          gh<_i781.FirebaseAuthDataSource>(),
-          gh<_i852.OnboardingLocalDataSource>(),
-          gh<_i361.Dio>(),
-        ));
-    gh.lazySingleton<_i328.NotificationRepository>(
-        () => _i303.NotificationRepositoryImpl(
-              gh<_i238.NotificationRemoteDataSource>(),
-              gh<_i857.NetworkInfo>(),
-            ));
+    gh.factory<_i280.CreateReportUseCase>(
+        () => _i280.CreateReportUseCase(gh<_i658.ReportRepository>()));
+    gh.factory<_i638.GetFormSchemaUseCase>(
+        () => _i638.GetFormSchemaUseCase(gh<_i658.ReportRepository>()));
     gh.factory<_i401.CompleteOnboardingUseCase>(
         () => _i401.CompleteOnboardingUseCase(gh<_i576.AuthRepository>()));
-    gh.factory<_i222.DeleteAccountUseCase>(
-        () => _i222.DeleteAccountUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i586.IsFirstLaunchUseCase>(
         () => _i586.IsFirstLaunchUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i351.SignInWithEmailUseCase>(
         () => _i351.SignInWithEmailUseCase(gh<_i576.AuthRepository>()));
-    gh.factory<_i290.SignOutUseCase>(
-        () => _i290.SignOutUseCase(gh<_i576.AuthRepository>()));
+    gh.factory<_i316.DeleteAccountUseCase>(
+        () => _i316.DeleteAccountUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i141.SignUpWithEmailUseCase>(
         () => _i141.SignUpWithEmailUseCase(gh<_i576.AuthRepository>()));
+    gh.factory<_i290.SignOutUseCase>(
+        () => _i290.SignOutUseCase(gh<_i576.AuthRepository>()));
+    gh.lazySingleton<_i108.ReportBloc>(
+        () => _i108.ReportBloc(gh<_i280.CreateReportUseCase>()));
+    gh.factory<_i972.WatchMyReportsUseCase>(
+        () => _i972.WatchMyReportsUseCase(gh<_i431.MyReportsRepository>()));
+    gh.factory<_i56.GetMyReportsUseCase>(
+        () => _i56.GetMyReportsUseCase(gh<_i431.MyReportsRepository>()));
+    gh.factory<_i333.CancelReportUseCase>(
+        () => _i333.CancelReportUseCase(gh<_i431.MyReportsRepository>()));
+    gh.factory<_i250.MyReportsBloc>(() => _i250.MyReportsBloc(
+          gh<_i56.GetMyReportsUseCase>(),
+          gh<_i972.WatchMyReportsUseCase>(),
+          gh<_i333.CancelReportUseCase>(),
+        ));
     gh.lazySingleton<_i352.IncidentsBloc>(() => _i352.IncidentsBloc(
           gh<_i1069.GetIncidentsUseCase>(),
           gh<_i125.GetIncidentDetailUseCase>(),
@@ -215,6 +273,7 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i586.IsFirstLaunchUseCase>(),
           gh<_i401.CompleteOnboardingUseCase>(),
           gh<_i576.AuthRepository>(),
+          gh<_i922.FcmService>(),
         ));
     gh.factory<_i750.GetNotificationsUseCase>(() =>
         _i750.GetNotificationsUseCase(gh<_i328.NotificationRepository>()));

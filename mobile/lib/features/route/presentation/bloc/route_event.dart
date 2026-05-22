@@ -7,12 +7,12 @@ abstract class RouteEvent {
 class RouteRequested extends RouteEvent {
   const RouteRequested({
     required this.origin,
-    required this.destinationQuery,
+    required this.destination,
     required this.incidents,
   });
 
   final LatLng origin;
-  final String destinationQuery;
+  final LatLng destination;
   final List<IncidentEntity> incidents;
 }
 

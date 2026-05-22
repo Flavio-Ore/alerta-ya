@@ -7,8 +7,10 @@ class NotificationModel {
         title: json['title'] as String,
         body: json['body'] as String,
         incidentId: json['incidentId'] as String?,
-        district: json['district'] as String? ?? '',
-        isRead: json['isRead'] as bool? ?? false,
+        // district no viene de la API — se deja vacío
+        district: '',
+        // API devuelve readAt: ISO string | null (no isRead bool)
+        isRead: json['readAt'] != null,
         createdAt: DateTime.parse(json['createdAt'] as String),
       );
 }

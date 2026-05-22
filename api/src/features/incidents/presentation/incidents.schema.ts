@@ -22,7 +22,10 @@ export const listIncidentsQuerySchema = z.object({
 });
 
 export const idParamSchema = z.object({
-  id: z.string().uuid(),
+  // Acepta cualquier string no-vacío. Antes era .uuid() estricto, pero rechazaba
+  // los seed IDs con formato custom (e.g. 'seed-incident-demo'). Prisma maneja
+  // injection — el formato strict no aportaba seguridad real.
+  id: z.string().min(1),
 });
 
 export const confirmSchema = z.object({
@@ -41,6 +44,19 @@ export const zoneConfirmSchema = z.object({
   response: z.enum(['yes', 'no']),
 });
 
+// Lista de "mis reportes" (ciudadano autenticado)
+export const listMyReportsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+// Param para rutas que usan :reportId
+export const reportIdParamSchema = z.object({
+  // Mismo criterio que idParamSchema — acepta seeds custom además de UUIDs.
+  reportId: z.string().min(1),
+});
+
+export type ListMyReportsQuery = z.infer<typeof listMyReportsQuerySchema>;
 export type CreateReportInput = z.infer<typeof createReportSchema>;
 export type ListIncidentsQuery = z.infer<typeof listIncidentsQuerySchema>;
 export type ConfirmInput = z.infer<typeof confirmSchema>;

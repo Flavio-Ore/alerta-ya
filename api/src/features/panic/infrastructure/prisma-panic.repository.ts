@@ -23,6 +23,25 @@ export class PrismaPanicRepository implements PanicSessionRepository {
     });
   }
 
+  async findAllActive(): Promise<PanicSession[]> {
+    // Máximo 2h — las sesiones huérfanas (app crasheada) no quedan pegadas para siempre.
+    // El job expire-panic-sessions las marca DEACTIVATED, pero este filtro es el safety net.
+    const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    return this.prisma.panicSession.findMany({
+      where: { status: PanicStatus.ACTIVE, startedAt: { gte: cutoff } },
+      orderBy: { startedAt: 'desc' },
+    });
+  }
+
+  async expireOldSessions(olderThanMinutes: number): Promise<number> {
+    const cutoff = new Date(Date.now() - olderThanMinutes * 60 * 1000);
+    const result = await this.prisma.panicSession.updateMany({
+      where: { status: PanicStatus.ACTIVE, startedAt: { lt: cutoff } },
+      data: { status: PanicStatus.DEACTIVATED, endedAt: new Date(), deactivatedBy: 'timeout' },
+    });
+    return result.count;
+  }
+
   async findById(id: string): Promise<PanicSession | null> {
     return this.prisma.panicSession.findUnique({ where: { id } });
   }

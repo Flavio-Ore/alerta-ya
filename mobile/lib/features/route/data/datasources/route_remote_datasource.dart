@@ -77,8 +77,8 @@ class RouteRemoteDatasource {
     int raw = 0;
     for (final inc in nearby) {
       raw += switch (inc.severity) {
-        Severity.high => 30,
-        Severity.medium => 10,
+        Severity.critical => 30,
+        Severity.moderate => 10,
         Severity.low => 3,
       };
     }

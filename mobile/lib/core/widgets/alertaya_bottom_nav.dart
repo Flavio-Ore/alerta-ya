@@ -1,12 +1,19 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_constants.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 
-/// Bottom navigation con pánico central.
-/// Reglas: exactamente 5 ítems, pánico en el centro (#EF4444, 44px, elevado)
-/// Estado activo: #F5A623. Estado inactivo: #6B7A8D. Fondo: #0D1B2A
+/// Bottom navigation Urban Sentinel — glassmorphism + pánico central.
+///
+/// Reglas:
+///   - 5 ítems, pánico en el índice 2 (visual central).
+///   - Fondo: `surfaceContainerLow` @80% con blur 40px (glass).
+///   - Activo: `secondary` (ámbar). Inactivo: `outline`.
+///   - Pánico: círculo elevado `tertiaryContainer` con borde de separación
+///     en `surface` para destacarlo del glass.
 class AlertaYaBottomNav extends StatelessWidget {
   const AlertaYaBottomNav({
     super.key,
@@ -23,40 +30,45 @@ class AlertaYaBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: AppConstants.bottomNavHeight + MediaQuery.of(context).padding.bottom,
-      color: AppColors.dark,
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _NavItem(
-            icon: Icons.map_outlined,
-            label: 'Mapa',
-            isActive: currentIndex == 0,
-            onTap: () => onTap(0),
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+        child: Container(
+          height: AppConstants.bottomNavHeight + bottomInset,
+          color: AppColors.surfaceContainerLow.withValues(alpha: 0.80),
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(
+                icon: Icons.map_outlined,
+                label: 'Mapa',
+                isActive: currentIndex == 0,
+                onTap: () => onTap(0),
+              ),
+              _NavItem(
+                icon: Icons.notifications_outlined,
+                label: 'Alertas',
+                isActive: currentIndex == 1,
+                onTap: () => onTap(1),
+              ),
+              _PanicButton(onPressed: onPanicPressed),
+              _NavItem(
+                icon: Icons.shield_outlined,
+                label: 'Riesgo',
+                isActive: currentIndex == 3,
+                onTap: () => onTap(3),
+              ),
+              _NavItem(
+                icon: Icons.person_outline,
+                label: 'Perfil',
+                isActive: currentIndex == 4,
+                onTap: () => onTap(4),
+              ),
+            ],
           ),
-          _NavItem(
-            icon: Icons.notifications_outlined,
-            label: 'Alertas',
-            isActive: currentIndex == 1,
-            onTap: () => onTap(1),
-          ),
-          // Botón de pánico central
-          _PanicButton(onPressed: onPanicPressed),
-          _NavItem(
-            icon: Icons.shield_outlined,
-            label: 'Riesgo',
-            isActive: currentIndex == 3,
-            onTap: () => onTap(3),
-          ),
-          _NavItem(
-            icon: Icons.person_outline,
-            label: 'Perfil',
-            isActive: currentIndex == 4,
-            onTap: () => onTap(4),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -77,7 +89,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? AppColors.accent : AppColors.textSecondary;
+    final color = isActive ? AppColors.secondary : AppColors.outline;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -88,7 +100,10 @@ class _NavItem extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(height: 3),
-            Text(label, style: AppTextStyles.label.copyWith(color: color)),
+            Text(
+              label,
+              style: AppTextStyles.labelSm.copyWith(color: color),
+            ),
           ],
         ),
       ),
@@ -109,13 +124,22 @@ class _PanicButton extends StatelessWidget {
         width: AppConstants.panicButtonDiameter,
         height: AppConstants.panicButtonDiameter,
         decoration: BoxDecoration(
-          color: AppColors.severityCritical,
+          color: AppColors.tertiaryContainer,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
+          // Borde de separación visual contra el glass (no es ghost-border,
+          // es un anillo del color del fondo para destacar el botón).
+          border: Border.all(color: AppColors.surface, width: 3),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.tertiaryContainer.withValues(alpha: 0.35),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: const Icon(
           Icons.shield,
-          color: Colors.white,
+          color: AppColors.onTertiaryContainer,
           size: 22,
         ),
       ),

@@ -1,6 +1,9 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 
+import 'package:alertaya/core/services/fcm_service.dart';
 import 'package:alertaya/features/auth/domain/entities/user_entity.dart';
 import 'package:alertaya/features/auth/domain/repositories/auth_repository.dart';
 import 'package:alertaya/features/auth/domain/usecases/complete_onboarding_usecase.dart';
@@ -21,6 +24,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     this._isFirstLaunch,
     this._completeOnboarding,
     this._repository,
+    this._fcm,
   ) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onCheckRequested);
     on<AuthEmailSignInRequested>(_onEmailSignIn);
@@ -36,6 +40,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final IsFirstLaunchUseCase _isFirstLaunch;
   final CompleteOnboardingUseCase _completeOnboarding;
   final AuthRepository _repository;
+  final FcmService _fcm;
 
   Future<void> _onCheckRequested(
     AuthCheckRequested event,
@@ -50,6 +55,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     if (user != null) {
       emit(AuthAuthenticated(user));
+      unawaited(_fcm.registerToken());
     } else {
       emit(AuthUnauthenticated(isFirstLaunch: isFirst));
     }
@@ -67,7 +73,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) => emit(AuthError(failure.toString())),
-      (user) => emit(AuthAuthenticated(user)),
+      (user) {
+        emit(AuthAuthenticated(user));
+        unawaited(_fcm.registerToken());
+      },
     );
   }
 
@@ -83,7 +92,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) => emit(AuthError(failure.toString())),
-      (user) => emit(AuthAuthenticated(user)),
+      (user) {
+        emit(AuthAuthenticated(user));
+        unawaited(_fcm.registerToken());
+      },
     );
   }
 
@@ -103,7 +115,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(AuthError(failure.toString()));
         }
       },
-      (user) => emit(AuthAuthenticated(user)),
+      (user) {
+        emit(AuthAuthenticated(user));
+        unawaited(_fcm.registerToken());
+      },
     );
   }
 
@@ -111,6 +126,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSignOutRequested event,
     Emitter<AuthState> emit,
   ) async {
+    await _fcm.unregisterToken();
     await _signOut();
     emit(const AuthUnauthenticated());
   }

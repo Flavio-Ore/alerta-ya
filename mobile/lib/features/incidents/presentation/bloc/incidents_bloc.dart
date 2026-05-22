@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 
@@ -49,14 +50,47 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
   late final StreamSubscription<IncidentEntity> _updatedSub;
   late final StreamSubscription<ConfirmRequestEvent> _confirmSub;
 
+  // Buffer para confirm-request que llega antes de que se carguen los incidentes.
+  // Si el WS dispara durante IncidentsLoading, guardamos el evento aquí y lo
+  // aplicamos cuando la transición a IncidentsLoaded termine.
+  ConfirmRequestEvent? _bufferedConfirmRequest;
+
   Future<void> _onStarted(
       IncidentsStarted event, Emitter<IncidentsState> emit) async {
     emit(const IncidentsLoading());
-    final result = await _getIncidents(const GetIncidentsParams());
-    result.fold(
-      (f) => emit(IncidentsFailure(f.toString())),
-      (incidents) => emit(IncidentsLoaded(incidents: incidents)),
-    );
+
+    // Reintento automático: si el primer fetch falla (e.g. token Firebase aún
+    // no listo en boot), intentamos hasta 3 veces con backoff antes de Failure.
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      final result = await _getIncidents(const GetIncidentsParams());
+      final succeeded = result.fold(
+        (f) {
+          debugPrint('[IncidentsBloc] ⚠ GET /incidents intento $attempt/$maxAttempts falló: $f');
+          return false;
+        },
+        (incidents) {
+          final pending = _bufferedConfirmRequest;
+          _bufferedConfirmRequest = null;
+          emit(IncidentsLoaded(
+            incidents: incidents,
+            pendingConfirmRequest: pending,
+          ));
+          debugPrint('[IncidentsBloc] ✓ ${incidents.length} incidentes cargados en intento $attempt');
+          return true;
+        },
+      );
+      if (succeeded) return;
+      if (attempt < maxAttempts) {
+        await Future<void>.delayed(Duration(seconds: attempt));
+      } else {
+        // Último intento — emitir el error del último fold
+        result.fold(
+          (f) => emit(IncidentsFailure(f.toString())),
+          (_) {},
+        );
+      }
+    }
   }
 
   void _onNewReceived(
@@ -80,12 +114,20 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
       IncidentDetailRequested event, Emitter<IncidentsState> emit) async {
     if (state is! IncidentsLoaded) return;
     final current = state as IncidentsLoaded;
-    emit(current.copyWith(detailLoading: true));
+    debugPrint('[IncidentsBloc] 🔎 IncidentDetailRequested id=${event.id}');
+    // Limpiar el detalle anterior antes de pedir el nuevo — evita que el sheet
+    // muestre data stale del marker anterior mientras carga el nuevo.
+    emit(current.copyWith(clearDetail: true, detailLoading: true));
     final result = await _getDetail(event.id);
     result.fold(
-      (_) => emit(current.copyWith(detailLoading: false)),
-      (detail) =>
-          emit(current.copyWith(selectedDetail: detail, detailLoading: false)),
+      (f) {
+        debugPrint('[IncidentsBloc] ⚠ getDetail(${event.id}) FAILED: $f');
+        emit(current.copyWith(clearDetail: true, detailLoading: false));
+      },
+      (detail) {
+        debugPrint('[IncidentsBloc] ✓ detail recibido id=${detail.id} type=${detail.type} severity=${detail.severity}');
+        emit(current.copyWith(selectedDetail: detail, detailLoading: false));
+      },
     );
   }
 
@@ -109,9 +151,19 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
 
   void _onConfirmRequestReceived(
       ConfirmRequestReceived event, Emitter<IncidentsState> emit) {
+    debugPrint('[IncidentsBloc] 📨 ConfirmRequestReceived state=${state.runtimeType} zone=${event.event.zoneLabel} type=${event.event.type}');
     if (state is IncidentsLoaded) {
+      debugPrint('[IncidentsBloc] ✓ emit IncidentsLoaded con pendingConfirmRequest');
       emit((state as IncidentsLoaded)
           .copyWith(pendingConfirmRequest: event.event));
+    } else {
+      // Bufferear el evento Y disparar retry del fetch — sino el evento queda
+      // huérfano cuando la carga inicial falló (estado terminal IncidentsFailure).
+      debugPrint('[IncidentsBloc] ⏳ state no es IncidentsLoaded — buffereando + retry fetch');
+      _bufferedConfirmRequest = event.event;
+      if (state is! IncidentsLoading) {
+        add(const IncidentsStarted());
+      }
     }
   }
 

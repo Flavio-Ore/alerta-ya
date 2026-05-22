@@ -1,3 +1,6 @@
+# Variables de entorno — cada desarrollador tiene su propio .env (nunca commitear)
+.env
+
 # Miscellaneous
 *.class
 *.log

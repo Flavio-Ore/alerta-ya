@@ -2,7 +2,7 @@ import { FC } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import type { PublicIncidentDTO, Severity } from '../../../core/api/types';
+import type { PublicIncidentDTO, PanicSessionDTO, Severity } from '../../../core/api/types';
 import { incidentTypeLabel } from '../../incidents/presentation/utils/labels';
 
 const LIMA_CENTER: [number, number] = [-12.046374, -77.042793];
@@ -15,10 +15,11 @@ const SEVERITY_HEX: Record<Severity, string> = {
 
 interface Props {
   incidents: PublicIncidentDTO[];
+  panicSessions?: PanicSessionDTO[];
   onPinClick?: (id: string) => void;
 }
 
-export const IncidentsMap: FC<Props> = ({ incidents, onPinClick }) => {
+export const IncidentsMap: FC<Props> = ({ incidents, panicSessions = [], onPinClick }) => {
   return (
     <MapContainer
       center={LIMA_CENTER}
@@ -58,6 +59,38 @@ export const IncidentsMap: FC<Props> = ({ incidents, onPinClick }) => {
           </CircleMarker>
         );
       })}
+
+      {/* Sesiones de pánico activas — doble anillo para efecto pulsante */}
+      {panicSessions.flatMap((session) => [
+        // Anillo exterior translúcido
+        <CircleMarker
+          key={`${session.id}-ring`}
+          center={[session.lat, session.lng]}
+          radius={18}
+          pathOptions={{
+            color:       '#ff1744',
+            weight:      2,
+            fillColor:   '#ff1744',
+            fillOpacity: 0.20,
+          }}
+        />,
+        // Punto central sólido con tooltip
+        <CircleMarker
+          key={`${session.id}-dot`}
+          center={[session.lat, session.lng]}
+          radius={9}
+          pathOptions={{
+            color:       '#ffffff',
+            weight:      2,
+            fillColor:   '#ff1744',
+            fillOpacity: 0.95,
+          }}
+        >
+          <Tooltip direction="top" offset={[0, -12]} opacity={1} permanent>
+            <span style={{ fontWeight: 700, fontSize: 11, color: '#cc0000' }}>🚨 PÁNICO</span>
+          </Tooltip>
+        </CircleMarker>,
+      ])}
     </MapContainer>
   );
 };
