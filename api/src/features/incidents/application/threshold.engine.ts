@@ -32,10 +32,18 @@ function extractFormFlags(
   stillHere: boolean;
 } {
   const d = formData as Record<string, unknown>;
+  // El mobile manda STRINGS, no booleans:
+  // - weapon: 'firearm' | 'blade' | 'none' | 'unknown'
+  // - injured: 'yes' | 'no' | 'unknown'
+  // - stillInArea: 'yes' | 'fled_foot' | 'fled_vehicle' | 'unknown'
+  const weapon = d["weapon"];
+  const injured = d["injured"];
+  const stillInArea = d["stillInArea"];
   return {
-    weapon: d["weapon"] === true,
-    injured: d["injured"] === true,
-    stillHere: d["stillInArea"] === true,
+    weapon:
+      weapon === true || weapon === "firearm" || weapon === "blade",
+    injured: injured === true || injured === "yes",
+    stillHere: stillInArea === true || stillInArea === "yes",
   };
 }
 

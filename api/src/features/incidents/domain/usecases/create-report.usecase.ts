@@ -67,6 +67,7 @@ export async function createReport(
       type: input.type,
       lat: input.lat,
       lng: input.lng,
+      reporterUserId: input.userId,
     };
     eventBus.emit(IncidentEvents.CONFIRM_REQUEST, payload);
     return null;
@@ -96,7 +97,10 @@ export async function createReport(
     }
 
     const dto = toPublicDTO(incident);
-    eventBus.emit(IncidentEvents.UPDATED, dto);
+    eventBus.emit(IncidentEvents.UPDATED, {
+      incident: dto,
+      reporterUserId: input.userId,
+    });
     return dto;
   }
 
@@ -120,6 +124,9 @@ export async function createReport(
   await Promise.all(orphaned.map((r) => deps.incidentRepo.linkReport(r.id, incident.id)));
 
   const dto = toPublicDTO(incident);
-  eventBus.emit(IncidentEvents.NEW, dto);
+  eventBus.emit(IncidentEvents.NEW, {
+    incident: dto,
+    reporterUserId: input.userId,
+  });
   return dto;
 }

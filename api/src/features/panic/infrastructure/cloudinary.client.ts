@@ -50,3 +50,41 @@ export function generateCloudinaryUploadParams(
 
   return params;
 }
+
+/**
+ * Genera N upload params firmados para evidencia (imágenes/videos) de reportes
+ * ciudadanos. Resource type 'image' acepta jpg/png/heic/webp/mp4 (video se transcodea).
+ *
+ * Path: reports/{userId}/{uuid}. El userId queda en el path para auditoría — NO
+ * se expone públicamente (Cloudinary URLs llevan el publicId completo).
+ *
+ * Cada call genera UUIDs nuevos — el mobile decide cuántos según los archivos
+ * que el usuario seleccione antes de enviar el reporte.
+ */
+export function generateReportUploadParams(
+  userId: string,
+  count: number,
+): CloudinaryUploadParams[] {
+  const params: CloudinaryUploadParams[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const uuid = crypto.randomUUID();
+    const publicId = `reports/${userId}/${uuid}`;
+    const timestamp = Math.round(Date.now() / 1000);
+
+    const signature = cloudinary.utils.api_sign_request(
+      { timestamp, public_id: publicId },
+      env.CLOUDINARY_API_SECRET,
+    );
+
+    params.push({
+      uploadUrl: `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/image/upload`,
+      publicId,
+      timestamp,
+      apiKey: env.CLOUDINARY_API_KEY,
+      signature,
+    });
+  }
+
+  return params;
+}

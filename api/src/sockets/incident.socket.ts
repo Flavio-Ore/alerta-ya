@@ -4,6 +4,7 @@ import {
   eventBus,
   IncidentEvents,
   ConfirmRequestPayload,
+  IncidentEventPayload,
   StatusChangedForReportersPayload,
   PanicEvents,
   PanicStartedPayload,
@@ -96,12 +97,14 @@ export function registerIncidentSocket(io: Server): void {
   });
 
   // Incidente publicado → broadcast al distrito + Lima
-  eventBus.on(IncidentEvents.NEW, (incident: PublicIncidentDTO) => {
-    emitIncidentNew(io, incident);
+  // (la exclusión del reporter solo aplica a push FCM, no al WS — el reporter
+  //  igual quiere ver su pin aparecer en su propio mapa en tiempo real)
+  eventBus.on(IncidentEvents.NEW, (payload: IncidentEventPayload) => {
+    emitIncidentNew(io, payload.incident);
   });
 
-  eventBus.on(IncidentEvents.UPDATED, (incident: PublicIncidentDTO) => {
-    emitIncidentUpdated(io, incident);
+  eventBus.on(IncidentEvents.UPDATED, (payload: IncidentEventPayload) => {
+    emitIncidentUpdated(io, payload.incident);
   });
 
   // Primer reporte en una zona → mini-alert a usuarios cercanos (~1km)

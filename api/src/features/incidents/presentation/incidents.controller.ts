@@ -12,6 +12,7 @@ import { confirmIncident } from '../domain/usecases/confirm-incident.usecase';
 import { updateIncidentStatus } from '../domain/usecases/update-incident-status.usecase';
 import { getMyReports } from '../domain/usecases/get-my-reports.usecase';
 import { PrismaNotificationRepository } from '../../notifications/infrastructure/prisma-notification.repository';
+import { generateReportUploadParams } from '../../panic/infrastructure/cloudinary.client';
 import { AppError } from '../../../core/errors/AppError';
 import { IncidentType, IncidentStatus } from '@prisma/client';
 const ZONE_CONFIRM_COOLDOWN = 30 * 60; // 30 minutos entre respuestas por zona
@@ -54,6 +55,33 @@ export async function getIncident(req: Request, res: Response, next: NextFunctio
   try {
     const dto = await getIncidentById(req.params['id']!, incidentRepo, reportRepo);
     res.json(dto);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /incidents/reports/upload-params
+ * Devuelve N upload params firmados para subir evidencia (imágenes/videos) a
+ * Cloudinary. El mobile sube directo, recoge las URLs, y después manda el
+ * POST /reports con `mediaUrls`.
+ *
+ * Body: { count: 1..10 }
+ */
+export async function getReportUploadParams(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user?.uid) {
+      next(new AppError(401, 'No autenticado'));
+      return;
+    }
+    const user = await userLookup.findOrCreate(req.user.uid);
+    const { count } = req.body as { count: number };
+    const params = generateReportUploadParams(user.id, count);
+    res.json({ params });
   } catch (err) {
     next(err);
   }

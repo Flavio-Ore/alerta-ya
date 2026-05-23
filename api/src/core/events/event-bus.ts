@@ -32,6 +32,15 @@ export interface ConfirmRequestPayload {
   type: string;        // "ROBBERY"
   lat: number;
   lng: number;
+  /** userId del reportante — para excluirlo de la notificación */
+  reporterUserId?: string;
+}
+
+/** Payload del evento NEW/UPDATED — incluye reporter para exclusión de notif */
+export interface IncidentEventPayload {
+  incident: import("../../features/incidents/domain/entities/incident.entity").PublicIncidentDTO;
+  /** userId del reportante que generó este evento — para excluirlo de la notif */
+  reporterUserId?: string;
 }
 
 /** Payload del evento dirigido a los reportantes — emitido al room user:{firebaseUid} */

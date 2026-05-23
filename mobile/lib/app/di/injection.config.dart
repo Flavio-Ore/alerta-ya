@@ -148,7 +148,7 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i922.FcmService>(
         () => _i922.FcmService(gh<_i361.Dio>()));
     gh.lazySingleton<_i846.MediaUploadService>(
-        () => _i846.MediaUploadService());
+        () => _i846.MediaUploadService(gh<_i361.Dio>()));
     gh.lazySingleton<_i705.PanicUploadService>(
         () => _i705.PanicUploadService());
     gh.lazySingleton<_i419.PanicChannelService>(

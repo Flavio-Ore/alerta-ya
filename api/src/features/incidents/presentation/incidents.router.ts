@@ -4,8 +4,8 @@ import { authMiddleware } from '../../../core/middleware/auth.middleware';
 import { authorityMiddleware } from '../../../core/middleware/authority.middleware';
 import { reportRateLimiterMiddleware } from '../../../core/middleware/rateLimiter.middleware';
 import { validate } from '../../../core/middleware/validate.middleware';
-import { createReportSchema, listIncidentsQuerySchema, listMyReportsQuerySchema, idParamSchema, confirmSchema, updateStatusSchema, zoneConfirmSchema, reportIdParamSchema } from './incidents.schema';
-import { listIncidents, getIncident, submitReport, patchIncidentStatus, confirmOrDenyIncident, respondZoneConfirm, listMyReports, cancelReport } from './incidents.controller';
+import { createReportSchema, listIncidentsQuerySchema, listMyReportsQuerySchema, idParamSchema, confirmSchema, updateStatusSchema, zoneConfirmSchema, reportIdParamSchema, uploadParamsRequestSchema } from './incidents.schema';
+import { listIncidents, getIncident, submitReport, patchIncidentStatus, confirmOrDenyIncident, respondZoneConfirm, listMyReports, cancelReport, getReportUploadParams } from './incidents.controller';
 
 const router = Router();
 
@@ -18,6 +18,15 @@ router.get(
   listMyReports,
 );
 router.get('/:id', validate(idParamSchema, 'params'), getIncident);
+// Cloudinary signed upload params para evidencia — pedir ANTES de POST /reports.
+// Va ANTES de '/reports' para no chocar con la ruta general.
+router.post(
+  '/reports/upload-params',
+  authMiddleware,
+  validate(uploadParamsRequestSchema),
+  getReportUploadParams,
+);
+
 router.post(
   '/reports',
   authMiddleware,
