@@ -70,3 +70,33 @@ export interface UpdateStatusInput {
   status: IncidentStatus;
   feedback?: string;
 }
+
+export type AdminRole = 'AUTHORITY' | 'ADMIN';
+
+export interface AdminUserDTO {
+  uid: string;
+  email: string;
+  displayName: string | null;
+  role: AdminRole | null;
+  disabled: boolean;
+  createdAt: string;
+}
+
+export interface ListAdminUsersResult {
+  items: AdminUserDTO[];
+  total: number;
+  page: number;
+}
+
+export interface CreateAdminUserInput {
+  email: string;
+  password: string;
+  displayName: string;
+  role: AdminRole;
+}
+
+export interface UpdateAdminUserInput {
+  displayName?: string;
+  role?: AdminRole;
+  disabled?: boolean;
+}

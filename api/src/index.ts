@@ -19,6 +19,7 @@ import { incidentsRouter } from "./features/incidents/presentation/incidents.rou
 import { zonesRouter } from "./features/zones/presentation/zones.router";
 import { panicRouter } from "./features/panic/presentation/panic.router";
 import { notificationsRouter } from "./features/notifications/presentation/notifications.router";
+import { adminRouter } from "./features/admin/presentation/admin.router";
 
 import { registerIncidentSocket } from "./sockets/incident.socket";
 import { registerSocketAuth } from "./sockets/auth.socket";
@@ -95,6 +96,7 @@ app.use("/zones", zonesRouter);
 app.use("/panic", panicRouter);
 app.use("/notifications", notificationsRouter);
 app.use("/internal/jobs", jobsRouter);
+app.use("/admin/users", adminRouter);
 
 // Error handler — siempre al final
 app.use(errorHandlerMiddleware);

@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 
 import type { PublicIncidentDTO, Severity } from '../../../core/api/types';
 import { incidentTypeLabel } from '../../incidents/presentation/utils/labels';
+import { HeatmapLayer } from './HeatmapLayer';
 
 const LIMA_CENTER: [number, number] = [-12.046374, -77.042793];
 
@@ -16,9 +17,10 @@ const SEVERITY_HEX: Record<Severity, string> = {
 interface Props {
   incidents: PublicIncidentDTO[];
   onPinClick?: (id: string) => void;
+  showHeatmap?: boolean;
 }
 
-export const IncidentsMap: FC<Props> = ({ incidents, onPinClick }) => {
+export const IncidentsMap: FC<Props> = ({ incidents, onPinClick, showHeatmap = true }) => {
   return (
     <MapContainer
       center={LIMA_CENTER}
@@ -31,6 +33,9 @@ export const IncidentsMap: FC<Props> = ({ incidents, onPinClick }) => {
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       />
+      {showHeatmap && incidents.length > 1 && (
+        <HeatmapLayer incidents={incidents} />
+      )}
       {incidents.map((inc) => {
         const color = SEVERITY_HEX[inc.severity];
         return (

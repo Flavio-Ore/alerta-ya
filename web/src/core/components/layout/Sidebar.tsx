@@ -4,7 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "../../../features/auth/presentation/stores/auth.store";
 
 interface NavItem {
-  to: "/dashboard" | "/incidents" | "/predictions" | "/statistics" | "/export";
+  to: "/dashboard" | "/incidents" | "/predictions" | "/statistics" | "/export" | "/admin/users";
   label: string;
   icon: string;
 }
@@ -16,6 +16,8 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/statistics", label: "Estadísticas", icon: "bar_chart" },
   { to: "/export", label: "Exportar", icon: "ios_share" },
 ];
+
+const ADMIN_NAV_ITEM: NavItem = { to: "/admin/users", label: "Administrar Autoridades", icon: "badge" };
 
 function getInitials(email: string, displayName: string | null): string {
   if (displayName) {
@@ -72,6 +74,24 @@ export const Sidebar: FC = () => {
           </Link>
         ))}
       </nav>
+
+      {/* Admin section — solo visible para ADMIN */}
+      {user?.role === 'ADMIN' && (
+        <div className="px-3 mb-2">
+          <div className="h-px bg-stitch-surface-container-high mb-2" />
+          <Link
+            to={ADMIN_NAV_ITEM.to}
+            className="flex items-center gap-3 px-3 py-3 rounded-lg text-stitch-on-surface-variant hover:text-white hover:bg-stitch-surface-container/60 transition-colors"
+            activeProps={{
+              className:
+                "flex items-center gap-3 px-3 py-3 rounded-lg text-stitch-primary font-bold border-r-2 border-stitch-primary bg-stitch-surface-container/40 transition-colors",
+            }}
+          >
+            <span className="material-symbols-outlined">{ADMIN_NAV_ITEM.icon}</span>
+            <span className="font-label text-sm">{ADMIN_NAV_ITEM.label}</span>
+          </Link>
+        </div>
+      )}
 
       {/* User card + settings */}
       <div className="px-3 pt-6 space-y-1">

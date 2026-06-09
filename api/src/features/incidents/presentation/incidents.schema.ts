@@ -22,7 +22,7 @@ export const listIncidentsQuerySchema = z.object({
 });
 
 export const idParamSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1, 'ID de incidente requerido'),
 });
 
 export const confirmSchema = z.object({
