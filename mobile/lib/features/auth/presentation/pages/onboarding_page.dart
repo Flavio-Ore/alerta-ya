@@ -24,18 +24,18 @@ const _slides = [
     kind: _SlideKind.realtime,
     headline: 'Alertas en tiempo real',
     body:
-        'Enterate al instante de lo que pasa en tu zona. El mapa se actualiza solo.',
+        'Entérate al instante de lo que pasa en tu zona. El mapa se actualiza solo.',
   ),
   _Slide(
     kind: _SlideKind.report,
-    headline: 'Reportá en menos de 10 segundos',
+    headline: 'Reporta en menos de 10 segundos',
     body:
-        'Elegí el tipo de incidente, respondé 3 preguntas rápidas y el sistema hace el resto.',
+        'Elige el tipo de incidente, responde 3 preguntas rápidas y el sistema hace el resto.',
   ),
   _Slide(
     kind: _SlideKind.anonymous,
     headline: 'Tu identidad, siempre protegida',
-    body: 'Sos anónimo para todos. Solo vos sabés que reportaste.',
+    body: 'Eres anónimo para todos. Solo tú sabes que reportaste.',
   ),
 ];
 
