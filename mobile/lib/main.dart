@@ -19,7 +19,11 @@ void main() async {
   // El archivo .env está en assets — gitignoreado, cada dev tiene el suyo.
   await dotenv.load(fileName: '.env');
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } on FirebaseException catch (e) {
+    if (e.code != 'duplicate-app') rethrow;
+  }
   await Hive.initFlutter();
   await Hive.openBox<bool>('app_prefs');
   await configureDependencies();
