@@ -12,16 +12,21 @@ class PanicActivationRequested extends PanicEvent {
   const PanicActivationRequested({
     required this.lat,
     required this.lng,
-    required this.pin,
+    this.pin, // null = usar el PIN guardado previamente
     this.recordAudio = true,
     this.alarmSound = true,
   });
   final double lat;
   final double lng;
-  final String pin;
+  final String? pin;
   // Toggles del usuario. Defaults true por seguridad — si no hay prefs cargadas, asumimos lo más protector.
   final bool recordAudio;
   final bool alarmSound;
+}
+
+class PanicSavedPinUpdated extends PanicEvent {
+  const PanicSavedPinUpdated(this.pin);
+  final String pin;
 }
 
 class PanicDeactivationRequested extends PanicEvent {

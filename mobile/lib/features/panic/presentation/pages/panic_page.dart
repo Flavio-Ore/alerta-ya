@@ -70,6 +70,16 @@ class _PanicPageState extends State<PanicPage> {
     _elapsed = Duration.zero;
   }
 
+  Future<void> _onSosTap() async {
+    final hasSaved = await context.read<PanicBloc>().hasSavedPin();
+    if (!mounted) return;
+    if (hasSaved) {
+      await _activatePanic(null);
+    } else {
+      await _showPinSetupSheet();
+    }
+  }
+
   Future<void> _showPinSetupSheet() async {
     final pin = await showModalBottomSheet<String>(
       context: context,
@@ -78,7 +88,7 @@ class _PanicPageState extends State<PanicPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheetCtx) => _PinSetupSheet(
+      builder: (sheetCtx) => PinSetupSheet(
         onConfirm: (p) => Navigator.of(sheetCtx).pop(p),
       ),
     );
@@ -88,7 +98,7 @@ class _PanicPageState extends State<PanicPage> {
     }
   }
 
-  Future<void> _activatePanic(String pin) async {
+  Future<void> _activatePanic(String? pin) async {
     double lat = -12.0464;
     double lng = -77.0428;
     bool gpsUnavailable = false;
@@ -235,7 +245,7 @@ class _PanicPageState extends State<PanicPage> {
             );
           }
           return _IdleView(
-            onPanicTap: _showPinSetupSheet,
+            onPanicTap: _onSosTap,
             onBack: () {
               if (context.canPop()) {
                 context.pop();
@@ -1594,15 +1604,15 @@ class _LoadingView extends StatelessWidget {
 
 // ─── PIN Setup Sheet (activación) ─────────────────────────────────────────────
 
-class _PinSetupSheet extends StatefulWidget {
-  const _PinSetupSheet({required this.onConfirm});
+class PinSetupSheet extends StatefulWidget {
+  const PinSetupSheet({super.key, required this.onConfirm});
   final void Function(String pin) onConfirm;
 
   @override
-  State<_PinSetupSheet> createState() => _PinSetupSheetState();
+  State<PinSetupSheet> createState() => _PinSetupSheetState();
 }
 
-class _PinSetupSheetState extends State<_PinSetupSheet> {
+class _PinSetupSheetState extends State<PinSetupSheet> {
   final _controller = TextEditingController();
 
   @override

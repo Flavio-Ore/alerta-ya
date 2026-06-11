@@ -8,6 +8,8 @@ import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/storage/secure_storage_service.dart';
 import 'package:alertaya/features/auth/domain/usecases/delete_account_usecase.dart';
 import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart';
+import 'package:alertaya/features/panic/presentation/bloc/panic_bloc.dart';
+import 'package:alertaya/features/panic/presentation/pages/panic_page.dart';
 import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 
 const _kCall105OnLock = 'panic_call_105_on_lock';
@@ -27,12 +29,19 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   TrustedContact? _currentContact;
   bool _deletingAccount = false;
   bool _call105OnLock = true;
+  bool _hasSavedPin = false;
 
   @override
   void initState() {
     super.initState();
     _loadContact();
     _loadCall105();
+    _loadSavedPin();
+  }
+
+  Future<void> _loadSavedPin() async {
+    final has = await getIt<PanicBloc>().hasSavedPin();
+    if (mounted) setState(() => _hasSavedPin = has);
   }
 
   Future<void> _loadContact() async {
@@ -50,6 +59,24 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   Future<void> _toggleCall105(bool value) async {
     setState(() => _call105OnLock = value);
     await _storage.write(_kCall105OnLock, value ? 'true' : 'false');
+  }
+
+  Future<void> _showPinSetup() async {
+    final pin = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => PinSetupSheet(
+        onConfirm: (p) => Navigator.of(sheetCtx).pop(p),
+      ),
+    );
+    if (pin != null) {
+      getIt<PanicBloc>().add(PanicSavedPinUpdated(pin));
+      if (mounted) setState(() => _hasSavedPin = true);
+    }
   }
 
   Future<void> _showContactSheet() async {
@@ -109,12 +136,13 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
               _SettingsItem(
                 icon: Icons.pin_outlined,
                 title: 'PIN de pánico',
-                subtitle: 'Lo creás al momento de activar el SOS',
-                trailing: const _Pill(
-                  label: 'Al activar',
-                  color: AppColors.secondary,
-                ),
-                onTap: () => _showPinInfo(context),
+                subtitle: _hasSavedPin
+                    ? 'PIN guardado · se usa en cada activación'
+                    : 'Sin PIN guardado · se pedirá al activar',
+                trailing: _hasSavedPin
+                    ? const _Pill(label: 'Configurado', color: AppColors.secondary)
+                    : const _Pill(label: 'Al activar', color: AppColors.onSurfaceVariant),
+                onTap: _showPinSetup,
               ),
               _SettingsItem(
                 icon: Icons.local_police_outlined,
@@ -241,87 +269,6 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  static void _showPinInfo(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.surfaceContainerHigh,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.outline,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.pin_outlined,
-                      color: AppColors.secondary, size: 22),
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Text('PIN de pánico', style: AppTextStyles.titleLg),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'El PIN se define en el momento exacto que activás el botón SOS.',
-              style: AppTextStyles.bodyLg,
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Cada sesión de pánico tiene su propio PIN — no se reutiliza. Para desactivar la alarma, ingresás ese mismo PIN.',
-              style: AppTextStyles.bodyMd,
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.secondary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppColors.secondary.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.shield_outlined,
-                      color: AppColors.secondary, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Si alguien te bloquea el teléfono, podés configurar que sugerimos llamar al 105 tras 3 intentos fallidos.',
-                      style: AppTextStyles.bodySm
-                          .copyWith(color: AppColors.secondary),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
