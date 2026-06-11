@@ -6,7 +6,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['DM Sans', 'Barlow', 'Nunito Sans', 'Arial', 'sans-serif'],
+        sans:     ['Inter', 'DM Sans', 'system-ui', 'sans-serif'],
+        headline: ['Manrope', 'sans-serif'],
+        label:    ['Inter', 'sans-serif'],
       },
       colors: {
         // ── Tokens de marca AlertaYa ─────────────────────────────────────
@@ -24,6 +26,30 @@ const config: Config = {
         'ay-text-sec':   '#6B7A8D',
         'ay-text-muted': '#C4CDD8',
         'ay-border':     '#2D3A4A',
+
+        // ── Design System Stitch: "The Sovereign Sentinel" ───────────────
+        // Fuente: stitch projects/13797666803496547393 designTheme.namedColors
+        'stitch-surface':                     '#101319',
+        'stitch-surface-bright':              '#363940',
+        'stitch-surface-dim':                 '#101319',
+        'stitch-surface-container-lowest':    '#0b0e14',
+        'stitch-surface-container-low':       '#191c22',
+        'stitch-surface-container':           '#1d2026',
+        'stitch-surface-container-high':      '#272a30',
+        'stitch-surface-container-highest':   '#32353b',
+        'stitch-on-surface':                  '#e1e2ea',
+        'stitch-on-surface-variant':          '#c4c6d0',
+        'stitch-primary':                     '#acc7ff',
+        'stitch-primary-container':           '#1b3a6b',
+        'stitch-on-primary-container':        '#89a5dd',
+        'stitch-secondary':                   '#b8c8dd',
+        'stitch-secondary-container':         '#3c4a5c',
+        'stitch-tertiary':                    '#ffb955',
+        'stitch-tertiary-container':          '#533400',
+        'stitch-error':                       '#ffb4ab',
+        'stitch-error-container':             '#93000a',
+        'stitch-outline':                     '#8e909a',
+        'stitch-outline-variant':             '#44474f',
 
         // ── shadcn/ui CSS variable tokens (dark dashboard theme) ─────────
         border:      'hsl(var(--border))',
@@ -64,7 +90,6 @@ const config: Config = {
         lg:        'var(--radius)',
         md:        'calc(var(--radius) - 2px)',
         sm:        'calc(var(--radius) - 4px)',
-        // Tokens propios
         pill:      '100px',
         btn:       '28px',
         card:      '14px',

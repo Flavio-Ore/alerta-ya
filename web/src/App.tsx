@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useEffect } from 'react';
 import {
   createRouter,
   createRoute,
@@ -10,26 +10,28 @@ import {
 
 import { Sidebar } from './core/components/layout/Sidebar';
 import { TopBar } from './core/components/layout/TopBar';
-import LoginPage from './features/auth/pages/LoginPage';
+import LoginPage from './features/auth/presentation/pages/LoginPage';
+import { useAuthStore } from './features/auth/presentation/stores/auth.store';
 import DashboardPage from './features/dashboard/pages/DashboardPage';
 import IncidentsListPage from './features/incidents/pages/IncidentsListPage';
 import IncidentDetailPage from './features/incidents/pages/IncidentDetailPage';
 import PredictionsPage from './features/predictions/pages/PredictionsPage';
 import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import ExportPage from './features/export/pages/ExportPage';
+import AdminUsersPage from './features/admin/pages/AdminUsersPage';
 
-// TODO(auth): replace with real auth store check
-const isAuthenticated = () => true;
-const hasAuthorityRole = () => true;
+function isAuthorized() {
+  const user = useAuthStore.getState().user;
+  return user !== null && (user.role === 'AUTHORITY' || user.role === 'ADMIN');
+}
 
-// Layout con Sidebar + TopBar para rutas protegidas
 function AuthLayout() {
   return (
-    <div className="flex h-screen bg-ay-bg-dark overflow-hidden">
+    <div className="flex h-screen bg-stitch-surface overflow-hidden">
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
         <TopBar />
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-hidden flex flex-col">
           <Outlet />
         </main>
       </div>
@@ -37,23 +39,46 @@ function AuthLayout() {
   );
 }
 
-// Root
-const rootRoute = createRootRoute();
+const rootRoute = createRootRoute({
+  beforeLoad: async ({ location }) => {
+    // Esperá al bootstrap de Firebase antes de redirigir
+    if (!useAuthStore.getState().isReady) {
+      await new Promise<void>((resolve) => {
+        const unsub = useAuthStore.subscribe((s) => {
+          if (s.isReady) {
+            unsub();
+            resolve();
+          }
+        });
+      });
+    }
 
-// Ruta pública — login
+    if (location.pathname === '/' && !isAuthorized()) {
+      throw redirect({ to: '/auth/login' });
+    }
+    if (location.pathname === '/' && isAuthorized()) {
+      throw redirect({ to: '/dashboard' });
+    }
+  },
+});
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth/login',
   component: LoginPage,
+  beforeLoad: () => {
+    if (isAuthorized()) {
+      throw redirect({ to: '/dashboard' });
+    }
+  },
 });
 
-// Layout protegido — verifica auth + rol AUTHORITY
 const authLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'auth',
   component: AuthLayout,
   beforeLoad: ({ location }) => {
-    if (!isAuthenticated() || !hasAuthorityRole()) {
+    if (!isAuthorized()) {
       throw redirect({
         to: '/auth/login',
         search: { redirect: location.href },
@@ -98,6 +123,18 @@ const exportRoute = createRoute({
   component: ExportPage,
 });
 
+const adminUsersRoute = createRoute({
+  getParentRoute: () => authLayoutRoute,
+  path: '/admin/users',
+  component: AdminUsersPage,
+  beforeLoad: () => {
+    const user = useAuthStore.getState().user;
+    if (user?.role !== 'ADMIN') {
+      throw redirect({ to: '/dashboard' });
+    }
+  },
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authLayoutRoute.addChildren([
@@ -107,6 +144,7 @@ const routeTree = rootRoute.addChildren([
     predictionsRoute,
     statisticsRoute,
     exportRoute,
+    adminUsersRoute,
   ]),
 ]);
 
@@ -121,6 +159,15 @@ declare module '@tanstack/react-router' {
   }
 }
 
-const App: FC = () => <RouterProvider router={router} />;
+const App: FC = () => {
+  const bootstrap = useAuthStore((s) => s.bootstrap);
+
+  useEffect(() => {
+    const unsub = bootstrap();
+    return unsub;
+  }, [bootstrap]);
+
+  return <RouterProvider router={router} />;
+};
 
 export default App;

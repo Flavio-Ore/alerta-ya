@@ -1,108 +1,236 @@
-import { Map as MapIcon, Activity, Brain, BarChart3, Download, Bell, AlertCircle, ShieldCheck } from 'lucide-react';
+import { useMemo } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+
+import { useIncidentsList } from '../../incidents/infrastructure/incidents.api';
+import { useIncidentLiveUpdates } from '../../incidents/infrastructure/incidents.socket';
+import {
+  incidentTypeLabel,
+  severityLabel,
+  formatRelativeTime,
+} from '../../incidents/presentation/utils/labels';
+import { IncidentsMap } from '../components/IncidentsMap';
+import type { PublicIncidentDTO, Severity } from '../../../core/api/types';
+
+const SEVERITY_BAR: Record<Severity, string> = {
+  CRITICAL: 'border-stitch-error',
+  MODERATE: 'border-stitch-tertiary',
+  LOW:      'border-green-500',
+};
+
+const SEVERITY_BADGE: Record<Severity, string> = {
+  CRITICAL: 'bg-stitch-error/10 text-stitch-error border-stitch-error/20',
+  MODERATE: 'bg-stitch-tertiary/10 text-stitch-tertiary border-stitch-tertiary/20',
+  LOW:      'bg-green-500/10 text-green-400 border-green-500/20',
+};
+
+function IncidentCard({ incident, onClick }: { incident: PublicIncidentDTO; onClick: () => void }) {
+  return (
+    <article
+      className={`bg-stitch-surface-container-low rounded-xl overflow-hidden border-l-4 ${SEVERITY_BAR[incident.severity]} flex flex-col p-4 gap-3`}
+    >
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-sm font-bold text-white">
+            {incidentTypeLabel[incident.type]}
+          </h3>
+          <p className="text-[10px] font-bold text-stitch-on-surface-variant font-label uppercase">
+            {formatRelativeTime(incident.createdAt)} · {incident.district}
+          </p>
+        </div>
+        <span
+          className={`text-[10px] font-bold px-2 py-0.5 rounded border ${SEVERITY_BADGE[incident.severity]}`}
+        >
+          {severityLabel[incident.severity].toUpperCase()}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between text-[11px] text-stitch-on-surface-variant">
+        <span>{incident.reportCount} reportes · {incident.confirmCount} confirman</span>
+      </div>
+
+      <button
+        onClick={onClick}
+        className="w-full bg-stitch-primary-container text-stitch-on-primary-container font-bold py-2 rounded-lg text-xs hover:bg-stitch-primary-container/80 transition-all uppercase tracking-wide font-label"
+      >
+        Ver detalle
+      </button>
+    </article>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  unit,
+  valueClass,
+  badge,
+}: {
+  label:      string;
+  value:      string | number;
+  unit:       string;
+  valueClass: string;
+  badge?:     string;
+}) {
+  return (
+    <div className="bg-stitch-surface-container-low p-5 rounded-xl relative">
+      <p className="text-[10px] font-bold text-stitch-on-surface-variant uppercase tracking-widest font-label mb-1">
+        {label}
+      </p>
+      <div className="flex items-baseline gap-2">
+        <span className={`text-3xl font-headline font-bold ${valueClass}`}>{value}</span>
+        <span className="text-xs text-stitch-on-surface-variant">{unit}</span>
+      </div>
+      {badge && (
+        <span className="absolute top-3 right-3 text-[8px] font-bold uppercase tracking-widest text-stitch-tertiary bg-stitch-tertiary/10 px-2 py-0.5 rounded">
+          {badge}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function DashboardPage() {
-  const stats = [
-    { label: 'ACTIVOS', val: '14', color: 'text-orange-500' },
-    { label: 'CRÍTICOS', val: '3', color: 'text-red-500' },
-    { label: 'REPORTES HOY', val: '47', color: 'text-white' },
-    { label: 'RESPUESTA PROM.', val: '6 min', target: '5 min', color: 'text-blue-400' },
-  ];
+  const navigate = useNavigate();
+  useIncidentLiveUpdates();
+  // status:'ALL' → trae histórico completo. El KPI "Total" + agregaciones
+  // requieren ver TODO (no solo ACTIVE), aunque mapa y lista filtran cliente-side por ACTIVE.
+  const { data, isLoading } = useIncidentsList({ pageSize: 100, status: 'ALL' });
+
+  // KPIs según HU008 H8-4: total, críticos, zonas activas
+  const stats = useMemo(() => {
+    const items = data?.items ?? [];
+
+    const total      = data?.total ?? 0;
+    const critical   = items.filter((i) => i.severity === 'CRITICAL').length;
+    const activeNow  = items.filter((i) => i.status === 'ACTIVE').length;
+    const activeZones = new Set(
+      items.filter((i) => i.status === 'ACTIVE').map((i) => i.district),
+    ).size;
+
+    return { total, critical, activeNow, activeZones };
+  }, [data]);
+
+  const activeIncidents = useMemo(() => {
+    const items = (data?.items ?? []).filter((i) => i.status === 'ACTIVE');
+    const sevOrder: Record<Severity, number> = { CRITICAL: 0, MODERATE: 1, LOW: 2 };
+    return [...items].sort((a, b) => {
+      const bySev = sevOrder[a.severity] - sevOrder[b.severity];
+      if (bySev !== 0) return bySev;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [data]);
 
   return (
-    <div className="flex h-screen bg-[#0B111B] text-slate-300">
-      {/* 1. BARRA LATERAL */}
-      {/* <aside className="w-64 border-r border-slate-800 bg-[#0B111B] flex flex-col p-6">
-        <div className="flex items-center gap-2 mb-10">
-          <div className="h-8 w-8 bg-orange-500 rounded flex items-center justify-center font-bold text-white text-xs">AY</div>
-          <span className="font-bold tracking-tighter text-white">ALERTA YA</span>
-        </div>
+    <div className="flex-1 p-6 overflow-hidden flex flex-col gap-6">
+      {/* Stat Cards Row — HU008 H8-4: total, críticos, zonas activas */}
+      <div className="grid grid-cols-4 gap-4">
+        <StatCard
+          label="Total"
+          value={isLoading ? '—' : stats.total}
+          unit="incidentes"
+          valueClass="text-white"
+        />
+        <StatCard
+          label="Críticos"
+          value={isLoading ? '—' : stats.critical}
+          unit="emergencias"
+          valueClass="text-stitch-error"
+        />
+        <StatCard
+          label="Zonas activas"
+          value={isLoading ? '—' : stats.activeZones}
+          unit="distritos"
+          valueClass="text-stitch-tertiary"
+        />
+        <StatCard
+          label="Activos ahora"
+          value={isLoading ? '—' : stats.activeNow}
+          unit="alertas"
+          valueClass="text-green-500"
+        />
+      </div>
 
-        <nav className="flex-1 space-y-1">
-          {[
-            { icon: MapIcon, label: 'Mapa en Vivo', active: true },
-            { icon: Bell, label: 'Incidentes' },
-            { icon: Brain, label: 'Predicciones IA' },
-            { icon: BarChart3, label: 'Estadísticas' },
-            { icon: Download, label: 'Exportar' },
-          ].map((item) => (
-            <button key={item.label} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all ${item.active ? 'bg-blue-600/10 text-blue-500 border-l-2 border-blue-500' : 'hover:bg-slate-800/50'}`}>
-              <item.icon size={18} /> {item.label}
-            </button>
-          ))}
-        </nav>
-
-        <div className="pt-6 border-t border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-slate-700" />
-            <div>
-              <p className="text-xs font-bold text-white">Sup. García</p>
-              <p className="text-[10px] text-slate-500 uppercase">Comisaría San Isidro</p>
-            </div>
-          </div>
-        </div>
-      </aside> */}
-
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* 2. PANEL SUPERIOR */}
-        <header className="h-20 border-b border-slate-800 bg-[#0B111B]/80 backdrop-blur flex items-center px-8 gap-12">
-          {stats.map(s => (
-            <div key={s.label} className="space-y-1">
-              <p className="text-[10px] font-bold text-slate-500 tracking-widest">{s.label}</p>
-              <div className="flex items-baseline gap-2">
-                <span className={`text-2xl font-black ${s.color}`}>{s.val}</span>
-                {s.target && <span className="text-[10px] text-slate-600">Goal: {s.target}</span>}
-              </div>
-            </div>
-          ))}
-        </header>
-
-        {/* 3. ÁREA CENTRAL */}
-        <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 relative bg-slate-900 border-r border-slate-800">
-             {/* Mockup Mapa Calor */}
-            <div className="absolute inset-0 bg-[url('https://snazzy-maps-cdn.azureedge.net/assets/1243-retro.png?v=20170616052825')] opacity-20 grayscale" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-red-500/20 blur-[100px] rounded-full" />
-            
-            <div className="absolute bottom-6 left-6 bg-[#0B111B]/90 border border-slate-700 p-4 rounded-lg">
-              <p className="text-[10px] font-bold text-slate-500 mb-3 uppercase tracking-tighter">Leyenda de Prioridad</p>
-              <div className="space-y-2">
-                <div className="flex items-center gap-3 text-[10px] font-bold"><span className="h-2 w-2 rounded-full bg-red-500" /> CRÍTICO</div>
-                <div className="flex items-center gap-3 text-[10px] font-bold"><span className="h-2 w-2 rounded-full bg-orange-500" /> MODERADO</div>
-                <div className="flex items-center gap-3 text-[10px] font-bold"><span className="h-2 w-2 rounded-full bg-green-500" /> INFORMATIVO</div>
-              </div>
-            </div>
+      {/* Split: Mapa 65% + Lista 35% */}
+      <div className="flex-1 flex gap-6 min-h-0">
+        {/* Map */}
+        <section className="w-[65%] bg-stitch-surface-container-low rounded-xl relative overflow-hidden flex flex-col">
+          <div className="absolute inset-0">
+            <IncidentsMap
+              incidents={activeIncidents}
+              onPinClick={(id) =>
+                navigate({ to: '/incidents/$incidentId', params: { incidentId: id } })
+              }
+            />
           </div>
 
-          {/* 4. COLUMNA DERECHA (INCIDENTES) */}
-          <aside className="w-96 flex flex-col bg-[#0B111B]">
-            <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Incidentes Activos</h3>
-              <Activity size={14} className="text-blue-500" />
+          {/* Legend */}
+          <div className="absolute bottom-4 left-4 bg-stitch-surface/90 backdrop-blur-md p-3 rounded-lg flex flex-col gap-2 z-[1000]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-stitch-error" />
+              <span className="text-[10px] font-bold text-stitch-on-surface font-label uppercase">
+                Prioridad Alta
+              </span>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div className="bg-[#151C27] border-l-4 border-red-500 p-4 space-y-2">
-                <div className="flex justify-between items-start">
-                  <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 font-bold uppercase">CRÍTICO</span>
-                  <span className="text-[10px] text-slate-500">Hace 2 min</span>
-                </div>
-                <p className="text-sm font-bold text-white">Robo a Mano Armada</p>
-                <p className="text-[11px] text-slate-400 italic">Av. Larco. Sujetos en moto lineal con arma de fuego.</p>
-                <button className="w-full mt-2 bg-blue-600 hover:bg-blue-700 py-2 text-[10px] font-bold uppercase text-white transition-colors">Asignar Unidad</button>
-              </div>
-              
-              <div className="bg-[#151C27] border-l-4 border-orange-500 p-4 space-y-2">
-                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] bg-orange-500 text-white px-2 py-0.5 font-bold uppercase">ACTIVO</span>
-                  <span className="text-[10px] text-slate-500">Hace 15 min</span>
-                </div>
-                <p className="text-sm font-bold text-white">Actividad Sospechosa</p>
-                <p className="text-[11px] text-slate-400">Vehículo lunas polarizadas frente a banco.</p>
-                <button className="w-full mt-2 border border-slate-700 hover:bg-slate-800 py-2 text-[10px] font-bold uppercase">Asignar Unidad</button>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-stitch-tertiary" />
+              <span className="text-[10px] font-bold text-stitch-on-surface font-label uppercase">
+                Moderado
+              </span>
             </div>
-          </aside>
-        </div>
-      </main>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-[10px] font-bold text-stitch-on-surface font-label uppercase">
+                Baja/Informativo
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Incident List */}
+        <section className="w-[35%] flex flex-col gap-4 min-h-0">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xs font-black font-label text-stitch-on-surface-variant uppercase tracking-[0.15em]">
+              Incidentes Activos
+            </h2>
+            <span className="text-[10px] text-stitch-on-surface-variant uppercase tracking-widest">
+              Ordenar por: Severidad
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+            {isLoading && (
+              <div className="text-center text-stitch-on-surface-variant py-8 text-xs">
+                Cargando incidentes…
+              </div>
+            )}
+
+            {!isLoading && activeIncidents.length === 0 && (
+              <div className="text-center text-stitch-on-surface-variant py-8 text-xs">
+                No hay incidentes activos en este momento.
+              </div>
+            )}
+
+            {activeIncidents.map((inc) => (
+              <IncidentCard
+                key={inc.id}
+                incident={inc}
+                onClick={() =>
+                  navigate({ to: '/incidents/$incidentId', params: { incidentId: inc.id } })
+                }
+              />
+            ))}
+          </div>
+
+          <footer className="flex items-center justify-center gap-2 py-3">
+            <span className="material-symbols-outlined text-xs text-stitch-on-surface-variant">
+              lock
+            </span>
+            <span className="text-[10px] font-bold text-stitch-on-surface-variant font-label uppercase tracking-widest">
+              Identidad de reportantes: Anónima
+            </span>
+          </footer>
+        </section>
+      </div>
     </div>
   );
 }

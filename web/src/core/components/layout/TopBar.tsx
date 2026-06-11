@@ -1,20 +1,20 @@
-import { FC, useEffect, useState } from 'react';
-import { useRouterState } from '@tanstack/react-router';
-import { Bell } from 'lucide-react';
+import { FC, useEffect, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 
 const ROUTE_LABELS: Record<string, string> = {
-  '/dashboard':   'Mapa en Vivo',
-  '/incidents':   'Incidentes',
-  '/predictions': 'Predicciones IA',
-  '/statistics':  'Estadísticas',
-  '/export':      'Exportar',
+  "/dashboard": "Mapa en Vivo",
+  "/incidents": "Incidentes",
+  "/predictions": "Predicciones IA",
+  "/statistics": "Estadísticas",
+  "/export": "Exportar",
+  "/admin/users": "Administrar Autoridades",
 };
 
-/**
- * Top bar del panel de autoridades.
- * Fondo: #1A1D23, altura: 60px.
- * Centro: indicador "En vivo" con dot verde pulsante.
- */
+function getCurrentLabel(pathname: string): string {
+  if (pathname.startsWith("/incidents/")) return "Detalle de incidente";
+  return ROUTE_LABELS[pathname] ?? "Panel";
+}
+
 export const TopBar: FC = () => {
   const routerState = useRouterState();
   const [secondsAgo, setSecondsAgo] = useState(0);
@@ -28,42 +28,33 @@ export const TopBar: FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const currentLabel = ROUTE_LABELS[routerState.location.pathname] ?? 'Panel';
+  const label = getCurrentLabel(routerState.location.pathname);
 
   return (
-    <header
-      className="flex items-center justify-between px-6 shrink-0"
-      style={{
-        height: 60,
-        backgroundColor: '#1A1D23',
-        borderBottom: '0.5px solid #2D3A4A',
-      }}
-    >
-      <span className="text-sm font-semibold text-white">{currentLabel}</span>
-
-      <div className="flex items-center gap-2">
-        <span
-          className="inline-block w-2 h-2 rounded-full bg-[#22C55E] animate-pulse"
-          aria-hidden="true"
-        />
-        <span className="text-xs text-ay-text-sec">
-          En vivo · Actualizado hace {secondsAgo}s
-        </span>
+    <header className="h-16 flex justify-between items-center px-8 w-full bg-stitch-surface-container/70 backdrop-blur-xl z-40 shrink-0">
+      <div className="flex items-center gap-6">
+        <h1 className="text-lg font-black text-white font-headline uppercase tracking-tight">
+          {label}
+        </h1>
+        <div className="flex items-center gap-2 px-3 py-1 bg-stitch-surface-container-low rounded-full">
+          <span className="w-2 h-2 rounded-full bg-green-500 pulse-live" />
+          <span className="text-[10px] font-bold text-stitch-on-surface uppercase tracking-widest font-label">
+            En vivo · Actualizado hace {secondsAgo}s
+          </span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button
-          className="relative p-2 rounded-lg text-ay-text-sec hover:text-white hover:bg-ay-primary/10 transition-colors"
-          aria-label="Notificaciones"
-        >
-          <Bell size={20} />
-          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-ay-critical" />
-        </button>
-        <div
-          className="w-8 h-8 rounded-full bg-ay-primary flex items-center justify-center text-white text-xs font-bold"
-          aria-label="Supervisor"
-        >
-          S
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 bg-stitch-surface-container-high/50 px-4 py-1.5 rounded-lg cursor-not-allowed opacity-60">
+          <span className="material-symbols-outlined text-sm text-stitch-on-surface-variant">
+            filter_list
+          </span>
+          <span className="text-xs font-bold text-stitch-on-surface font-label uppercase">
+            Lima · Todos los distritos
+          </span>
+          <span className="material-symbols-outlined text-sm text-stitch-on-surface-variant">
+            keyboard_arrow_down
+          </span>
         </div>
       </div>
     </header>
