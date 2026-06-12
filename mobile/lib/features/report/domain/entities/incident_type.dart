@@ -1,14 +1,3 @@
-enum IncidentType {
-  robbery('ROBBERY', 'Robo/Asalto'),
-  accident('ACCIDENT', 'Accidente de Tránsito'),
-  suspicious('SUSPICIOUS', 'Persona Sospechosa'),
-  harassment('HARASSMENT', 'Acoso'),
-  extortion('EXTORTION', 'Extorsión');
-
-  const IncidentType(this.value, this.label);
-  final String value;
-  final String label;
-
-  static IncidentType fromValue(String value) =>
-      IncidentType.values.firstWhere((e) => e.value == value);
-}
+// IncidentType movido a core/domain/enums.dart para ser compartido entre features.
+// Re-exportado acá para no romper imports existentes en el feature report.
+export 'package:alertaya/core/domain/enums.dart' show IncidentType;

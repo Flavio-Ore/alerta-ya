@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 
-import '../../domain/entities/user_entity.dart';
+import 'package:alertaya/features/auth/domain/entities/user_entity.dart';
 
 class UserModel {
   const UserModel({required this.uid, this.reputationScore = 100});

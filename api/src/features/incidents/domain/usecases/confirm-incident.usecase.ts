@@ -46,6 +46,8 @@ export async function confirmIncident(
   }
 
   const dto = toPublicDTO(updated);
-  eventBus.emit(IncidentEvents.UPDATED, dto);
+  // No hay reporter aquí (es una confirmación ciudadana, no un reporte nuevo).
+  // El evento se emite sin reporterUserId → todos los del distrito reciben push.
+  eventBus.emit(IncidentEvents.UPDATED, { incident: dto });
   return dto;
 }

@@ -5,7 +5,11 @@ import { ReportRepository } from '../repositories/report.repository';
 import { NotificationRepository } from '../../../notifications/domain/repositories/notification.repository';
 import { PublicIncidentDTO, toPublicDTO } from '../entities/incident.entity';
 import { AppError } from '../../../../core/errors/AppError';
-import { eventBus, IncidentEvents } from '../../../../core/events/event-bus';
+import {
+  eventBus,
+  IncidentEvents,
+  StatusChangedForReportersPayload,
+} from '../../../../core/events/event-bus';
 
 export interface UpdateIncidentStatusInput {
   incidentId: string;
@@ -51,6 +55,28 @@ export async function updateIncidentStatus(
 
   // Emitir por WebSocket — el mapa actualiza el color del pin en tiempo real
   eventBus.emit(IncidentEvents.UPDATED, dto);
+
+  // Emitir evento dirigido a los reportantes — "Mis reportes" se actualiza en vivo
+  // Fail open — si falla no bloquea la respuesta a la autoridad
+  try {
+    const firebaseUids = await deps.reportRepo.findFirebaseUidsByIncidentId(
+      input.incidentId,
+    );
+    if (firebaseUids.length > 0) {
+      const payload: StatusChangedForReportersPayload = {
+        firebaseUids,
+        incidentId: updated.id,
+        status: updated.status,
+        feedback: updated.feedback,
+        district: updated.district,
+        type: updated.type,
+        updatedAt: updated.updatedAt.toISOString(),
+      };
+      eventBus.emit(IncidentEvents.STATUS_CHANGED_FOR_REPORTERS, payload);
+    }
+  } catch {
+    // Fail open
+  }
 
   // Notificar a cada usuario que reportó este incidente
   // Fail open — si falla no bloquea la respuesta a la autoridad

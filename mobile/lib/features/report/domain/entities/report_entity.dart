@@ -1,4 +1,4 @@
-import 'incident_type.dart';
+import 'package:alertaya/features/report/domain/entities/incident_type.dart';
 
 class ReportEntity {
   const ReportEntity({
@@ -6,9 +6,13 @@ class ReportEntity {
     required this.lat,
     required this.lng,
     required this.formData,
+    this.mediaPaths,
+    this.notes,
   });
   final IncidentType type;
   final double lat;
   final double lng;
   final Map<String, String> formData;
+  final List<String>? mediaPaths;
+  final String? notes;
 }

@@ -48,16 +48,32 @@ enum NotificationType {
 // NUNCA almacenar email/nombre en texto plano
 // Datos de identidad en tabla separada cifrada (fuera del MVP)
 model User {
-  id              String         @id @default(uuid())
-  firebaseUid     String         @unique // Cifrado en reposo
-  reputationScore Int            @default(100)
-  createdAt       DateTime       @default(now())
+  id              String          @id @default(uuid())
+  firebaseUid     String          @unique // Cifrado en reposo
+  reputationScore Int             @default(100)
+  createdAt       DateTime        @default(now())
   reports         Report[]
   panicSessions   PanicSession[]
   deviceTokens    DeviceToken[]
   notifications   Notification[]
+  preferences     UserPreference?
 
   @@map("users")
+}
+
+// Preferencias del ciudadano — no expone PII
+model UserPreference {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  alertRadiusMeters Int      @default(2000) // Radio para recibir alertas push (metros)
+  muteNotifications Boolean  @default(false)
+  // Panic features togglables. GPS NO es configurable — siempre se transmite al panel.
+  panicRecordAudio  Boolean  @default(true)
+  panicAlarmSound   Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
 }
 
 // Incidentes publicados — anónimos, nunca exponen reportante
@@ -124,10 +140,15 @@ model DeviceToken {
   userId    String
   token     String   @unique // Token FCM — único por dispositivo
   district  String           // Último distrito conocido del usuario
+  // proxTile: key del tile de proximidad (formato "prox:<latTile>:<lngTile>" con
+  // TILE_SIZE=0.003°). Permite filtrar FCM por área específica (~330m), no solo
+  // por distrito. Nullable: tokens viejos siguen funcionando sin esta info.
+  proxTile  String?
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id])
 
   @@index([district]) // Lookup rápido: "todos los tokens del distrito X"
+  @@index([proxTile]) // Lookup rápido: "todos los tokens en el tile X"
   @@map("device_tokens")
 }
 

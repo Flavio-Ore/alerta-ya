@@ -1,8 +1,8 @@
 import 'package:injectable/injectable.dart';
 
-import '../entities/form_question_entity.dart';
-import '../entities/incident_type.dart';
-import '../repositories/report_repository.dart';
+import 'package:alertaya/features/report/domain/entities/form_question_entity.dart';
+import 'package:alertaya/features/report/domain/entities/incident_type.dart';
+import 'package:alertaya/features/report/domain/repositories/report_repository.dart';
 
 @injectable
 class GetFormSchemaUseCase {

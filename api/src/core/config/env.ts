@@ -15,9 +15,9 @@ const envSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().email(),
   FIREBASE_PRIVATE_KEY: z.string(),
 
-  // Google Cloud Storage
-  GCS_BUCKET_NAME: z.string(),
-  GCP_PROJECT_ID: z.string(),
+  // Google Cloud Storage — no usado en MVP, Cloudinary reemplaza para grabaciones de pánico
+  GCS_BUCKET_NAME: z.string().optional(),
+  GCP_PROJECT_ID: z.string().optional(),
 
   // CORS
   WEB_URL: z.string().url().default('http://localhost:5173'),

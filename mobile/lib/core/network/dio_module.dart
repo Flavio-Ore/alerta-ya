@@ -2,8 +2,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 
-import '../constants/app_constants.dart';
-import 'auth_interceptor.dart';
+import 'package:alertaya/core/constants/app_constants.dart';
+import 'package:alertaya/core/network/auth_interceptor.dart';
 
 @module
 abstract class DioModule {
