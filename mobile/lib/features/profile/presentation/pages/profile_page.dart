@@ -1,9 +1,15 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:permission_handler/permission_handler.dart';
 
+import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
+import 'package:alertaya/core/services/fcm_service.dart';
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:alertaya/features/profile/domain/entities/user_profile_entity.dart';
 import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -65,21 +71,18 @@ class _ProfileView extends StatelessWidget {
               const SizedBox(height: 32),
 
               // ── Notificaciones
+              // El permiso del SO es local — siempre se muestra independientemente
+              // de si la API cargó. El toggle de silenciar solo aparece con datos.
               const _SectionHeader(label: 'Notificaciones'),
+              _NotificationPermissionTile(
+                preferences: state is ProfileData ? state.preferences : null,
+                onMuteToggled: state is ProfileData
+                    ? (val) => context.read<ProfileBloc>().add(
+                          ProfileMuteToggled(mute: !val),
+                        )
+                    : null,
+              ),
               if (state is ProfileData) ...[
-                SwitchListTile(
-                  secondary: const Icon(Icons.notifications_outlined,
-                      color: AppColors.onSurfaceVariant),
-                  title: const Text('Alertas push',
-                      style: AppTextStyles.bodyLg),
-                  subtitle: const Text('Incidentes en tu zona',
-                      style: AppTextStyles.bodyMd),
-                  value: !state.preferences.muteNotifications,
-                  activeThumbColor: AppColors.secondary,
-                  onChanged: (val) => context.read<ProfileBloc>().add(
-                        ProfileMuteToggled(mute: !val),
-                      ),
-                ),
                 ListTile(
                   leading: const Icon(Icons.radar_outlined,
                       color: AppColors.onSurfaceVariant),
@@ -94,11 +97,6 @@ class _ProfileView extends StatelessWidget {
                   onTap: () => _showRadiusPicker(context, state.preferences.alertRadiusMeters),
                 ),
               ] else ...[
-                _SettingTile(
-                  icon: Icons.notifications_outlined,
-                  label: 'Alertas push',
-                  onTap: () {},
-                ),
                 _SettingTile(
                   icon: Icons.radar_outlined,
                   label: 'Radio de alertas',
@@ -209,7 +207,7 @@ class _ProfileView extends StatelessWidget {
             const Text('Radio de alertas', style: AppTextStyles.titleLg),
             const SizedBox(height: 4),
             const Text(
-              'Recibís alertas de incidentes dentro de este radio.',
+              'Recibirás alertas de incidentes dentro de este radio.',
               style: AppTextStyles.bodyMd,
             ),
             const SizedBox(height: 16),
@@ -248,6 +246,111 @@ class _ProfileView extends StatelessWidget {
 }
 
 // ─── Sub-widgets ──────────────────────────────────────────────────────────────
+
+// Tile de "Alertas push" que refleja el permiso real del SO.
+// Si el permiso no está concedido, guía al usuario a la configuración del sistema.
+// Si está concedido, muestra el toggle de silenciar/activar.
+// Refresca el estado del permiso cada vez que la app vuelve al primer plano.
+class _NotificationPermissionTile extends StatefulWidget {
+  const _NotificationPermissionTile({
+    required this.preferences,
+    required this.onMuteToggled,
+  });
+
+  // Null cuando la API no cargó — el permiso del SO funciona igual,
+  // pero el toggle de silenciar queda deshabilitado.
+  final UserPreferencesEntity? preferences;
+  final ValueChanged<bool>? onMuteToggled;
+
+  @override
+  State<_NotificationPermissionTile> createState() =>
+      _NotificationPermissionTileState();
+}
+
+class _NotificationPermissionTileState
+    extends State<_NotificationPermissionTile> with WidgetsBindingObserver {
+  // null = todavía resolviendo; evita mostrar "Permiso desactivado" antes de saber el estado real.
+  PermissionStatus? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshStatus();
+  }
+
+  Future<void> _refreshStatus() async {
+    final previous = _status;
+    final current = await Permission.notification.status;
+    if (!mounted) return;
+    setState(() => _status = current);
+    // Si el usuario acaba de conceder el permiso desde ajustes del SO,
+    // registrar el token FCM que no se pudo registrar antes.
+    if (previous != null && !previous.isGranted && current.isGranted) {
+      unawaited(getIt<FcmService>().registerToken());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = _status;
+
+    // Cargando — tile esqueleto sin acción para no confundir al usuario.
+    if (status == null) {
+      return ListTile(
+        leading: const Icon(Icons.notifications_outlined,
+            color: AppColors.onSurfaceVariant),
+        title: const Text('Alertas push', style: AppTextStyles.bodyLg),
+        subtitle: const Text('Incidentes en tu zona',
+            style: AppTextStyles.bodyMd),
+        trailing: SizedBox(
+          width: 36,
+          height: 20,
+          child: LinearProgressIndicator(
+            borderRadius: BorderRadius.circular(2),
+            color: AppColors.outline.withValues(alpha: 0.4),
+            backgroundColor: Colors.transparent,
+          ),
+        ),
+      );
+    }
+
+    if (!status.isGranted) {
+      return ListTile(
+        leading: const Icon(Icons.notifications_off_outlined,
+            color: AppColors.onSurfaceVariant),
+        title: const Text('Alertas push', style: AppTextStyles.bodyLg),
+        subtitle: const Text('Permiso desactivado · Tocá para activar',
+            style: AppTextStyles.bodyMd),
+        trailing: const Icon(Icons.open_in_new,
+            color: AppColors.onSurfaceVariant, size: 18),
+        onTap: () => openAppSettings(),
+      );
+    }
+
+    final prefs = widget.preferences;
+    return SwitchListTile(
+      secondary: const Icon(Icons.notifications_outlined,
+          color: AppColors.onSurfaceVariant),
+      title: const Text('Alertas push', style: AppTextStyles.bodyLg),
+      subtitle: const Text('Incidentes en tu zona', style: AppTextStyles.bodyMd),
+      value: prefs != null ? !prefs.muteNotifications : true,
+      activeThumbColor: AppColors.secondary,
+      onChanged: widget.onMuteToggled,
+    );
+  }
+}
 
 class _AvatarWidget extends StatelessWidget {
   const _AvatarWidget();

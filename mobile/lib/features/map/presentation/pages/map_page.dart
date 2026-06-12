@@ -677,7 +677,7 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                   Container(
                     height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.mapSurfaceContainerLow,
+                      color: AppColors.mapSurface,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: AppColors.mapOnSurfaceVariant
