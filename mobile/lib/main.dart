@@ -1,12 +1,8 @@
-import 'dart:io' show Platform;
-
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'package:alertaya/app/app.dart';
 import 'package:alertaya/app/di/injection.dart';
@@ -32,15 +28,6 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
-  // Solicitar permiso de notificaciones en Android 13+ (silencioso — si el
-  // usuario lo niega, se puede activar luego desde Configuración Personal).
-  if (!kIsWeb && Platform.isAndroid) {
-    final status = await Permission.notification.status;
-    if (status.isDenied) {
-      await Permission.notification.request();
-    }
-  }
 
   runApp(const AlertaYaApp());
 }
