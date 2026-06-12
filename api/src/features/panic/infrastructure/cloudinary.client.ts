@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 
 import { env } from '../../../core/config/env';
+import { UploadParams } from '../domain/entities/upload-params.entity';
 
 cloudinary.config({
   cloud_name: env.CLOUDINARY_CLOUD_NAME,
@@ -9,14 +10,6 @@ cloudinary.config({
   secure: true,
 });
 
-export interface CloudinaryUploadParams {
-  uploadUrl: string;
-  publicId: string;
-  timestamp: number;
-  apiKey: string;
-  signature: string;
-}
-
 /**
  * Genera parámetros de upload firmados para que Flutter suba directamente
  * a Cloudinary sin exponer el api_secret.
@@ -24,11 +17,11 @@ export interface CloudinaryUploadParams {
  * Flutter hace: POST multipart/form-data a uploadUrl con estos campos + el archivo.
  * Resource type "raw" acepta cualquier binario (audio cifrado AES-256).
  */
-export function generateCloudinaryUploadParams(
+export function generateUploadParams(
   sessionId: string,
   count: number,
-): CloudinaryUploadParams[] {
-  const params: CloudinaryUploadParams[] = [];
+): UploadParams[] {
+  const params: UploadParams[] = [];
 
   for (let i = 0; i < count; i++) {
     const publicId = `panic/${sessionId}/${i}`;
@@ -64,8 +57,8 @@ export function generateCloudinaryUploadParams(
 export function generateReportUploadParams(
   userId: string,
   count: number,
-): CloudinaryUploadParams[] {
-  const params: CloudinaryUploadParams[] = [];
+): UploadParams[] {
+  const params: UploadParams[] = [];
 
   for (let i = 0; i < count; i++) {
     const uuid = crypto.randomUUID();

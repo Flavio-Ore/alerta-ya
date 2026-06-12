@@ -37,7 +37,9 @@ const mockSession = {
   lat: -12.1167,
   lng: -77.0372,
   status: 'ACTIVE',
-  uploadUrls: ['https://gcs.example.com/chunk-0.webm'],
+  uploadParams: [
+    { uploadUrl: 'https://api.cloudinary.com/v1_1/test/raw/upload', publicId: 'panic/session-uuid/0', timestamp: 1234567890, apiKey: 'test-key', signature: 'test-sig' },
+  ],
 };
 
 vi.mock('../../domain/usecases/start-panic.usecase', () => ({
@@ -73,15 +75,15 @@ describe('POST /panic/sessions', () => {
     expect(res.status).toBe(400);
   });
 
-  it('GIVEN payload válido WHEN POST con token THEN 201 con uploadUrls', async () => {
+  it('GIVEN payload válido WHEN POST con token THEN 201 con uploadParams', async () => {
     const res = await request(app)
       .post('/panic/sessions')
       .set('Authorization', 'Bearer valid-token')
       .send({ lat: -12.1167, lng: -77.0372 });
 
     expect(res.status).toBe(201);
-    expect(res.body).toHaveProperty('uploadUrls');
-    expect(Array.isArray(res.body.uploadUrls)).toBe(true);
+    expect(res.body).toHaveProperty('uploadParams');
+    expect(Array.isArray(res.body.uploadParams)).toBe(true);
   });
 
   it('GIVEN sesión ya activa WHEN POST THEN 409', async () => {
