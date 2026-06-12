@@ -267,7 +267,7 @@ class _StatusTimeline extends StatelessWidget {
               ? const Icon(Icons.check, color: Colors.white, size: 14)
               : RotationTransition(
                   turns: spinAnimation,
-                  child: Icon(Icons.sync,
+                  child: const Icon(Icons.sync,
                       color: AppColors.secondary, size: 14),
                 ),
           circleBg: isPublished ? AppColors.success : AppColors.surfaceContainerLow,

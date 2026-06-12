@@ -351,7 +351,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
         setState(() => _deletingAccount = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No se pudo eliminar la cuenta. Intentá de nuevo.'),
+            content: Text('No se pudo eliminar la cuenta. Intenta de nuevo.'),
             backgroundColor: AppColors.severityCritical,
             behavior: SnackBarBehavior.floating,
           ),

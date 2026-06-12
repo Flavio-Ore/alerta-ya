@@ -797,7 +797,7 @@ class _CallButton extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.phone, size: 16, color: AppColors.onSecondary),
+                  const Icon(Icons.phone, size: 16, color: AppColors.onSecondary),
                   const SizedBox(width: 6),
                   Text(
                     'LLAMAR',
