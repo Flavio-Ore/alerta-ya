@@ -23,7 +23,7 @@ part 'panic_state.dart';
 
 // Claves de secure storage para la sesión de pánico activa
 const _kSessionId = 'panic_session_id';
-const _kPin = 'panic_pin';
+const _kSavedPin = 'panic_saved_pin'; // persiste entre sesiones
 const _kStartedAt = 'panic_started_at';
 const _kLat = 'panic_lat';
 const _kLng = 'panic_lng';
@@ -47,6 +47,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     on<PanicInitialized>(_onInitialized);
     on<PanicActivationRequested>(_onActivationRequested);
     on<PanicDeactivationRequested>(_onDeactivationRequested);
+    on<PanicSavedPinUpdated>(_onSavedPinUpdated);
     // Eventos internos del servicio de grabación
     on<_PanicAmplitudeUpdated>(_onAmplitudeUpdated);
     on<_PanicBlockCompleted>(_onBlockCompleted);
@@ -140,13 +141,14 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
         );
         await Future.wait([
           _storage.write(_kSessionId, startResult.session.id),
-          _storage.write(_kPin, _hashPin(event.pin)),
           _storage.write(_kStartedAt, startResult.session.startedAt.toIso8601String()),
           _storage.write(_kLat, startResult.session.lat.toString()),
           _storage.write(_kLng, startResult.session.lng.toString()),
           _storage.write(_kUploadUrls, paramsJson),
           _storage.write(_kRecordAudio, event.recordAudio.toString()),
           _storage.write(_kAlarmSound, event.alarmSound.toString()),
+          // Solo actualiza el PIN guardado si se provee uno nuevo.
+          if (event.pin != null) _storage.write(_kSavedPin, _hashPin(event.pin!)),
         ]);
         emit(PanicActive(
           session: startResult.session,
@@ -175,7 +177,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     final current = state as PanicActive;
     if (current.isPinLocked) return;
 
-    final storedPin = await _storage.read(_kPin);
+    final storedPin = await _storage.read(_kSavedPin);
     if (storedPin != _hashPin(event.pin)) {
       final newAttempts = current.failedPinAttempts + 1;
       await _storage.write(_kFailedAttempts, newAttempts.toString());
@@ -194,7 +196,6 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
         _uploadParams = [];
         await _storage.deleteAll([
           _kSessionId,
-          _kPin,
           _kStartedAt,
           _kLat,
           _kLng,
@@ -202,6 +203,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
           _kUploadUrls,
           _kRecordAudio,
           _kAlarmSound,
+          // _kSavedPin se omite: persiste para la próxima activación
         ]);
         emit(const PanicIdle());
       },
@@ -320,6 +322,16 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     }
 
     await _channelService.stopService();
+  }
+
+  Future<bool> hasSavedPin() async =>
+      (await _storage.read(_kSavedPin)) != null;
+
+  Future<void> _onSavedPinUpdated(
+    PanicSavedPinUpdated event,
+    Emitter<PanicState> emit,
+  ) async {
+    await _storage.write(_kSavedPin, _hashPin(event.pin));
   }
 
   String _hashPin(String pin) =>

@@ -47,6 +47,8 @@ class _SplashPageState extends State<SplashPage>
           } else {
             context.go('/login');
           }
+        } else if (state is AuthError) {
+          context.go('/login');
         }
       },
       child: Scaffold(
