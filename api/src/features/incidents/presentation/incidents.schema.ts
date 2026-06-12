@@ -22,10 +22,7 @@ export const listIncidentsQuerySchema = z.object({
 });
 
 export const idParamSchema = z.object({
-  // Acepta cualquier string no-vacío. Antes era .uuid() estricto, pero rechazaba
-  // los seed IDs con formato custom (e.g. 'seed-incident-demo'). Prisma maneja
-  // injection — el formato strict no aportaba seguridad real.
-  id: z.string().min(1),
+  id: z.string().min(1, 'ID de incidente requerido'),
 });
 
 export const confirmSchema = z.object({
