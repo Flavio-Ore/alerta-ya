@@ -95,6 +95,7 @@ app.use("/incidents", incidentsRouter);
 app.use("/zones", zonesRouter);
 app.use("/panic", panicRouter);
 app.use("/notifications", notificationsRouter);
+app.use("/me", meRouter);
 app.use("/internal/jobs", jobsRouter);
 app.use("/admin/users", adminRouter);
 
@@ -110,6 +111,11 @@ registerNotificationListener(redis);
 
 httpServer.listen(env.PORT, () => {
   console.log(`AlertaYa API running on port ${env.PORT}`);
+  if (process.env.DEMO_MODE === "true") {
+    console.warn(
+      "⚠️  DEMO_MODE=true → threshold engine bypass activo (1 reporte publica incidente). NO usar en producción.",
+    );
+  }
 });
 
 export default app;

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/widgets/alertaya_button.dart';
 import 'package:alertaya/features/report/domain/entities/incident_type.dart';
-import '../bloc/report_bloc.dart';
+import 'package:alertaya/features/report/presentation/bloc/report_bloc.dart';
 
 class IncidentTypePage extends StatefulWidget {
   const IncidentTypePage({super.key});
@@ -34,25 +36,25 @@ class _IncidentTypePageState extends State<IncidentTypePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        backgroundColor: AppColors.bgLight,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
           onPressed: () => context.pop(),
         ),
-        title: Text('Reportar Incidente', style: AppTextStyles.h2.copyWith(fontSize: 17)),
+        title: Text('Reportar Incidente', style: AppTextStyles.headlineMd.copyWith(fontSize: 17)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.close, color: AppColors.textPrimary),
+            icon: const Icon(Icons.close, color: AppColors.onSurface),
             onPressed: () => context.go('/map'),
           ),
         ],
       ),
       body: Column(
         children: [
-          _ProgressBar(step: 1),
+          const _ProgressBar(step: 1),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -61,8 +63,8 @@ class _IncidentTypePageState extends State<IncidentTypePage> {
                 children: [
                   Text(
                     'Paso 1 de 3 — ¿Qué está pasando?',
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textSecondary,
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: AppColors.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -122,35 +124,111 @@ class _ProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return LinearProgressIndicator(
       value: step / 3,
-      backgroundColor: AppColors.bgGray,
+      backgroundColor: AppColors.surfaceContainerLow,
       valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
       minHeight: 3,
     );
   }
 }
 
-class _GpsChip extends StatelessWidget {
+class _GpsChip extends StatefulWidget {
   const _GpsChip();
 
   @override
+  State<_GpsChip> createState() => _GpsChipState();
+}
+
+class _GpsChipState extends State<_GpsChip> {
+  // null = cargando, '' = fallback, non-empty = ubicación real
+  String? _location;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveLocation();
+  }
+
+  Future<void> _resolveLocation() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _setLocation('');
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      final placemarks =
+          await placemarkFromCoordinates(pos.latitude, pos.longitude);
+
+      if (placemarks.isEmpty) {
+        _setLocation('');
+        return;
+      }
+
+      final p = placemarks.first;
+      final label = _pickLabel(p);
+      _setLocation(label);
+    } catch (_) {
+      _setLocation('');
+    }
+  }
+
+  String _pickLabel(Placemark p) {
+    final district =
+        p.subLocality?.isNotEmpty == true ? p.subLocality! : null;
+    final city = p.locality?.isNotEmpty == true ? p.locality! : null;
+    return district ?? city ?? '';
+  }
+
+  void _setLocation(String value) {
+    if (mounted) setState(() => _location = value);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final loading = _location == null;
+    final label = loading
+        ? 'Obteniendo ubicación...'
+        : _location!.isNotEmpty
+            ? 'GPS activo · $_location'
+            : 'GPS activo · Lima, Perú';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.severityLow.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: AppColors.severityLow.withValues(alpha: 0.25)),
+        border:
+            Border.all(color: AppColors.severityLow.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.location_on, color: AppColors.severityLow, size: 16),
+          if (loading)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.severityLow,
+              ),
+            )
+          else
+            const Icon(Icons.location_on, color: AppColors.severityLow, size: 16),
           const SizedBox(width: 6),
-          Text(
-            'GPS activo · Lima, Perú',
-            style: AppTextStyles.label.copyWith(
-              color: AppColors.severityLow,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelMd.copyWith(
+                color: AppColors.severityLow,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -177,15 +255,15 @@ class _TypeCard extends StatelessWidget {
     final bgColor = isSelected
         ? AppColors.primary
         : isEnabled
-            ? AppColors.bgLight
-            : AppColors.bgGray;
-    final borderColor = isSelected ? AppColors.primary : AppColors.textMuted;
+            ? AppColors.surface
+            : AppColors.surfaceContainerLow;
+    final borderColor = isSelected ? AppColors.primary : AppColors.outline;
     final iconColor = isSelected
-        ? AppColors.bgLight
+        ? AppColors.surface
         : isEnabled
             ? config.color
-            : AppColors.textMuted;
-    final labelColor = isSelected ? AppColors.bgLight : AppColors.textPrimary;
+            : AppColors.outline;
+    final labelColor = isSelected ? AppColors.surface : AppColors.onSurface;
 
     return GestureDetector(
       onTap: onTap,
@@ -212,8 +290,8 @@ class _TypeCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               type.label,
-              style: AppTextStyles.body.copyWith(
-                color: isEnabled ? labelColor : AppColors.textMuted,
+              style: AppTextStyles.bodyLg.copyWith(
+                color: isEnabled ? labelColor : AppColors.outline,
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
@@ -223,12 +301,12 @@ class _TypeCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.textMuted.withValues(alpha: 0.15),
+                  color: AppColors.outline.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(100),
                 ),
                 child: Text(
                   'Próximamente',
-                  style: AppTextStyles.label.copyWith(color: AppColors.textMuted),
+                  style: AppTextStyles.labelMd.copyWith(color: AppColors.outline),
                 ),
               ),
             ],
@@ -244,7 +322,7 @@ class _TypeCard extends StatelessWidget {
         IncidentType.accident =>
           const _CardConfig(icon: Icons.car_crash_outlined, color: AppColors.severityModerate),
         IncidentType.suspicious =>
-          const _CardConfig(icon: Icons.visibility_outlined, color: AppColors.textSecondary),
+          const _CardConfig(icon: Icons.visibility_outlined, color: AppColors.onSurfaceVariant),
         IncidentType.harassment =>
           const _CardConfig(icon: Icons.warning_amber_outlined, color: AppColors.severityModerate),
         IncidentType.extortion =>
@@ -264,19 +342,19 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgGray,
+        color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
-        border: Border(left: BorderSide(color: AppColors.accent, width: 3)),
+        border: const Border(left: BorderSide(color: AppColors.secondary, width: 3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, color: AppColors.accent, size: 20),
+          const Icon(Icons.info_outline, color: AppColors.secondary, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               'Seleccionar la categoría correcta ayuda a las unidades de respuesta a prepararse antes de llegar.',
-              style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.labelMd.copyWith(color: AppColors.onSurfaceVariant),
             ),
           ),
         ],

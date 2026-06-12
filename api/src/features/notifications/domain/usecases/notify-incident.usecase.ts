@@ -5,7 +5,11 @@ import { PrismaDeviceTokenRepository } from '../../../auth/infrastructure/prisma
 import { PrismaNotificationRepository } from '../../infrastructure/prisma-notification.repository';
 import { sendIncidentPush } from '../../infrastructure/fcm.service';
 import { reverseGeocode } from '../../infrastructure/geocoding.service';
-import { eventBus, IncidentEvents } from '../../../../core/events/event-bus';
+import {
+  eventBus,
+  IncidentEvents,
+  IncidentEventPayload,
+} from '../../../../core/events/event-bus';
 import { prisma } from '../../../../core/config/prisma';
 import { NotificationType } from '@prisma/client';
 
@@ -13,20 +17,21 @@ const deviceTokenRepo = new PrismaDeviceTokenRepository(prisma);
 const notificationRepo = new PrismaNotificationRepository(prisma);
 
 export function registerNotificationListener(redis: Redis): void {
-  eventBus.on(IncidentEvents.NEW, async (incident: PublicIncidentDTO) => {
-    await notifyIncident(incident, redis, 'INCIDENT_NEW');
+  eventBus.on(IncidentEvents.NEW, async (payload: IncidentEventPayload) => {
+    await notifyIncident(payload, redis, 'INCIDENT_NEW');
   });
 
-  eventBus.on(IncidentEvents.UPDATED, async (incident: PublicIncidentDTO) => {
-    await notifyIncident(incident, redis, 'INCIDENT_UPDATED');
+  eventBus.on(IncidentEvents.UPDATED, async (payload: IncidentEventPayload) => {
+    await notifyIncident(payload, redis, 'INCIDENT_UPDATED');
   });
 }
 
 async function notifyIncident(
-  incident: PublicIncidentDTO,
+  payload: IncidentEventPayload,
   redis: Redis,
   notifType: NotificationType,
 ): Promise<void> {
+  const { incident, reporterUserId } = payload;
   // Solo notificar MODERATE y CRITICAL — LOW no genera push (CONSTRAINTS.md)
   if (incident.severity === 'LOW') return;
 
@@ -45,6 +50,11 @@ async function notifyIncident(
         await sendIncidentPush(incident, redisTokens, redis, streetAddress);
       }
       return;
+    }
+
+    // EXCLUIR al reportante — no se notifica a sí mismo de su propio reporte.
+    if (reporterUserId) {
+      entries = entries.filter((e) => e.userId !== reporterUserId);
     }
 
     if (entries.length === 0) return;

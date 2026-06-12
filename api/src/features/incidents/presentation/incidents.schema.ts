@@ -41,6 +41,25 @@ export const zoneConfirmSchema = z.object({
   response: z.enum(['yes', 'no']),
 });
 
+// Lista de "mis reportes" (ciudadano autenticado)
+export const listMyReportsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+// Param para rutas que usan :reportId
+export const reportIdParamSchema = z.object({
+  // Mismo criterio que idParamSchema — acepta seeds custom además de UUIDs.
+  reportId: z.string().min(1),
+});
+
+// Body para pedir N upload params para evidencia de un reporte.
+// Limitamos a 10 para no abusar de Cloudinary.
+export const uploadParamsRequestSchema = z.object({
+  count: z.number().int().min(1).max(10),
+});
+
+export type ListMyReportsQuery = z.infer<typeof listMyReportsQuerySchema>;
 export type CreateReportInput = z.infer<typeof createReportSchema>;
 export type ListIncidentsQuery = z.infer<typeof listIncidentsQuerySchema>;
 export type ConfirmInput = z.infer<typeof confirmSchema>;

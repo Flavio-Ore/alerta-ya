@@ -2,20 +2,26 @@ import 'package:flutter/material.dart';
 
 import 'package:alertaya/core/constants/app_colors.dart';
 
-/// Card base de AlertaYa.
-/// Reglas UI_RULES.md: fondo #FFFFFF, borde 1px #E2E8F0,
-/// border-radius 14–16px, sin sombra.
+/// Card Urban Sentinel: fondo `surfaceContainerHigh`, sin border 1px,
+/// radius 16. Separación con shifts de fondo, no con líneas.
+///
+/// Si necesita float (elevación visible), pasar [floating] = true
+/// para usar una sombra ambient tintada (no gris pura).
 class AlertaYaCard extends StatelessWidget {
   const AlertaYaCard({
     super.key,
     required this.child,
     this.padding,
     this.onTap,
+    this.floating = false,
+    this.color,
   });
 
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
+  final bool floating;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -24,12 +30,17 @@ class AlertaYaCard extends StatelessWidget {
       child: Container(
         padding: padding ?? const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.bgLight,
+          color: color ?? AppColors.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: const Color(0xFFE2E8F0),
-            width: 1,
-          ),
+          boxShadow: floating
+              ? [
+                  BoxShadow(
+                    color: AppColors.onSurface.withValues(alpha: 0.08),
+                    blurRadius: 32,
+                    offset: const Offset(0, 12),
+                  ),
+                ]
+              : null,
         ),
         child: child,
       ),

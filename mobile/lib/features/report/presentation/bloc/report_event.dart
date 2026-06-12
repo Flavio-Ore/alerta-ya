@@ -14,9 +14,13 @@ class ReportSubmitted extends ReportEvent {
     required this.lat,
     required this.lng,
     required this.formData,
+    this.mediaPaths,
+    this.notes,
   });
   final IncidentType type;
   final double lat;
   final double lng;
   final Map<String, String> formData;
+  final List<String>? mediaPaths;
+  final String? notes;
 }

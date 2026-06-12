@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/widgets/severity_chip.dart';
 
-/// Pin del mapa por severidad.
-/// LEVE: 24px verde, MODERADO: 28px ámbar, CRÍTICO: 32px rojo + anillo pulsante
+/// Pin del mapa por severidad — Urban Sentinel.
+///   LEVE: 24px (severityLow)
+///   MODERADO: 28px (severityModerate)
+///   CRÍTICO: 32px (severityCritical) + anillo pulsante.
+/// Sombra ambient tintada con el color de la severidad (no gris pura).
 class SeverityPin extends StatefulWidget {
   const SeverityPin({
     super.key,
@@ -77,10 +80,17 @@ class _SeverityPinState extends State<SeverityPin>
             decoration: BoxDecoration(
               color: config.color,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: config.color.withValues(alpha: 0.30),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: const Icon(
               Icons.bolt,
-              color: Colors.white,
+              color: AppColors.surface,
               size: 14,
             ),
           ),
