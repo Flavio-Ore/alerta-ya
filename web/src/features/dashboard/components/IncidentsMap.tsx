@@ -21,7 +21,7 @@ interface Props {
   showHeatmap?: boolean;
 }
 
-export const IncidentsMap: FC<Props> = ({ incidents, onPinClick, showHeatmap = true }) => {
+export const IncidentsMap: FC<Props> = ({ incidents, panicSessions = [], onPinClick, showHeatmap = true }) => {
   return (
     <MapContainer
       center={LIMA_CENTER}
