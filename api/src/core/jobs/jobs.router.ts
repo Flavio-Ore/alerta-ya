@@ -3,8 +3,9 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { expireIncidents } from './expire-incidents.job';
 import { env } from '../config/env';
-import { eventBus, IncidentEvents } from '../events/event-bus';
+import { eventBus, IncidentEvents, PanicEvents } from '../events/event-bus';
 import { toPublicDTO } from '../../features/incidents/domain/entities/incident.entity';
+import { PrismaPanicRepository } from '../../features/panic/infrastructure/prisma-panic.repository';
 
 export const jobsRouter = Router();
 
@@ -24,6 +25,30 @@ jobsRouter.post('/expire-incidents', async (req: Request, res: Response) => {
 
   const { closed } = await expireIncidents(prisma);
   res.json({ ok: true, closed });
+});
+
+/**
+ * Expira sesiones de pánico huérfanas (app crasheada, batería muerta).
+ * Marca como DEACTIVATED las sesiones ACTIVE con más de 60 minutos.
+ * Emite panic:stopped por WebSocket para que el panel de autoridades las elimine.
+ * Correr cada 15 minutos vía Cloud Scheduler en producción.
+ */
+jobsRouter.post('/expire-panic-sessions', async (req: Request, res: Response) => {
+  if (!authorizeJob(req, res)) return;
+
+  const panicRepo = new PrismaPanicRepository(prisma);
+  // Sesiones con más de 60 min (max recording time) son consideradas huérfanas
+  const expired = await panicRepo.expireOldSessions(60);
+
+  // Notificar al panel de autoridades para que limpie los marcadores en tiempo real
+  if (expired > 0) {
+    // No tenemos los IDs individuales desde updateMany — el panel
+    // recibirá la invalidación via polling de 30s o en el próximo WS event.
+    // Para el MVP esto es suficiente.
+    eventBus.emit(PanicEvents.STOPPED, { id: 'bulk-expiry' });
+  }
+
+  res.json({ ok: true, expired });
 });
 
 /**

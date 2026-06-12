@@ -13,7 +13,9 @@ class ReportSubmitting extends ReportState {
 }
 
 class ReportSuccess extends ReportState {
-  const ReportSuccess();
+  const ReportSuccess({required this.isPublished, this.incident});
+  final bool isPublished;
+  final IncidentEntity? incident;
 }
 
 class ReportFailure extends ReportState {

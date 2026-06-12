@@ -3,6 +3,8 @@ import { useNavigate } from '@tanstack/react-router';
 
 import { useIncidentsList } from '../../incidents/infrastructure/incidents.api';
 import { useIncidentLiveUpdates } from '../../incidents/infrastructure/incidents.socket';
+import { useActivePanicSessions } from '../../panic/infrastructure/panic.api';
+import { usePanicLiveUpdates } from '../../panic/infrastructure/panic.socket';
 import {
   incidentTypeLabel,
   severityLabel,
@@ -92,6 +94,9 @@ function StatCard({
 export default function DashboardPage() {
   const navigate = useNavigate();
   useIncidentLiveUpdates();
+  usePanicLiveUpdates();
+  const { data: panicData } = useActivePanicSessions();
+  const panicSessions = panicData ?? [];
   // status:'ALL' → trae histórico completo. El KPI "Total" + agregaciones
   // requieren ver TODO (no solo ACTIVE), aunque mapa y lista filtran cliente-side por ACTIVE.
   const { data, isLoading } = useIncidentsList({ pageSize: 100, status: 'ALL' });
@@ -122,7 +127,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 p-6 overflow-hidden flex flex-col gap-6">
-      {/* Stat Cards Row — HU008 H8-4: total, críticos, zonas activas */}
+      {/* Stat Cards Row — HU008 H8-4: total, críticos, zonas activas + pánico */}
       <div className="grid grid-cols-4 gap-4">
         <StatCard
           label="Total"
@@ -143,10 +148,11 @@ export default function DashboardPage() {
           valueClass="text-stitch-tertiary"
         />
         <StatCard
-          label="Activos ahora"
-          value={isLoading ? '—' : stats.activeNow}
-          unit="alertas"
-          valueClass="text-green-500"
+          label="Pánico activo"
+          value={panicSessions.length}
+          unit="sesiones"
+          valueClass={panicSessions.length > 0 ? 'text-red-400' : 'text-green-500'}
+          badge={panicSessions.length > 0 ? 'URGENTE' : undefined}
         />
       </div>
 
@@ -157,6 +163,7 @@ export default function DashboardPage() {
           <div className="absolute inset-0">
             <IncidentsMap
               incidents={activeIncidents}
+              panicSessions={panicSessions}
               onPinClick={(id) =>
                 navigate({ to: '/incidents/$incidentId', params: { incidentId: id } })
               }
@@ -165,6 +172,17 @@ export default function DashboardPage() {
 
           {/* Legend */}
           <div className="absolute bottom-4 left-4 bg-stitch-surface/90 backdrop-blur-md p-3 rounded-lg flex flex-col gap-2 z-[1000]">
+            {panicSessions.length > 0 && (
+              <div className="flex items-center gap-2 pb-2 border-b border-red-500/30">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                </span>
+                <span className="text-[10px] font-bold text-red-400 font-label uppercase">
+                  Pánico activo · {panicSessions.length}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-stitch-error" />
               <span className="text-[10px] font-bold text-stitch-on-surface font-label uppercase">
@@ -186,8 +204,39 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Incident List */}
+        {/* Incident + Panic List */}
         <section className="w-[35%] flex flex-col gap-4 min-h-0">
+
+          {/* Panic session alerts — always at top when active */}
+          {panicSessions.length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-xs font-black font-label text-red-400 uppercase tracking-[0.15em] flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                </span>
+                Botones de Pánico Activos
+              </h2>
+              {panicSessions.map((s) => (
+                <div
+                  key={s.id}
+                  className="bg-red-950/40 rounded-xl overflow-hidden border-l-4 border-red-500 p-4 flex items-center gap-3"
+                >
+                  <span className="text-2xl">🚨</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-red-400">MODO PÁNICO</p>
+                    <p className="text-[10px] font-bold text-red-500/70 font-label uppercase">
+                      Lat {s.lat.toFixed(4)} · Lng {s.lng.toFixed(4)}
+                    </p>
+                    <p className="text-[10px] text-red-500/60 font-label">
+                      Desde {new Date(s.startedAt).toLocaleTimeString('es-PE')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex justify-between items-center">
             <h2 className="text-xs font-black font-label text-stitch-on-surface-variant uppercase tracking-[0.15em]">
               Incidentes Activos

@@ -1,19 +1,21 @@
 import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/errors/exceptions.dart';
 import 'package:alertaya/core/errors/failures.dart';
-import '../../domain/entities/user_entity.dart';
-import '../../domain/repositories/auth_repository.dart';
-import '../datasources/firebase_auth_datasource.dart';
-import '../datasources/onboarding_local_datasource.dart';
+import 'package:alertaya/features/auth/domain/entities/user_entity.dart';
+import 'package:alertaya/features/auth/domain/repositories/auth_repository.dart';
+import 'package:alertaya/features/auth/data/datasources/firebase_auth_datasource.dart';
+import 'package:alertaya/features/auth/data/datasources/onboarding_local_datasource.dart';
 
 @LazySingleton(as: AuthRepository)
 class AuthRepositoryImpl implements AuthRepository {
-  const AuthRepositoryImpl(this._authDataSource, this._onboardingDataSource);
+  AuthRepositoryImpl(this._authDataSource, this._onboardingDataSource, this._dio);
 
   final FirebaseAuthDataSource _authDataSource;
   final OnboardingLocalDataSource _onboardingDataSource;
+  final Dio _dio;
 
   @override
   Stream<UserEntity?> get authStateChanges =>
@@ -42,9 +44,43 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, UserEntity>> signUpWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final model = await _authDataSource.signUpWithEmail(
+        email: email,
+        password: password,
+      );
+      return Right(model.toEntity());
+    } on UnauthorizedException {
+      return const Left(Failure.unauthorized());
+    } on RateLimitException catch (e) {
+      return Left(Failure.rateLimit(message: e.message));
+    } on NetworkException catch (e) {
+      return Left(Failure.network(message: e.message));
+    } on ServerException catch (e) {
+      return Left(Failure.server(statusCode: e.statusCode, message: e.message));
+    }
+  }
+
+  @override
   Future<Either<Failure, UserEntity>> signInWithGoogle() async {
-    // Requiere google_sign_in package + google-services.json — Sprint 2
-    return const Left(Failure.unknown(message: 'Google Sign-In disponible próximamente'));
+    try {
+      final model = await _authDataSource.signInWithGoogle();
+      return Right(model.toEntity());
+    } on UserCancelledException {
+      return const Left(Failure.server(statusCode: 0, message: 'sign_in_cancelled'));
+    } on UnauthorizedException {
+      return const Left(Failure.unauthorized());
+    } on NetworkException catch (e) {
+      return Left(Failure.network(message: e.message));
+    } on ServerException catch (e) {
+      return Left(Failure.server(statusCode: e.statusCode, message: e.message));
+    } catch (e) {
+      return Left(Failure.unknown(message: e.toString()));
+    }
   }
 
   @override
@@ -71,6 +107,24 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _onboardingDataSource.completeOnboarding();
       return const Right(unit);
+    } catch (e) {
+      return Left(Failure.unknown(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> deleteAccount() async {
+    try {
+      await _dio.delete('/auth/account');
+      await _authDataSource.deleteAccount();
+      return const Right(unit);
+    } on UnauthorizedException {
+      return const Left(Failure.unauthorized());
+    } on DioException catch (e) {
+      return Left(Failure.server(
+        statusCode: e.response?.statusCode ?? 0,
+        message: e.message,
+      ));
     } catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }

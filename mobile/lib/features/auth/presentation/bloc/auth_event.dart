@@ -23,3 +23,13 @@ class AuthSignOutRequested extends AuthEvent {
 class AuthOnboardingCompleted extends AuthEvent {
   const AuthOnboardingCompleted();
 }
+
+class AuthEmailSignUpRequested extends AuthEvent {
+  const AuthEmailSignUpRequested({required this.email, required this.password});
+  final String email;
+  final String password;
+}
+
+class AuthGoogleSignInRequested extends AuthEvent {
+  const AuthGoogleSignInRequested();
+}

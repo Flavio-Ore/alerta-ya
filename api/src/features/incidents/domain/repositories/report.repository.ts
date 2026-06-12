@@ -1,4 +1,4 @@
-import { Report, IncidentType } from '@prisma/client';
+import { Report, Incident, IncidentType } from '@prisma/client';
 
 import { ReportFormData } from '../entities/report.entity';
 
@@ -12,6 +12,18 @@ export interface CreateReportData {
   incidentId?: string | null;
 }
 
+export interface FindByUserIdOptions {
+  page: number;
+  pageSize: number;
+}
+
+export type ReportWithIncident = Report & { incident: Incident | null };
+
+export interface FindByUserIdResult {
+  items: ReportWithIncident[];
+  total: number;
+}
+
 export interface ReportRepository {
   create(data: CreateReportData): Promise<Report>;
   findOrphanedNearby(
@@ -21,4 +33,14 @@ export interface ReportRepository {
     windowSeconds: number,
   ): Promise<Report[]>;
   findByIncidentId(incidentId: string): Promise<Report[]>;
+  findByUserId(userId: string, opts: FindByUserIdOptions): Promise<FindByUserIdResult>;
+  /** Devuelve los firebaseUid únicos de los reportantes de un incidente */
+  findFirebaseUidsByIncidentId(incidentId: string): Promise<string[]>;
+  /**
+   * Cancela (elimina) un reporte pendiente.
+   * Solo si el reporte pertenece a userId y su incidentId es null.
+   * Lanza AppError 404 si no existe o no pertenece al usuario.
+   * Lanza AppError 409 si el reporte ya fue vinculado a un incidente.
+   */
+  cancelReport(reportId: string, userId: string): Promise<void>;
 }

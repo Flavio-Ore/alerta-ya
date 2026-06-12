@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'package:alertaya/app/router/go_router_refresh_stream.dart';
 import 'package:alertaya/features/alerts/presentation/pages/alerts_page.dart';
@@ -7,14 +7,17 @@ import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:alertaya/features/auth/presentation/pages/login_page.dart';
 import 'package:alertaya/features/auth/presentation/pages/onboarding_page.dart';
 import 'package:alertaya/features/auth/presentation/pages/splash_page.dart';
+import 'package:alertaya/features/incidents/presentation/pages/incident_detail_page.dart';
 import 'package:alertaya/features/map/presentation/pages/map_page.dart';
 import 'package:alertaya/features/panic/presentation/pages/panic_page.dart';
+import 'package:alertaya/features/panic/presentation/pages/panic_settings_page.dart';
+import 'package:alertaya/features/route/presentation/pages/route_comparator_page.dart';
 import 'package:alertaya/features/profile/presentation/pages/profile_page.dart';
 import 'package:alertaya/features/report/presentation/pages/dynamic_form_page.dart';
 import 'package:alertaya/features/report/presentation/pages/incident_type_page.dart';
 import 'package:alertaya/features/report/presentation/pages/report_confirmation_page.dart';
 import 'package:alertaya/features/risk/presentation/pages/risk_dashboard_page.dart';
-import 'app_shell.dart';
+import 'package:alertaya/app/router/app_shell.dart';
 
 GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
   return GoRouter(
@@ -40,6 +43,12 @@ GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
       GoRoute(
         path: '/panic',
         builder: (context, state) => const PanicPage(),
+        routes: [
+          GoRoute(
+            path: 'settings',
+            builder: (context, state) => const PanicSettingsPage(),
+          ),
+        ],
       ),
 
       // Flujo de reporte — modal flow iniciado desde el FAB en /map
@@ -71,13 +80,17 @@ GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
                 routes: [
                   GoRoute(
                     path: 'incident/:id',
-                    builder: (context, state) => IncidentDetailSheetPage(
+                    builder: (context, state) => IncidentDetailPage(
                       incidentId: state.pathParameters['id']!,
                     ),
                   ),
                   GoRoute(
                     path: 'routes',
-                    builder: (context, state) => const RouteComparatorPage(),
+                    builder: (context, state) {
+                      final origin = state.extra as LatLng? ??
+                          const LatLng(-12.0464, -77.0428);
+                      return RouteComparatorPage(origin: origin);
+                    },
                   ),
                 ],
               ),
@@ -131,20 +144,12 @@ String? _authGuard(GoRouterState state, AuthBloc authBloc) {
   if (authState is AuthUnauthenticated && isProtected) {
     return authState.isFirstLaunch ? '/onboarding' : '/login';
   }
+  if (authState is AuthUnauthenticated &&
+      location == '/onboarding' &&
+      !authState.isFirstLaunch) {
+    return '/login';
+  }
 
   return null;
 }
 
-// Placeholder pages — se implementan en sus features
-class IncidentDetailSheetPage extends StatelessWidget {
-  const IncidentDetailSheetPage({super.key, required this.incidentId});
-  final String incidentId;
-  @override
-  Widget build(BuildContext context) => const Scaffold();
-}
-
-class RouteComparatorPage extends StatelessWidget {
-  const RouteComparatorPage({super.key});
-  @override
-  Widget build(BuildContext context) => const Scaffold();
-}

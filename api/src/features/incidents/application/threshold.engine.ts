@@ -32,10 +32,18 @@ function extractFormFlags(
   stillHere: boolean;
 } {
   const d = formData as Record<string, unknown>;
+  // El mobile manda STRINGS, no booleans:
+  // - weapon: 'firearm' | 'blade' | 'none' | 'unknown'
+  // - injured: 'yes' | 'no' | 'unknown'
+  // - stillInArea: 'yes' | 'fled_foot' | 'fled_vehicle' | 'unknown'
+  const weapon = d["weapon"];
+  const injured = d["injured"];
+  const stillInArea = d["stillInArea"];
   return {
-    weapon: d["weapon"] === true,
-    injured: d["injured"] === true,
-    stillHere: d["stillInArea"] === true,
+    weapon:
+      weapon === true || weapon === "firearm" || weapon === "blade",
+    injured: injured === true || injured === "yes",
+    stillHere: stillInArea === true || stillInArea === "yes",
   };
 }
 
@@ -75,6 +83,27 @@ export async function evaluateThreshold(
   const firstAt = parseInt(firstAtRaw, 10);
   const elapsed = ctx.now - firstAt;
   const within15min = elapsed < WINDOW_15_MIN_MS;
+
+  // ── DEMO MODE ─────────────────────────────────────────────────────────────
+  // Bypass de umbrales: el primer reporte ya publica al panel.
+  // Severidad inicial MODERATE; las flags del propio reporte la pueden subir
+  // a CRITICAL. Útil para demos y QA — NO usar en producción.
+  if (process.env.DEMO_MODE === "true") {
+    let severity = Severity.MODERATE;
+    let alertPolice = false;
+    if (flags.weapon) severity = Severity.CRITICAL;
+    if (flags.injured) {
+      severity = Severity.CRITICAL;
+      alertPolice = true;
+    }
+    return {
+      publish: true,
+      severity,
+      push: true,
+      alertPolice,
+      extendExpiryMinutes: flags.stillHere ? 30 : undefined,
+    };
+  }
 
   if (count === 1) {
     return { publish: false };

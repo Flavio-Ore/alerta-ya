@@ -9,10 +9,21 @@ import {
 } from '../entities/incident.entity';
 import { AppError } from '../../../../core/errors/AppError';
 
+/**
+ * Cuenta reportes que satisfacen una flag de formulario.
+ * El mobile manda STRINGS, no booleans — chequeo flexible para retro-compat:
+ * - weapon: 'firearm' | 'blade' cuentan
+ * - injured: 'yes' cuenta
+ * - stillInArea: 'yes' cuenta (sigue ahí; fled_* NO)
+ */
 function countFormFlag(reports: Report[], flag: string): number {
   return reports.filter((r) => {
     const data = r.formData as Record<string, unknown>;
-    return data[flag] === true;
+    const v = data[flag];
+    if (v === true) return true;
+    if (flag === "weapon") return v === "firearm" || v === "blade";
+    if (flag === "injured" || flag === "stillInArea") return v === "yes";
+    return false;
   }).length;
 }
 

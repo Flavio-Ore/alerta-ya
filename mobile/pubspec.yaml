@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  permission_handler: ^11.3.1
   flutter_localizations:
     sdk: flutter
 
@@ -28,6 +29,9 @@ dependencies:
   # Conectividad
   connectivity_plus: ^6.0.3
 
+  # Tiempo real
+  socket_io_client: ^2.0.3+1
+
   # Mapas
   flutter_map: ^6.1.0
   latlong2: ^0.9.0
@@ -39,6 +43,7 @@ dependencies:
   flutter_local_notifications: ^17.2.1
   flutter_foreground_task: ^6.1.6
   # record — se agrega en FASE 5 (botón de pánico) con versión validada contra el AGP del momento
+  record: ^6.0.0
 
   # Seguridad
   flutter_secure_storage: ^9.0.0
@@ -49,12 +54,20 @@ dependencies:
   # Almacenamiento local
   hive_flutter: ^1.1.0
   hive: ^2.2.3
+  path_provider: ^2.1.0
 
   # Firebase
   firebase_core: ^2.30.1
   firebase_auth: ^4.19.5
   cloud_firestore: ^4.17.3
   firebase_storage: ^11.7.5
+
+  # Multimedia
+  image_picker: ^1.1.2
+  google_sign_in: ^6.2.1
+
+  # Configuración de entorno
+  flutter_dotenv: ^5.1.0
 
   # UI
   cached_network_image: ^3.3.1
@@ -66,9 +79,14 @@ dependencies:
   dartz: ^0.10.1
   freezed_annotation: ^2.4.1
 
+  # Utilidades
+  uuid: ^4.0.0
+  url_launcher: ^6.2.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.3
   build_runner: ^2.4.8
   freezed: ^2.4.7
   json_serializable: ^6.7.1
@@ -79,9 +97,18 @@ dev_dependencies:
   bloc_test: ^9.1.7
   flutter_lints: ^3.0.0
 
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icons/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icons/app_icon.png"
+
 flutter:
   uses-material-design: true
   assets:
+    - .env
     - assets/images/logo/
     - assets/icons/
   fonts:

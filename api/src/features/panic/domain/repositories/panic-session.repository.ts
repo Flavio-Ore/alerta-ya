@@ -9,6 +9,7 @@ export interface CreatePanicSessionData {
 export interface PanicSessionRepository {
   create(data: CreatePanicSessionData): Promise<PanicSession>;
   findActiveByUser(userId: string): Promise<PanicSession | null>;
+  findAllActive(): Promise<PanicSession[]>;
   deactivate(id: string, method: 'pin' | 'timeout'): Promise<PanicSession>;
   appendRecordingUrl(id: string, url: string): Promise<void>;
   findById(id: string): Promise<PanicSession | null>;
