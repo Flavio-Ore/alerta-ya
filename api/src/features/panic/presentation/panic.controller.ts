@@ -5,7 +5,7 @@ import { PrismaPanicRepository } from '../infrastructure/prisma-panic.repository
 import { UserLookupService } from '../../incidents/infrastructure/user-lookup.service';
 import { startPanic } from '../domain/usecases/start-panic.usecase';
 import { stopPanic } from '../domain/usecases/stop-panic.usecase';
-import { generateCloudinaryUploadParams } from '../infrastructure/cloudinary.client';
+import { generateUploadParams } from '../infrastructure/cloudinary.client';
 import { AppError } from '../../../core/errors/AppError';
 import { eventBus, PanicEvents } from '../../../core/events/event-bus';
 
@@ -24,7 +24,7 @@ export async function startPanicSession(req: Request, res: Response, next: NextF
 
     const dto = await startPanic(
       { userId: user.id, lat: body.lat, lng: body.lng },
-      { panicRepo, generateUploadParams: generateCloudinaryUploadParams },
+      { panicRepo, generateUploadParams: generateUploadParams },
     );
 
     res.status(201).json(dto);
