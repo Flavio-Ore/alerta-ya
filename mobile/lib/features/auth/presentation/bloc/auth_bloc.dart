@@ -48,16 +48,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
 
-    final firstResult = await _isFirstLaunch();
-    final isFirst = firstResult.fold((_) => false, (v) => v);
+    try {
+      final firstResult = await _isFirstLaunch();
+      final isFirst = firstResult.fold((_) => false, (v) => v);
 
-    final user = await _repository.authStateChanges.first;
+      final user = await _repository.authStateChanges.first
+          .timeout(const Duration(seconds: 10));
 
-    if (user != null) {
-      emit(AuthAuthenticated(user));
-      unawaited(_fcm.registerToken());
-    } else {
-      emit(AuthUnauthenticated(isFirstLaunch: isFirst));
+      if (user != null) {
+        emit(AuthAuthenticated(user));
+        unawaited(_fcm.registerToken());
+      } else {
+        emit(AuthUnauthenticated(isFirstLaunch: isFirst));
+      }
+    } catch (_) {
+      emit(const AuthUnauthenticated());
     }
   }
 

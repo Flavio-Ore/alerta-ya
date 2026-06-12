@@ -99,4 +99,13 @@ export interface UpdateAdminUserInput {
   displayName?: string;
   role?: AdminRole;
   disabled?: boolean;
+/**
+ * Sesión de pánico activa — devuelta por GET /panic/sessions/active.
+ * NUNCA contiene userId, nombre ni datos personales del ciudadano.
+ */
+export interface PanicSessionDTO {
+  id: string;
+  lat: number;
+  lng: number;
+  startedAt: string; // ISO
 }

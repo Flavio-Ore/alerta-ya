@@ -58,20 +58,19 @@ class FcmService {
 
   bool _handlersWired = false;
 
-  /// Pedir permiso, obtener token y registrarlo en el API.
+  /// Obtener token y registrarlo en el API.
+  /// Solo procede si el permiso de notificaciones ya fue concedido por el usuario.
+  /// El permiso se solicita durante el onboarding — nunca aquí.
   /// Silencia errores — una falla aquí NO debe bloquear el login.
   /// [lat]/[lng] opcionales — si se mandan, el server calcula proxTile (~330m).
   Future<void> registerToken({double? lat, double? lng}) async {
     try {
-      final settings = await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
-
-      // Si el usuario negó explícitamente, no seguimos
-      if (settings.authorizationStatus == AuthorizationStatus.denied) return;
+      // Verificar sin solicitar — el onboarding es el único lugar donde se pide.
+      final settings = await FirebaseMessaging.instance.getNotificationSettings();
+      if (settings.authorizationStatus == AuthorizationStatus.denied ||
+          settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+        return;
+      }
 
       final token = await FirebaseMessaging.instance.getToken();
       if (token == null) return;

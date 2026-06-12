@@ -303,7 +303,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
 
                 // ── Badge de estado (línea propia — sin competir con el título) ──
                 if (isPending)
-                  _InfoBanner(
+                  const _InfoBanner(
                     icon: Icons.hourglass_empty_rounded,
                     color: AppColors.secondary,
                     message: 'Pendiente: esperando confirmación de otros ciudadanos',
@@ -311,7 +311,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                 else
                   Row(
                     children: [
-                      _StatusBadge(status: incident!.status),
+                      _StatusBadge(status: incident.status),
                       const SizedBox(width: 8),
                       const Icon(Icons.location_on_outlined,
                           size: 13, color: AppColors.onSurfaceVariant),
@@ -330,7 +330,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
 
                 // ── Imágenes de evidencia ────────────────────────────────────
                 if (report.mediaUrls.isNotEmpty) ...[
-                  _SectionLabel('Evidencia'),
+                  const _SectionLabel('Evidencia'),
                   const SizedBox(height: 10),
                   SizedBox(
                     height: 160,
@@ -347,7 +347,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
 
                 // ── Datos del formulario ────────────────────────────────────
                 if (_visibleFormData(report.formData).isNotEmpty) ...[
-                  _SectionLabel('Detalles del reporte'),
+                  const _SectionLabel('Detalles del reporte'),
                   const SizedBox(height: 10),
                   _DataCard(
                     rows: _visibleFormData(report.formData)
@@ -366,7 +366,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                 if (incident != null &&
                     incident.feedback != null &&
                     incident.feedback!.isNotEmpty) ...[
-                  _SectionLabel('Mensaje de la autoridad'),
+                  const _SectionLabel('Mensaje de la autoridad'),
                   const SizedBox(height: 10),
                   Container(
                     width: double.infinity,

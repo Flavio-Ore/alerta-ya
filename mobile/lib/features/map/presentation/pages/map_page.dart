@@ -674,8 +674,12 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  SizedBox(
+                  Container(
                     height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.mapOnSurfaceVariant.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     child: TextField(
                       controller: _controller,
                       onChanged: _onChanged,

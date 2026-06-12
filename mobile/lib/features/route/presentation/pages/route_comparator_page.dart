@@ -333,10 +333,10 @@ class _InputCardState extends State<_InputCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Tu ubicación actual',
+                        const Text('Tu ubicación actual',
                             style: AppTextStyles.bodyMd),
                         const SizedBox(height: 4),
-                        Divider(height: 1, color: AppColors.outline),
+                        const Divider(height: 1, color: AppColors.outline),
                         const SizedBox(height: 6),
                         Row(
                           children: [
@@ -344,7 +344,7 @@ class _InputCardState extends State<_InputCard> {
                               child: TextField(
                                 controller: _controller,
                                 onChanged: _onChanged,
-                                decoration: InputDecoration(
+                                decoration: const InputDecoration(
                                   hintText: 'Destino...',
                                   hintStyle: AppTextStyles.bodyMd,
                                   border: InputBorder.none,
@@ -384,7 +384,7 @@ class _InputCardState extends State<_InputCard> {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 itemCount: _suggestions.length,
                 separatorBuilder: (_, __) =>
-                    Divider(height: 1, indent: 16, color: AppColors.outline),
+                    const Divider(height: 1, indent: 16, color: AppColors.outline),
                 itemBuilder: (context, i) {
                   final s = _suggestions[i];
                   return ListTile(
@@ -470,7 +470,7 @@ class _PanelContent extends StatelessWidget {
             Icon(Icons.route_outlined, size: 44, color: AppColors.outline),
             SizedBox(height: 10),
             Text(
-              'Ingresá un destino para comparar las rutas más seguras',
+              'Ingresa un destino para comparar las rutas más seguras',
               style: AppTextStyles.bodyMd,
               textAlign: TextAlign.center,
             ),

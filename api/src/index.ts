@@ -20,6 +20,7 @@ import { zonesRouter } from "./features/zones/presentation/zones.router";
 import { panicRouter } from "./features/panic/presentation/panic.router";
 import { notificationsRouter } from "./features/notifications/presentation/notifications.router";
 import { adminRouter } from "./features/admin/presentation/admin.router";
+import { meRouter } from "./features/me/presentation/me.router";
 
 import { registerIncidentSocket } from "./sockets/incident.socket";
 import { registerSocketAuth } from "./sockets/auth.socket";
