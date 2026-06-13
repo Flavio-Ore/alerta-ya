@@ -1,5 +1,5 @@
 import 'dart:async' show StreamSubscription, unawaited;
-import 'dart:convert';
+import 'dart:convert' show utf8;
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
@@ -14,7 +14,6 @@ import 'package:alertaya/features/panic/data/services/panic_upload_service.dart'
 import 'package:alertaya/features/panic/data/services/sms_service.dart';
 import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart';
 import 'package:alertaya/features/panic/domain/entities/panic_session_entity.dart';
-import 'package:alertaya/features/panic/domain/entities/panic_start_result.dart';
 import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart';
 import 'package:alertaya/features/panic/domain/usecases/deactivate_panic_usecase.dart';
 
@@ -28,7 +27,6 @@ const _kStartedAt = 'panic_started_at';
 const _kLat = 'panic_lat';
 const _kLng = 'panic_lng';
 const _kFailedAttempts = 'panic_failed_attempts';
-const _kUploadUrls = 'panic_upload_urls';
 const _kRecordAudio = 'panic_record_audio';
 const _kAlarmSound = 'panic_alarm_sound';
 
@@ -64,7 +62,6 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
 
   StreamSubscription<double>? _amplitudeSub;
   StreamSubscription<String>? _blockSub;
-  List<CloudinaryUploadParams> _uploadParams = [];
 
   Future<void> _onInitialized(
     PanicInitialized event,
@@ -80,13 +77,6 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
 
     final failedStr = await _storage.read(_kFailedAttempts);
     final failedAttempts = int.tryParse(failedStr ?? '0') ?? 0;
-
-    final uploadParamsStr = await _storage.read(_kUploadUrls);
-    if (uploadParamsStr != null) {
-      _uploadParams = (jsonDecode(uploadParamsStr) as List<dynamic>)
-          .map((e) => CloudinaryUploadParams.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
 
     final session = PanicSessionEntity(
       id: sessionId,
@@ -128,23 +118,12 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     await result.fold(
       (failure) async => emit(PanicError(failure.toString())),
       (startResult) async {
-        _uploadParams = startResult.uploadParams;
         final contact = await _contactService.getContact();
-        final paramsJson = jsonEncode(
-          _uploadParams.map((p) => {
-            'uploadUrl': p.uploadUrl,
-            'publicId': p.publicId,
-            'timestamp': p.timestamp,
-            'apiKey': p.apiKey,
-            'signature': p.signature,
-          }).toList(),
-        );
         await Future.wait([
           _storage.write(_kSessionId, startResult.session.id),
           _storage.write(_kStartedAt, startResult.session.startedAt.toIso8601String()),
           _storage.write(_kLat, startResult.session.lat.toString()),
           _storage.write(_kLng, startResult.session.lng.toString()),
-          _storage.write(_kUploadUrls, paramsJson),
           _storage.write(_kRecordAudio, event.recordAudio.toString()),
           _storage.write(_kAlarmSound, event.alarmSound.toString()),
           // Solo actualiza el PIN guardado si se provee uno nuevo.
@@ -193,14 +172,12 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     await result.fold(
       (failure) async => emit(PanicError(failure.toString())),
       (_) async {
-        _uploadParams = [];
         await _storage.deleteAll([
           _kSessionId,
           _kStartedAt,
           _kLat,
           _kLng,
           _kFailedAttempts,
-          _kUploadUrls,
           _kRecordAudio,
           _kAlarmSound,
           // _kSavedPin se omite: persiste para la próxima activación
@@ -226,20 +203,16 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     if (state is! PanicActive) return;
     final current = state as PanicActive;
 
-    final urlIndex = current.session.currentBlock - 1;
-    debugPrint('[PanicBloc] Bloque completado: currentBlock=${current.session.currentBlock} urlIndex=$urlIndex uploadParams=${_uploadParams.length}');
-    if (urlIndex >= 0 && urlIndex < _uploadParams.length) {
-      // Fire-and-forget: el bloque siguiente graba mientras este se sube
-      unawaited(
-        _uploadService
-            .uploadBlock(_uploadParams[urlIndex], event.filePath)
-            .catchError((dynamic e) {
-          debugPrint('[PanicBloc] Upload bloque $urlIndex falló: $e');
-        }),
-      );
-    } else {
-      debugPrint('[PanicBloc] SKIP upload — urlIndex=$urlIndex fuera de rango (${_uploadParams.length} slots)');
-    }
+    final blockIndex = current.session.currentBlock - 1;
+    debugPrint('[PanicBloc] Bloque completado: currentBlock=${current.session.currentBlock} blockIndex=$blockIndex');
+    // Fire-and-forget: el bloque siguiente graba mientras este se sube
+    unawaited(
+      _uploadService
+          .uploadBlock(event.filePath, current.session.id, blockIndex)
+          .catchError((dynamic e) {
+        debugPrint('[PanicBloc] Upload bloque $blockIndex falló: $e');
+      }),
+    );
 
     final updatedPaths = [...current.session.recordingPaths, event.filePath];
     emit(current.copyWith(
@@ -299,23 +272,19 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     _blockSub = null;
 
     final finalPaths = await _audioService.stop();
-    debugPrint('[PanicBloc] _stopRecording — finalPaths: $finalPaths | uploadParams: ${_uploadParams.length}');
+    debugPrint('[PanicBloc] _stopRecording — finalPaths: $finalPaths');
 
     // Subir el bloque parcial final si la desactivación fue intencional
     if (activeState != null && finalPaths.isNotEmpty) {
-      final urlIndex = activeState.session.currentBlock - 1;
-      debugPrint('[PanicBloc] Subiendo bloque parcial final — urlIndex=$urlIndex');
-      if (urlIndex >= 0 && urlIndex < _uploadParams.length) {
-        try {
-          await _uploadService
-              .uploadBlock(_uploadParams[urlIndex], finalPaths.first)
-              .timeout(const Duration(seconds: 30));
-          debugPrint('[PanicBloc] Upload bloque parcial OK');
-        } catch (e) {
-          debugPrint('[PanicBloc] Upload bloque parcial FALLÓ: $e');
-        }
-      } else {
-        debugPrint('[PanicBloc] SKIP upload parcial — urlIndex=$urlIndex fuera de rango');
+      final blockIndex = activeState.session.currentBlock - 1;
+      debugPrint('[PanicBloc] Subiendo bloque parcial final — blockIndex=$blockIndex');
+      try {
+        await _uploadService
+            .uploadBlock(finalPaths.first, activeState.session.id, blockIndex)
+            .timeout(const Duration(seconds: 30));
+        debugPrint('[PanicBloc] Upload bloque parcial OK');
+      } catch (e) {
+        debugPrint('[PanicBloc] Upload bloque parcial FALLÓ: $e');
       }
     } else {
       debugPrint('[PanicBloc] SKIP upload parcial — activeState=$activeState finalPaths=$finalPaths');
