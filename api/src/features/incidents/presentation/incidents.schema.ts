@@ -53,12 +53,6 @@ export const reportIdParamSchema = z.object({
   reportId: z.string().min(1),
 });
 
-// Body para pedir N upload params para evidencia de un reporte.
-// Limitamos a 10 para no abusar de Cloudinary.
-export const uploadParamsRequestSchema = z.object({
-  count: z.number().int().min(1).max(10),
-});
-
 export type ListMyReportsQuery = z.infer<typeof listMyReportsQuerySchema>;
 export type CreateReportInput = z.infer<typeof createReportSchema>;
 export type ListIncidentsQuery = z.infer<typeof listIncidentsQuerySchema>;

@@ -5,7 +5,6 @@ import { PrismaPanicRepository } from '../infrastructure/prisma-panic.repository
 import { UserLookupService } from '../../incidents/infrastructure/user-lookup.service';
 import { startPanic } from '../domain/usecases/start-panic.usecase';
 import { stopPanic } from '../domain/usecases/stop-panic.usecase';
-import { generateUploadParams } from '../infrastructure/cloudinary.client';
 import { AppError } from '../../../core/errors/AppError';
 import { eventBus, PanicEvents } from '../../../core/events/event-bus';
 
@@ -24,12 +23,11 @@ export async function startPanicSession(req: Request, res: Response, next: NextF
 
     const dto = await startPanic(
       { userId: user.id, lat: body.lat, lng: body.lng },
-      { panicRepo, generateUploadParams: generateUploadParams },
+      { panicRepo },
     );
 
     res.status(201).json(dto);
 
-    // Notificar al panel de autoridades en tiempo real (solo coordenadas — sin PII)
     eventBus.emit(PanicEvents.STARTED, {
       id: dto.id,
       lat: dto.lat,
@@ -68,7 +66,6 @@ export async function getActivePanicSessions(
 ): Promise<void> {
   try {
     const sessions = await panicRepo.findAllActive();
-    // Solo coordenadas — nunca exponer userId ni datos del ciudadano (SECURITY_RULES)
     res.json(
       sessions.map((s) => ({
         id: s.id,

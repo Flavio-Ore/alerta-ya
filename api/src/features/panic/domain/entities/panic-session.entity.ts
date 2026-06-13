@@ -1,5 +1,4 @@
 import { PanicSession, PanicStatus } from '@prisma/client';
-import { UploadParams } from './upload-params.entity';
 
 export type { PanicStatus };
 
@@ -10,14 +9,9 @@ export interface PublicPanicSessionDTO {
   lat: number;
   lng: number;
   status: PanicStatus;
-  /** Parámetros para upload directo a Cloudinary desde el cliente. */
-  uploadParams: UploadParams[];
 }
 
-export function toPanicDTO(
-  session: PanicSession,
-  uploadParams: UploadParams[],
-): PublicPanicSessionDTO {
+export function toPanicDTO(session: PanicSession): PublicPanicSessionDTO {
   return {
     id: session.id,
     startedAt: session.startedAt.toISOString(),
@@ -25,6 +19,5 @@ export function toPanicDTO(
     lat: session.lat,
     lng: session.lng,
     status: session.status,
-    uploadParams,
   };
 }
