@@ -162,8 +162,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i42.AudioRecordingService(gh<_i142.SecureStorageService>()));
     gh.lazySingleton<_i732.TrustedContactService>(
         () => _i732.TrustedContactService(gh<_i142.SecureStorageService>()));
-    gh.lazySingleton<_i846.MediaUploadService>(
-        () => _i846.MediaUploadService(gh<_i361.Dio>()));
     gh.lazySingleton<_i554.MeRemoteDataSource>(
         () => _i554.MeRemoteDataSourceImpl(gh<_i361.Dio>()));
     gh.lazySingleton<_i973.PanicRemoteDataSource>(
@@ -186,11 +184,8 @@ extension GetItInjectableX on _i174.GetIt {
             ));
     gh.factory<_i901.ProfileBloc>(
         () => _i901.ProfileBloc(gh<_i554.MeRemoteDataSource>()));
-    gh.lazySingleton<_i658.ReportRepository>(() => _i1054.ReportRepositoryImpl(
-          gh<_i35.ReportRemoteDataSource>(),
-          gh<_i846.MediaUploadService>(),
-          gh<_i59.FirebaseAuth>(),
-        ));
+    gh.lazySingleton<_i846.MediaUploadService>(
+        () => _i846.MediaUploadService(gh<_i457.FirebaseStorageService>()));
     gh.lazySingleton<_i431.MyReportsRepository>(
         () => _i97.MyReportsRepositoryImpl(
               gh<_i750.MyReportsRemoteDataSource>(),
@@ -235,10 +230,6 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i238.NotificationRemoteDataSource>(),
               gh<_i857.NetworkInfo>(),
             ));
-    gh.factory<_i280.CreateReportUseCase>(
-        () => _i280.CreateReportUseCase(gh<_i658.ReportRepository>()));
-    gh.factory<_i638.GetFormSchemaUseCase>(
-        () => _i638.GetFormSchemaUseCase(gh<_i658.ReportRepository>()));
     gh.factory<_i401.CompleteOnboardingUseCase>(
         () => _i401.CompleteOnboardingUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i316.DeleteAccountUseCase>(
@@ -251,8 +242,11 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i290.SignOutUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i141.SignUpWithEmailUseCase>(
         () => _i141.SignUpWithEmailUseCase(gh<_i576.AuthRepository>()));
-    gh.lazySingleton<_i108.ReportBloc>(
-        () => _i108.ReportBloc(gh<_i280.CreateReportUseCase>()));
+    gh.lazySingleton<_i658.ReportRepository>(() => _i1054.ReportRepositoryImpl(
+          gh<_i35.ReportRemoteDataSource>(),
+          gh<_i846.MediaUploadService>(),
+          gh<_i59.FirebaseAuth>(),
+        ));
     gh.factory<_i339.CancelReportUseCase>(
         () => _i339.CancelReportUseCase(gh<_i431.MyReportsRepository>()));
     gh.factory<_i56.GetMyReportsUseCase>(
@@ -284,6 +278,12 @@ extension GetItInjectableX on _i174.GetIt {
         _i750.GetNotificationsUseCase(gh<_i328.NotificationRepository>()));
     gh.factory<_i748.MarkNotificationsReadUseCase>(() =>
         _i748.MarkNotificationsReadUseCase(gh<_i328.NotificationRepository>()));
+    gh.factory<_i280.CreateReportUseCase>(
+        () => _i280.CreateReportUseCase(gh<_i658.ReportRepository>()));
+    gh.factory<_i638.GetFormSchemaUseCase>(
+        () => _i638.GetFormSchemaUseCase(gh<_i658.ReportRepository>()));
+    gh.lazySingleton<_i108.ReportBloc>(
+        () => _i108.ReportBloc(gh<_i280.CreateReportUseCase>()));
     gh.factory<_i767.AlertsBloc>(() => _i767.AlertsBloc(
           gh<_i750.GetNotificationsUseCase>(),
           gh<_i748.MarkNotificationsReadUseCase>(),
