@@ -11,9 +11,11 @@ import 'package:alertaya/core/storage/secure_storage_service.dart';
 import 'package:alertaya/features/panic/data/services/audio_recording_service.dart';
 import 'package:alertaya/features/panic/data/services/panic_channel_service.dart';
 import 'package:alertaya/features/panic/data/services/panic_upload_service.dart';
+import 'package:alertaya/features/panic/data/services/panic_location_tracker.dart';
 import 'package:alertaya/features/panic/data/services/sms_service.dart';
 import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart';
 import 'package:alertaya/features/panic/domain/entities/panic_session_entity.dart';
+import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart';
 import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart';
 import 'package:alertaya/features/panic/domain/usecases/deactivate_panic_usecase.dart';
 
@@ -41,6 +43,8 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     this._uploadService,
     this._contactService,
     this._smsService,
+    this._locationTracker,
+    this._panicRepo,
   ) : super(const PanicIdle()) {
     on<PanicInitialized>(_onInitialized);
     on<PanicActivationRequested>(_onActivationRequested);
@@ -49,6 +53,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     // Eventos internos del servicio de grabación
     on<_PanicAmplitudeUpdated>(_onAmplitudeUpdated);
     on<_PanicBlockCompleted>(_onBlockCompleted);
+    on<_PanicLocationTick>(_onLocationTick);
   }
 
   final ActivatePanicUseCase _activate;
@@ -59,6 +64,8 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   final PanicUploadService _uploadService;
   final TrustedContactService _contactService;
   final SmsService _smsService;
+  final PanicLocationTracker _locationTracker;
+  final PanicRepository _panicRepo;
 
   StreamSubscription<double>? _amplitudeSub;
   StreamSubscription<String>? _blockSub;
@@ -223,6 +230,21 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     ));
   }
 
+  Future<void> _onLocationTick(
+    _PanicLocationTick event,
+    Emitter<PanicState> emit,
+  ) async {
+    if (state is! PanicActive) return;
+    final sessionId = (state as PanicActive).session.id;
+    unawaited(
+      _panicRepo
+          .updateLocation(sessionId: sessionId, lat: event.lat, lng: event.lng)
+          .catchError((dynamic e) {
+        debugPrint('[PanicBloc] updateLocation falló: $e');
+      }),
+    );
+  }
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   Future<void> _sendEmergencySms(
@@ -263,9 +285,14 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
       initialElapsed,
       alarmSound: alarmSound,
     );
+    _locationTracker.start(
+      sessionId,
+      onLocation: (lat, lng) => add(_PanicLocationTick(lat, lng)),
+    );
   }
 
   Future<void> _stopRecording([PanicActive? activeState]) async {
+    _locationTracker.stop();
     await _amplitudeSub?.cancel();
     await _blockSub?.cancel();
     _amplitudeSub = null;

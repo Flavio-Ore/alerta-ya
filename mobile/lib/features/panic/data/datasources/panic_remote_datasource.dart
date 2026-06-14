@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 
@@ -11,6 +12,11 @@ abstract class PanicRemoteDataSource {
     required double lng,
   });
   Future<void> stopSession(String sessionId);
+  Future<void> updateLocation({
+    required String sessionId,
+    required double lat,
+    required double lng,
+  });
 }
 
 @LazySingleton(as: PanicRemoteDataSource)
@@ -48,6 +54,24 @@ class PanicRemoteDataSourceImpl implements PanicRemoteDataSource {
         statusCode: e.response?.statusCode ?? 500,
         message: e.message,
       );
+    }
+  }
+
+  @override
+  Future<void> updateLocation({
+    required String sessionId,
+    required double lat,
+    required double lng,
+  }) async {
+    try {
+      await _dio.patch<void>(
+        '/panic/sessions/$sessionId/location',
+        data: {'lat': lat, 'lng': lng},
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorizedException();
+      // No relanzar — fire-and-forget: la actualización de ubicación no bloquea el pánico
+      debugPrint('[PanicDataSource] updateLocation error: ${e.message}');
     }
   }
 }

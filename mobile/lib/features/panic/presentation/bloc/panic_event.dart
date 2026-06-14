@@ -45,3 +45,9 @@ class _PanicBlockCompleted extends PanicEvent {
   const _PanicBlockCompleted(this.filePath);
   final String filePath;
 }
+
+class _PanicLocationTick extends PanicEvent {
+  const _PanicLocationTick(this.lat, this.lng);
+  final double lat;
+  final double lng;
+}
