@@ -4,6 +4,7 @@ import 'dart:convert' show utf8;
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/constants/app_constants.dart';
@@ -34,6 +35,7 @@ const _kRecordAudio = 'panic_record_audio';
 const _kAlarmSound = 'panic_alarm_sound';
 const _kRecordVideo = 'panic_record_video';
 const _kSendSms = 'panic_send_sms';
+const _kVolumeActivation = 'panic_volume_activation';
 
 @lazySingleton
 class PanicBloc extends Bloc<PanicEvent, PanicState> {
@@ -58,6 +60,9 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     on<_PanicBlockCompleted>(_onBlockCompleted);
     on<_PanicVideoClipCompleted>(_onVideoClipCompleted);
     on<_PanicLocationTick>(_onLocationTick);
+    on<_PanicVolumeActivated>(_onVolumeActivated);
+    _volumeSub = _channelService.volumeTriggerStream
+        .listen((_) => add(const _PanicVolumeActivated()));
   }
 
   final ActivatePanicUseCase _activate;
@@ -75,6 +80,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   StreamSubscription<double>? _amplitudeSub;
   StreamSubscription<String>? _blockSub;
   StreamSubscription<String>? _videoClipSub;
+  StreamSubscription<void>? _volumeSub;
 
   Future<void> _onInitialized(
     PanicInitialized event,
@@ -263,6 +269,41 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     emit(current.copyWith(currentVideoClip: current.currentVideoClip + 1));
   }
 
+  Future<void> _onVolumeActivated(
+    _PanicVolumeActivated event,
+    Emitter<PanicState> emit,
+  ) async {
+    if (state is! PanicIdle) return;
+    final enabled = await _storage.read(_kVolumeActivation);
+    if (enabled == 'false') return;
+
+    final recordAudio = (await _storage.read(_kRecordAudio)) != 'false';
+    final alarmSound = (await _storage.read(_kAlarmSound)) != 'false';
+    final recordVideo = (await _storage.read(_kRecordVideo)) == 'true';
+
+    Position? pos;
+    try {
+      pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 10),
+      );
+    } catch (_) {
+      pos = await Geolocator.getLastKnownPosition();
+    }
+    if (pos == null) {
+      debugPrint('[PanicBloc] Activación por volumen — sin GPS disponible');
+      return;
+    }
+
+    add(PanicActivationRequested(
+      lat: pos.latitude,
+      lng: pos.longitude,
+      recordAudio: recordAudio,
+      alarmSound: alarmSound,
+      recordVideo: recordVideo,
+    ));
+  }
+
   Future<void> _onLocationTick(
     _PanicLocationTick event,
     Emitter<PanicState> emit,
@@ -395,6 +436,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
 
   @override
   Future<void> close() async {
+    await _volumeSub?.cancel();
     await _stopRecording();
     return super.close();
   }

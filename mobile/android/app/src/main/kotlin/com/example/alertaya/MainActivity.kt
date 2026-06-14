@@ -8,21 +8,24 @@ import android.content.IntentFilter
 import android.os.Build
 import android.telephony.SmsManager
 import android.util.Log
+import android.view.KeyEvent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
 
-    private val channel = "com.example.alertaya/panic"
+    private val channelName = "com.example.alertaya/panic"
+    private var panicChannel: MethodChannel? = null
+
+    private val volumePressTimestamps = mutableListOf<Long>()
+    private val triplePresWindowMs = 2000L
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            channel
-        ).setMethodCallHandler { call, result ->
+        panicChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
+        panicChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "startPanic" -> {
                     val elapsed = call.argument<Int>("elapsedSeconds") ?: 0
@@ -109,5 +112,20 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    // Detecta 3 pulsaciones del botón de volumen en menos de 2 segundos
+    // y notifica a Flutter para activar el modo pánico.
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            val now = System.currentTimeMillis()
+            volumePressTimestamps.add(now)
+            volumePressTimestamps.removeAll { now - it > triplePresWindowMs }
+            if (volumePressTimestamps.size >= 3) {
+                volumePressTimestamps.clear()
+                panicChannel?.invokeMethod("triggerVolumePanic", null)
+            }
+        }
+        return super.onKeyDown(keyCode, event)
     }
 }

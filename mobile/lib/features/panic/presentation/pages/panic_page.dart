@@ -347,7 +347,10 @@ class _IdleView extends StatelessWidget {
                     const SizedBox(height: 32),
                     _PanicHeroButton(onTap: onPanicTap),
                     const SizedBox(height: 32),
-                    const _ComingSoonHint(text: 'o usa el volumen físico 3 veces'),
+                    const _ComingSoonHint(
+                      text: 'o presioná el volumen 3 veces',
+                      isComingSoon: false,
+                    ),
                     const SizedBox(height: 6),
                     const _ComingSoonHint(text: 'o di tu palabra clave'),
                     const SizedBox(height: 24),
@@ -649,8 +652,9 @@ class _PanicStatusPill extends StatelessWidget {
 }
 
 class _ComingSoonHint extends StatelessWidget {
-  const _ComingSoonHint({required this.text});
+  const _ComingSoonHint({required this.text, this.isComingSoon = true});
   final String text;
+  final bool isComingSoon;
 
   @override
   Widget build(BuildContext context) {
@@ -666,23 +670,25 @@ class _ComingSoonHint extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: AppColors.secondary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            'PRÓXIMAMENTE',
-            style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.secondary,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
+        if (isComingSoon) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.secondary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              'PRÓXIMAMENTE',
+              style: AppTextStyles.labelSm.copyWith(
+                color: AppColors.secondary,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

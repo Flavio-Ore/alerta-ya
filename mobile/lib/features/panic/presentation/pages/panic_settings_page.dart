@@ -18,6 +18,7 @@ import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 const _kCall105OnLock = 'panic_call_105_on_lock';
 const _kSendSms = 'panic_send_sms';
 const _kRecordVideo = 'panic_record_video';
+const _kVolumeActivation = 'panic_volume_activation';
 
 // ─── Modo de emergencia ───────────────────────────────────────────────────────
 
@@ -85,6 +86,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   bool _call105OnLock = true;
   bool _sendSms = true;
   bool _recordVideo = false;
+  bool _volumeActivation = true;
   bool _hasSavedPin = false;
 
   @override
@@ -94,6 +96,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     _loadCall105();
     _loadSendSms();
     _loadRecordVideo();
+    _loadVolumeActivation();
     _loadSavedPin();
   }
 
@@ -122,6 +125,16 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   Future<void> _loadRecordVideo() async {
     final raw = await _storage.read(_kRecordVideo);
     if (mounted) setState(() => _recordVideo = raw == 'true');
+  }
+
+  Future<void> _loadVolumeActivation() async {
+    final raw = await _storage.read(_kVolumeActivation);
+    if (mounted) setState(() => _volumeActivation = raw != 'false');
+  }
+
+  Future<void> _toggleVolumeActivation(bool value) async {
+    setState(() => _volumeActivation = value);
+    await _storage.write(_kVolumeActivation, value ? 'true' : 'false');
   }
 
   Future<void> _toggleCall105(bool value) async {
@@ -337,6 +350,18 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
                 trailing: Switch(
                   value: _call105OnLock,
                   onChanged: _toggleCall105,
+                  activeThumbColor: AppColors.secondary,
+                ),
+              ),
+              _SettingsItem(
+                icon: Icons.volume_up_outlined,
+                title: 'Activar con botón de volumen',
+                subtitle: _volumeActivation
+                    ? 'Presioná el volumen 3 veces en < 2 seg para activar'
+                    : 'Desactivado — solo el botón en pantalla activa el pánico',
+                trailing: Switch(
+                  value: _volumeActivation,
+                  onChanged: _toggleVolumeActivation,
                   activeThumbColor: AppColors.secondary,
                 ),
               ),

@@ -59,3 +59,7 @@ class _PanicLocationTick extends PanicEvent {
   final double lat;
   final double lng;
 }
+
+class _PanicVolumeActivated extends PanicEvent {
+  const _PanicVolumeActivated();
+}
