@@ -288,43 +288,47 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          {/* Filter bar inside the incident list panel */}
-          <div className="bg-stitch-surface-container-low rounded-[10px] border border-stitch-outline/20 p-2.5 flex flex-col gap-2">
+          {/* Filter bar with styled inputs */}
+          <div className="bg-stitch-surface-container-low rounded-[10px] border border-stitch-outline/20 p-4 flex flex-col gap-3">
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar…"
-                className="w-full bg-stitch-surface rounded-md border border-stitch-outline/20 pl-3 pr-3 py-1.5 text-xs text-white outline-none focus:border-stitch-primary transition-colors placeholder:text-stitch-outline"
+                className="w-full bg-stitch-surface rounded-md border border-stitch-outline/20 pl-3 pr-3 py-2 text-xs text-white outline-none focus:border-stitch-primary transition-colors placeholder:text-stitch-outline"
               />
             </div>
-            <div className="flex items-center justify-between flex-wrap gap-1.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <FilterSelect
-                  value={typeFilter}
-                  onChange={(v) => setTypeFilter(v as IncidentType | 'ALL')}
-                  options={TYPE_OPTIONS.map((opt) => ({ value: opt, label: filterTypeLabel(opt) }))}
-                />
-                <span className="text-stitch-outline/30 text-[10px]">|</span>
-                <FilterSelect
-                  value={severityFilter}
-                  onChange={(v) => setSeverityFilter(v as Severity | 'ALL')}
-                  options={SEVERITY_OPTIONS.map((opt) => ({ value: opt, label: filterSeverityLabel(opt) }))}
-                />
-                <span className="text-stitch-outline/30 text-[10px]">|</span>
-                <FilterSelect
-                  value={districtFilter}
-                  onChange={(v) => setDistrictFilter(v)}
-                  options={DISTRICT_OPTIONS.map((opt) => ({
-                    value: opt,
-                    label: opt === 'ALL' ? 'Distrito' : opt,
-                  }))}
-                  icon="location_on"
-                />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
+                  <FilterSelect
+                    value={typeFilter}
+                    onChange={(v) => setTypeFilter(v as IncidentType | 'ALL')}
+                    options={TYPE_OPTIONS.map((opt) => ({ value: opt, label: filterTypeLabel(opt) }))}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
+                  <FilterSelect
+                    value={severityFilter}
+                    onChange={(v) => setSeverityFilter(v as Severity | 'ALL')}
+                    options={SEVERITY_OPTIONS.map((opt) => ({ value: opt, label: filterSeverityLabel(opt) }))}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
+                  <FilterSelect
+                    value={districtFilter}
+                    onChange={(v) => setDistrictFilter(v)}
+                    options={DISTRICT_OPTIONS.map((opt) => ({
+                      value: opt,
+                      label: opt === 'ALL' ? 'Distrito' : opt,
+                    }))}
+                    icon="location_on"
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {hasActiveFilters && (
                   <button
                     onClick={clearFilters}
