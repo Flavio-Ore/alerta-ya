@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 
 import { useIncidentsList } from '../../incidents/infrastructure/incidents.api';
@@ -11,7 +11,20 @@ import {
   formatRelativeTime,
 } from '../../incidents/presentation/utils/labels';
 import { IncidentsMap } from '../components/IncidentsMap';
-import type { PublicIncidentDTO, Severity } from '../../../core/api/types';
+import type { PublicIncidentDTO, Severity, IncidentType } from '../../../core/api/types';
+import {
+  FilterSelect,
+  TYPE_OPTIONS,
+  SEVERITY_OPTIONS,
+  DISTRICT_OPTIONS,
+} from '../../../core/components/ui/FilterSelect';
+
+function filterTypeLabel(value: typeof TYPE_OPTIONS[number]): string {
+  return value === 'ALL' ? 'Todos los tipos' : incidentTypeLabel[value as IncidentType];
+}
+function filterSeverityLabel(value: typeof SEVERITY_OPTIONS[number]): string {
+  return value === 'ALL' ? 'Severidad' : severityLabel[value as Severity];
+}
 
 const SEVERITY_BAR: Record<Severity, string> = {
   CRITICAL: 'border-stitch-error',
@@ -97,37 +110,66 @@ export default function DashboardPage() {
   usePanicLiveUpdates();
   const { data: panicData } = useActivePanicSessions();
   const panicSessions = panicData ?? [];
-  // status:'ALL' → trae histórico completo. El KPI "Total" + agregaciones
-  // requieren ver TODO (no solo ACTIVE), aunque mapa y lista filtran cliente-side por ACTIVE.
   const { data, isLoading } = useIncidentsList({ pageSize: 100, status: 'ALL' });
 
-  // KPIs según HU008 H8-4: total, críticos, zonas activas
+  // ── Filter state ──────────────────────────────────────────────
+  const [typeFilter, setTypeFilter] = useState<IncidentType | 'ALL'>('ALL');
+  const [severityFilter, setSeverityFilter] = useState<Severity | 'ALL'>('ALL');
+  const [districtFilter, setDistrictFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const hasActiveFilters =
+    typeFilter !== 'ALL' ||
+    severityFilter !== 'ALL' ||
+    districtFilter !== 'ALL' ||
+    searchQuery !== '';
+
+  function clearFilters() {
+    setTypeFilter('ALL');
+    setSeverityFilter('ALL');
+    setDistrictFilter('ALL');
+    setSearchQuery('');
+  }
+
+  // KPIs calculados del total (sin filtros)
   const stats = useMemo(() => {
     const items = data?.items ?? [];
-
     const total      = data?.total ?? 0;
     const critical   = items.filter((i) => i.severity === 'CRITICAL').length;
     const activeNow  = items.filter((i) => i.status === 'ACTIVE').length;
     const activeZones = new Set(
       items.filter((i) => i.status === 'ACTIVE').map((i) => i.district),
     ).size;
-
     return { total, critical, activeNow, activeZones };
   }, [data]);
 
-  const activeIncidents = useMemo(() => {
+  // Incidentes activos filtrados (para mapa + lista lateral)
+  const filteredIncidents = useMemo(() => {
     const items = (data?.items ?? []).filter((i) => i.status === 'ACTIVE');
-    const sevOrder: Record<Severity, number> = { CRITICAL: 0, MODERATE: 1, LOW: 2 };
-    return [...items].sort((a, b) => {
+    return items.filter((i) => {
+      if (typeFilter !== 'ALL' && i.type !== typeFilter) return false;
+      if (severityFilter !== 'ALL' && i.severity !== severityFilter) return false;
+      if (districtFilter !== 'ALL' && i.district !== districtFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matches =
+          i.district.toLowerCase().includes(q) ||
+          incidentTypeLabel[i.type].toLowerCase().includes(q) ||
+          severityLabel[i.severity].toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+      return true;
+    }).sort((a, b) => {
+      const sevOrder: Record<Severity, number> = { CRITICAL: 0, MODERATE: 1, LOW: 2 };
       const bySev = sevOrder[a.severity] - sevOrder[b.severity];
       if (bySev !== 0) return bySev;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [data]);
+  }, [data, typeFilter, severityFilter, districtFilter, searchQuery]);
 
   return (
     <div className="flex-1 p-6 overflow-hidden flex flex-col gap-6">
-      {/* Stat Cards Row — HU008 H8-4: total, críticos, zonas activas + pánico */}
+      {/* Stat Cards Row */}
       <div className="grid grid-cols-4 gap-4">
         <StatCard
           label="Total"
@@ -162,7 +204,7 @@ export default function DashboardPage() {
         <section className="w-[65%] bg-stitch-surface-container-low rounded-xl relative overflow-hidden flex flex-col">
           <div className="absolute inset-0">
             <IncidentsMap
-              incidents={activeIncidents}
+              incidents={filteredIncidents}
               panicSessions={panicSessions}
               onPinClick={(id) =>
                 navigate({ to: '/incidents/$incidentId', params: { incidentId: id } })
@@ -246,6 +288,64 @@ export default function DashboardPage() {
             </span>
           </div>
 
+          {/* Filter bar with styled inputs */}
+          <div className="bg-stitch-surface-container-low rounded-[10px] border border-stitch-outline/20 p-4 flex flex-col gap-3">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar…"
+                className="w-full bg-stitch-surface rounded-md border border-stitch-outline/20 pl-3 pr-3 py-2 text-xs text-white outline-none focus:border-stitch-primary transition-colors placeholder:text-stitch-outline"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
+                  <FilterSelect
+                    value={typeFilter}
+                    onChange={(v) => setTypeFilter(v as IncidentType | 'ALL')}
+                    options={TYPE_OPTIONS.map((opt) => ({ value: opt, label: filterTypeLabel(opt) }))}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
+                  <FilterSelect
+                    value={severityFilter}
+                    onChange={(v) => setSeverityFilter(v as Severity | 'ALL')}
+                    options={SEVERITY_OPTIONS.map((opt) => ({ value: opt, label: filterSeverityLabel(opt) }))}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
+                  <FilterSelect
+                    value={districtFilter}
+                    onChange={(v) => setDistrictFilter(v)}
+                    options={DISTRICT_OPTIONS.map((opt) => ({
+                      value: opt,
+                      label: opt === 'ALL' ? 'Distrito' : opt,
+                    }))}
+                    icon="location_on"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-stitch-primary text-[10px] font-bold hover:underline shrink-0 uppercase tracking-wider"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="text-[10px] text-stitch-on-surface-variant font-medium">
+              {filteredIncidents.length}{' '}
+              {filteredIncidents.length === 1 ? 'activo' : 'activos'}
+              {hasActiveFilters && ' filtrados'}
+            </div>
+          </div>
+
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             {isLoading && (
               <div className="text-center text-stitch-on-surface-variant py-8 text-xs">
@@ -253,13 +353,15 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {!isLoading && activeIncidents.length === 0 && (
+            {!isLoading && filteredIncidents.length === 0 && (
               <div className="text-center text-stitch-on-surface-variant py-8 text-xs">
-                No hay incidentes activos en este momento.
+                {hasActiveFilters
+                  ? 'No hay incidentes activos con los filtros seleccionados.'
+                  : 'No hay incidentes activos en este momento.'}
               </div>
             )}
 
-            {activeIncidents.map((inc) => (
+            {filteredIncidents.map((inc) => (
               <IncidentCard
                 key={inc.id}
                 incident={inc}

@@ -14,53 +14,16 @@ import type {
   IncidentType,
   IncidentStatus,
 } from "../../../core/api/types";
-
-const SEVERITY_OPTIONS: Array<Severity | "ALL"> = [
-  "ALL",
-  "CRITICAL",
-  "MODERATE",
-  "LOW",
-];
-const TYPE_OPTIONS: Array<IncidentType | "ALL"> = [
-  "ALL",
-  "ROBBERY",
-  "ACCIDENT",
-  "HARASSMENT",
-  "EXTORTION",
-  "SUSPICIOUS",
-];
-const STATUS_OPTIONS: Array<IncidentStatus | "ALL"> = [
-  "ALL",
-  "ACTIVE",
-  "IN_ATTENTION",
-  "CLOSED",
-];
-
-const DISTRICTS = [
-  "Barranco", "Callao", "Cercado de Lima", "Comas", "Jesús María",
-  "La Molina", "La Victoria", "Los Olivos", "Lince", "Magdalena",
-  "Miraflores", "Pueblo Libre", "San Borja", "San Isidro",
-  "San Juan de Lurigancho", "San Miguel", "Santiago de Surco",
-  "Surquillo", "Villa El Salvador", "Villa María del Triunfo",
-];
-const DISTRICT_OPTIONS = ["ALL", ...DISTRICTS];
-
-const DATE_PRESETS = [
-  { label: "Hoy", value: "today" },
-  { label: "Ayer", value: "yesterday" },
-  { label: "Últ. 7 días", value: "7d" },
-  { label: "Últ. 30 días", value: "30d" },
-];
-
-function todayISO(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function daysAgoISO(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().split("T")[0];
-}
+import {
+  FilterSelect,
+  TYPE_OPTIONS,
+  SEVERITY_OPTIONS,
+  STATUS_OPTIONS,
+  DISTRICT_OPTIONS,
+  DATE_PRESETS,
+  todayISO,
+  daysAgoISO,
+} from "../../../core/components/ui/FilterSelect";
 
 // ── Estilos Stitch por severidad / status ─────────────────────────────────────
 const SEVERITY_BAR: Record<Severity, string> = {
@@ -225,50 +188,8 @@ export default function IncidentsListPage() {
         </div>
 
         <div className="bg-ay-bg-dark2 rounded-[10px] border border-ay-border p-4 flex flex-col gap-4">
-          {/* Date range */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-stitch-outline">
-                calendar_today
-              </span>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => {
-                  setDateFrom(e.target.value);
-                  setPage(1);
-                }}
-                className="bg-ay-bg-dark border border-ay-border rounded px-3 py-1.5 text-sm text-white outline-none focus:border-ay-accent [color-scheme:dark]"
-              />
-              <span className="text-stitch-outline text-sm">—</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => {
-                  setDateTo(e.target.value);
-                  setPage(1);
-                }}
-                className="bg-ay-bg-dark border border-ay-border rounded px-3 py-1.5 text-sm text-white outline-none focus:border-ay-accent [color-scheme:dark]"
-              />
-            </div>
-            <div className="flex items-center gap-1.5">
-              {DATE_PRESETS.map((preset) => (
-                <button
-                  key={preset.value}
-                  onClick={() => applyDatePreset(preset.value)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-md border border-ay-border text-stitch-outline hover:text-white hover:border-white transition-all"
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Separator */}
-          <div className="h-px bg-ay-border/50" />
-
-          {/* Dropdown filters */}
-          <div className="flex items-center justify-between flex-wrap gap-4">
+          {/* Dropdown filters left + Date range right */}
+          <div className="flex items-start justify-between gap-6">
             <div className="flex items-center gap-4 flex-wrap">
               <FilterSelect
                 value={typeFilter}
@@ -321,6 +242,44 @@ export default function IncidentsListPage() {
               />
             </div>
 
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="material-symbols-outlined text-[18px] text-stitch-outline">
+                calendar_today
+              </span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-ay-bg-dark border border-ay-border rounded px-3 py-1.5 text-sm text-white outline-none focus:border-ay-accent [color-scheme:dark]"
+              />
+              <span className="text-stitch-outline text-sm">—</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-ay-bg-dark border border-ay-border rounded px-3 py-1.5 text-sm text-white outline-none focus:border-ay-accent [color-scheme:dark]"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              {DATE_PRESETS.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => applyDatePreset(preset.value)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-md border border-ay-border text-stitch-outline hover:text-white hover:border-white transition-all"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
@@ -505,55 +464,5 @@ export default function IncidentsListPage() {
         </div>
       </footer>
     </div>
-  );
-}
-
-// ── Componente auxiliar — dropdown con estilo Stitch ──────────────────────────
-interface FilterSelectOption {
-  value: string;
-  label: string;
-}
-
-function FilterSelect({
-  value,
-  onChange,
-  options,
-  icon,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: FilterSelectOption[];
-  icon?: string;
-}) {
-  const isDefault = value === "ALL";
-  return (
-    <label className="flex items-center gap-2 text-sm cursor-pointer relative">
-      {icon && (
-        <span className="material-symbols-outlined text-[18px] text-stitch-outline pointer-events-none">
-          {icon}
-        </span>
-      )}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ backgroundImage: "none" }}
-        className={`bg-transparent appearance-none pr-6 pl-0 py-0 border-0 outline-none focus:ring-0 cursor-pointer ${
-          isDefault ? "text-stitch-outline" : "text-white font-semibold"
-        }`}
-      >
-        {options.map((opt) => (
-          <option
-            key={opt.value}
-            value={opt.value}
-            className="bg-ay-bg-dark2 text-white"
-          >
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <span className="material-symbols-outlined text-[18px] text-stitch-outline absolute right-0 pointer-events-none">
-        expand_more
-      </span>
-    </label>
   );
 }
