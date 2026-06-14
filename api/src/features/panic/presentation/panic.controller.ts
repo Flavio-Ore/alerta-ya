@@ -5,6 +5,7 @@ import { PrismaPanicRepository } from '../infrastructure/prisma-panic.repository
 import { UserLookupService } from '../../incidents/infrastructure/user-lookup.service';
 import { startPanic } from '../domain/usecases/start-panic.usecase';
 import { stopPanic } from '../domain/usecases/stop-panic.usecase';
+import { updatePanicLocation } from '../domain/usecases/update-panic-location.usecase';
 import { AppError } from '../../../core/errors/AppError';
 import { eventBus, PanicEvents } from '../../../core/events/event-bus';
 
@@ -54,6 +55,36 @@ export async function stopPanicSession(req: Request, res: Response, next: NextFu
     res.json(dto);
 
     eventBus.emit(PanicEvents.STOPPED, { id: dto.id });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updatePanicLocationHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user?.uid) {
+      next(new AppError(401, 'No autenticado'));
+      return;
+    }
+
+    const body = req.body as { lat: number; lng: number };
+
+    await updatePanicLocation(
+      { sessionId: req.params['id']!, uid: req.user.uid, lat: body.lat, lng: body.lng },
+      {
+        panicRepo,
+        getUserId: async (uid) => {
+          const user = await userLookup.findOrCreate(uid);
+          return user.id;
+        },
+      },
+    );
+
+    res.status(204).end();
   } catch (err) {
     next(err);
   }
