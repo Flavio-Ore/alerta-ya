@@ -111,3 +111,52 @@ export interface PanicSessionDTO {
   lng: number;
   startedAt: string; // ISO
 }
+
+// ── Stats ─────────────────────────────────────────────────
+
+export type StatsPeriod = 'today' | 'yesterday' | '7d' | '30d' | '12m' | 'all';
+
+export interface StatsQuery {
+  period?: StatsPeriod;
+  district?: string;
+  type?: IncidentType;
+  from?: string;
+  to?: string;
+}
+
+export interface StatsResponse {
+  summary: {
+    totalIncidents: number;
+    activeIncidents: number;
+    inAttentionIncidents: number;
+    closedIncidents: number;
+    criticalIncidents: number;
+    totalReports: number;
+    totalPanicSessions: number;
+    avgConfirmations: number;
+    kpis: {
+      totalReportes: number;
+      completeFormPct: number;
+      criticalPct: number;
+      aiAccuracyPct: number;
+      avgResponseMin: number;
+      trend: number;
+    };
+  };
+  byType: { type: IncidentType; count: number }[];
+  bySeverity: { severity: Severity; count: number }[];
+  byStatus: { status: IncidentStatus; count: number }[];
+  byDistrict: { district: string; count: number }[];
+  byDay: { date: string; count: number }[];
+  byHour: { hour: number; count: number }[];
+  byDayHour: { day: number; hour: number; count: number }[];
+  byTypeAndSeverity: { type: IncidentType; severity: Severity; count: number }[];
+  formAnalysis: {
+    weaponType: { label: string; count: number; pct: number }[];
+    escapeMethod: { label: string; count: number; pct: number }[];
+    stillInZonePct: number;
+    avgResponseMin: number;
+    topVehicleDistrict: string | null;
+  };
+  comparison: { current: number; previous: number; percentChange: number } | null;
+}
