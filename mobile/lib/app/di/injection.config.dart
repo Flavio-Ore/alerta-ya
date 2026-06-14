@@ -88,6 +88,8 @@ import 'package:alertaya/features/panic/data/services/audio_recording_service.da
     as _i42;
 import 'package:alertaya/features/panic/data/services/panic_channel_service.dart'
     as _i419;
+import 'package:alertaya/features/panic/data/services/panic_location_tracker.dart'
+    as _i655;
 import 'package:alertaya/features/panic/data/services/panic_upload_service.dart'
     as _i705;
 import 'package:alertaya/features/panic/data/services/sms_service.dart'
@@ -152,6 +154,8 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i419.PanicChannelService>(
         () => _i419.PanicChannelService());
     gh.lazySingleton<_i764.SmsService>(() => _i764.SmsService());
+    gh.lazySingleton<_i655.PanicLocationTracker>(
+        () => _i655.PanicLocationTracker());
     gh.lazySingleton<_i457.FirebaseStorageService>(
         () => _i457.FirebaseStorageService(gh<_i457.FirebaseStorage>()));
     gh.lazySingleton<_i238.NotificationRemoteDataSource>(
