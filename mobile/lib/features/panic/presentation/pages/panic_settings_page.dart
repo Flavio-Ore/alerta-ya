@@ -574,7 +574,6 @@ class _ModeCard extends StatelessWidget {
       color: selected
           ? AppColors.secondary.withValues(alpha: 0.08)
           : AppColors.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
