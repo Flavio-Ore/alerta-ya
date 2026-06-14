@@ -10,6 +10,7 @@ import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/storage/secure_storage_service.dart';
 import 'package:alertaya/features/auth/domain/usecases/delete_account_usecase.dart';
+import 'package:alertaya/features/panic/data/services/panic_channel_service.dart';
 import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart';
 import 'package:alertaya/features/panic/presentation/bloc/panic_bloc.dart';
 import 'package:alertaya/features/panic/presentation/pages/panic_page.dart';
@@ -18,6 +19,8 @@ import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 const _kCall105OnLock = 'panic_call_105_on_lock';
 const _kSendSms = 'panic_send_sms';
 const _kRecordVideo = 'panic_record_video';
+const _kRecordAudio = 'panic_record_audio';
+const _kAlarmSound = 'panic_alarm_sound';
 const _kVolumeActivation = 'panic_volume_activation';
 
 // ─── Modo de emergencia ───────────────────────────────────────────────────────
@@ -51,7 +54,7 @@ enum _PanicMode {
         _PanicMode.silencioso =>
           'Sin alarma ni vibración. Grabación de audio cifrada. Discreción total.',
         _PanicMode.combinado =>
-          'Alarma + grabación de video. Captura el rostro del agresor.',
+          'Alarma + grabación de video. Captura video del entorno como evidencia.',
       };
 
   IconData get icon => switch (this) {
@@ -80,6 +83,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   final _contactService = getIt<TrustedContactService>();
   final _deleteAccountUseCase = getIt<DeleteAccountUseCase>();
   final _storage = getIt<SecureStorageService>();
+  final _channelService = getIt<PanicChannelService>();
 
   TrustedContact? _currentContact;
   bool _deletingAccount = false;
@@ -88,6 +92,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   bool _recordVideo = false;
   bool _volumeActivation = true;
   bool _hasSavedPin = false;
+  bool _accessibilityEnabled = false;
 
   @override
   void initState() {
@@ -98,6 +103,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     _loadRecordVideo();
     _loadVolumeActivation();
     _loadSavedPin();
+    _loadAccessibilityStatus();
   }
 
   Future<void> _loadSavedPin() async {
@@ -132,6 +138,12 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     if (mounted) setState(() => _volumeActivation = raw != 'false');
   }
 
+  Future<void> _loadAccessibilityStatus() async {
+    if (!Platform.isAndroid) return;
+    final enabled = await _channelService.isAccessibilityServiceEnabled();
+    if (mounted) setState(() => _accessibilityEnabled = enabled);
+  }
+
   Future<void> _toggleVolumeActivation(bool value) async {
     setState(() => _volumeActivation = value);
     await _storage.write(_kVolumeActivation, value ? 'true' : 'false');
@@ -154,7 +166,14 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     context.read<ProfileBloc>().add(
           ProfilePanicAlarmSoundToggled(enabled: mode.derivedAlarm),
         );
-    await _storage.write(_kRecordVideo, mode.derivedVideo.toString());
+    // Escribir en SecureStorage para que la activación por botón de volumen
+    // (que no tiene acceso al ProfileBloc) lea el modo correcto incluso si
+    // el usuario nunca activó pánico antes.
+    await Future.wait([
+      _storage.write(_kRecordAudio, mode.derivedRecord.toString()),
+      _storage.write(_kAlarmSound, mode.derivedAlarm.toString()),
+      _storage.write(_kRecordVideo, mode.derivedVideo.toString()),
+    ]);
     if (mounted) setState(() => _recordVideo = mode.derivedVideo);
   }
 
@@ -357,7 +376,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
                 icon: Icons.volume_up_outlined,
                 title: 'Activar con botón de volumen',
                 subtitle: _volumeActivation
-                    ? 'Presioná el volumen 3 veces en < 2 seg para activar'
+                    ? 'Presiona el volumen 3 veces en < 2 seg para activar'
                     : 'Desactivado — solo el botón en pantalla activa el pánico',
                 trailing: Switch(
                   value: _volumeActivation,
@@ -365,6 +384,16 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
                   activeThumbColor: AppColors.secondary,
                 ),
               ),
+              if (_volumeActivation && Platform.isAndroid)
+                _AccessibilityServiceTile(
+                  enabled: _accessibilityEnabled,
+                  onTap: () async {
+                    await _channelService.openAccessibilitySettings();
+                    // Re-verificar al volver de Settings del sistema
+                    await Future<void>.delayed(const Duration(seconds: 1));
+                    await _loadAccessibilityStatus();
+                  },
+                ),
             ],
           ),
 
@@ -373,84 +402,43 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
             icon: Icons.mic_outlined,
             label: 'GRABACIÓN Y PRIVACIDAD',
           ),
-          BlocBuilder<ProfileBloc, ProfileState>(
-            builder: (context, state) {
-              final prefs = state is ProfileData ? state.preferences : null;
-              final recordOn = prefs?.panicRecordAudio ?? true;
-              final alarmOn = prefs?.panicAlarmSound ?? true;
-              return _SettingsGroup(
-                children: [
-                  _SettingsItem(
-                    icon: Icons.mic_none_outlined,
-                    title: 'Grabar audio cifrado',
-                    subtitle: recordOn
-                        ? 'Se graba durante la alarma'
-                        : 'No se graba (no recomendado)',
-                    trailing: Switch(
-                      value: recordOn,
-                      onChanged: prefs == null
-                          ? null
-                          : (val) => context.read<ProfileBloc>().add(
-                                ProfilePanicRecordAudioToggled(enabled: val),
-                              ),
-                      activeThumbColor: AppColors.secondary,
-                    ),
-                  ),
-                  _SettingsItem(
-                    icon: alarmOn
-                        ? Icons.notifications_active_outlined
-                        : Icons.notifications_off_outlined,
-                    title: 'Alarma sonora',
-                    subtitle: alarmOn
-                        ? 'Suena fuerte para disuadir agresores'
-                        : 'Modo silencioso — solo grabación y GPS',
-                    trailing: Switch(
-                      value: alarmOn,
-                      onChanged: prefs == null
-                          ? null
-                          : (val) => context.read<ProfileBloc>().add(
-                                ProfilePanicAlarmSoundToggled(enabled: val),
-                              ),
-                      activeThumbColor: AppColors.secondary,
-                    ),
-                  ),
-                  const _SettingsItem(
-                    icon: Icons.location_on_outlined,
-                    title: 'GPS en vivo al panel',
-                    subtitle: 'Siempre activo — no se puede desactivar',
-                    trailing: _Pill(
-                      label: 'Obligatorio',
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const _SettingsItem(
-                    icon: Icons.timer_outlined,
-                    title: 'Grabación máxima',
-                    subtitle: '60 minutos en 6 bloques de 10 min',
-                    trailing: _Pill(
-                      label: '60 min',
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                  const _SettingsItem(
-                    icon: Icons.lock_outline,
-                    title: 'Cifrado de audio',
-                    subtitle: 'Tus grabaciones nunca viajan sin cifrar',
-                    trailing: _Pill(
-                      label: 'AES-256 ✓',
-                      color: AppColors.secondary,
-                    ),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.delete_sweep_outlined,
-                    title: 'Eliminar grabaciones anteriores',
-                    subtitle: 'Borrar todos los archivos locales encriptados',
-                    isDestructive: true,
-                    onTap: () => _deleteRecordings(context),
-                  ),
-                ],
-              );
-            },
+          _SettingsGroup(
+            children: [
+              const _SettingsItem(
+                icon: Icons.location_on_outlined,
+                title: 'GPS en vivo al panel',
+                subtitle: 'Siempre activo en cualquier modo — no se puede desactivar',
+                trailing: _Pill(
+                  label: 'Obligatorio',
+                  color: AppColors.primary,
+                ),
+              ),
+              const _SettingsItem(
+                icon: Icons.timer_outlined,
+                title: 'Límites de grabación',
+                subtitle: 'Audio: 60 min (6 bloques de 10 min) · Video: 20 min (10 clips de 2 min)',
+                trailing: _Pill(
+                  label: 'Por modo',
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const _SettingsItem(
+                icon: Icons.lock_outline,
+                title: 'Cifrado de grabaciones',
+                subtitle: 'Audio y video cifrados con AES-256 — nunca viajan sin cifrar',
+                trailing: _Pill(
+                  label: 'AES-256 ✓',
+                  color: AppColors.secondary,
+                ),
+              ),
+              _SettingsItem(
+                icon: Icons.delete_sweep_outlined,
+                title: 'Eliminar grabaciones anteriores',
+                subtitle: 'Borrar todos los archivos cifrados almacenados en este dispositivo',
+                isDestructive: true,
+                onTap: () => _deleteRecordings(context),
+              ),
+            ],
           ),
 
           // ── 3. CUENTA ──────────────────────────────────────────────────────
@@ -959,6 +947,89 @@ class _ContactField extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Accessibility Service Tile ───────────────────────────────────────────────
+
+class _AccessibilityServiceTile extends StatelessWidget {
+  const _AccessibilityServiceTile({
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: enabled
+          ? AppColors.secondary.withValues(alpha: 0.06)
+          : AppColors.severityModerate.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: enabled ? null : onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(
+                enabled
+                    ? Icons.accessibility_new
+                    : Icons.warning_amber_rounded,
+                color: enabled ? AppColors.secondary : AppColors.severityModerate,
+                size: 22,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      enabled
+                          ? 'Activación en background habilitada'
+                          : 'Solo funciona con la app abierta',
+                      style: AppTextStyles.titleSm.copyWith(
+                        color: enabled
+                            ? AppColors.secondary
+                            : AppColors.severityModerate,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      enabled
+                          ? 'El servicio de accesibilidad detecta el triple pulsación incluso con la app cerrada.'
+                          : 'Activa el servicio de accesibilidad de AlertaYa para que funcione en cualquier momento.',
+                      style: AppTextStyles.bodySm,
+                    ),
+                  ],
+                ),
+              ),
+              if (!enabled) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.severityModerate.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Text(
+                    'Activar',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.severityModerate,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
