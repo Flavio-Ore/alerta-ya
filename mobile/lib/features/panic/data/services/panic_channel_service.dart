@@ -11,7 +11,9 @@ class PanicChannelService {
 
   final _volumeTrigger = StreamController<void>.broadcast();
 
-  /// Emite cuando Android detecta 3 pulsaciones de volumen en < 2 segundos.
+  /// Emite cuando Android detecta 3 pulsaciones de volumen en < 2 segundos,
+  /// ya sea desde MainActivity (app en foreground) o desde
+  /// PanicAccessibilityService (app en background o cerrada).
   Stream<void> get volumeTriggerStream => _volumeTrigger.stream;
 
   PanicChannelService() {
@@ -34,7 +36,6 @@ class PanicChannelService {
         'alarmSound': alarmSound,
       });
     } on PlatformException catch (e) {
-      // No es crítico si falla — la grabación sigue en Flutter
       // ignore: avoid_print
       print('PanicChannelService.startService error: ${e.message}');
     }
@@ -47,6 +48,29 @@ class PanicChannelService {
     } on PlatformException catch (e) {
       // ignore: avoid_print
       print('PanicChannelService.stopService error: ${e.message}');
+    }
+  }
+
+  /// Devuelve true si el usuario habilitó PanicAccessibilityService en
+  /// Configuración → Accesibilidad. Requiere Android.
+  Future<bool> isAccessibilityServiceEnabled() async {
+    try {
+      final result =
+          await _channel.invokeMethod<bool>('isAccessibilityEnabled');
+      return result ?? false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// Abre la pantalla de Accesibilidad del sistema para que el usuario
+  /// pueda habilitar PanicAccessibilityService.
+  Future<void> openAccessibilitySettings() async {
+    try {
+      await _channel.invokeMethod('openAccessibilitySettings');
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('PanicChannelService.openAccessibilitySettings error: ${e.message}');
     }
   }
 

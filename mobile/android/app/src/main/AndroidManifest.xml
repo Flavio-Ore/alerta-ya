@@ -65,9 +65,22 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <service
-        android:name=".PanicForegroundService"
-        android:foregroundServiceType="microphone|camera"
-        android:exported="false"/>
+            android:name=".PanicForegroundService"
+            android:foregroundServiceType="microphone|camera"
+            android:exported="false"/>
+
+        <service
+            android:name=".PanicAccessibilityService"
+            android:exported="true"
+            android:label="AlertaYa — Activación de emergencia"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/panic_accessibility_service"/>
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

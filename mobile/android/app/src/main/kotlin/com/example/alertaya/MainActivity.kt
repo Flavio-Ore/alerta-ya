@@ -6,6 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.provider.Settings
 import android.telephony.SmsManager
 import android.util.Log
 import android.view.KeyEvent
@@ -36,6 +40,8 @@ class MainActivity : FlutterActivity() {
                         putExtra(PanicForegroundService.EXTRA_ALARM_SOUND, alarmSound)
                     }
                     startForegroundService(intent)
+                    // Modo Silencioso: vibración corta como única confirmación de activación.
+                    if (!alarmSound) vibrateConfirmation()
                     result.success(null)
                 }
                 "stopPanic" -> {
@@ -109,13 +115,79 @@ class MainActivity : FlutterActivity() {
                         result.error("SMS_ERROR", e.message, null)
                     }
                 }
+                "isAccessibilityEnabled" -> {
+                    result.success(isPanicAccessibilityServiceEnabled())
+                }
+                "openAccessibilitySettings" -> {
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    })
+                    result.success(null)
+                }
                 else -> result.notImplemented()
+            }
+        }
+
+        // Cuando la app se inicia desde cero por PanicAccessibilityService
+        // (app estaba cerrada), el intent ya llegó en onCreate antes de que el
+        // canal estuviera listo. Revisamos SharedPreferences para no perderlo.
+        checkPendingAccessibilityPanic()
+    }
+
+    // Recibe el Intent disparado por PanicAccessibilityService cuando la app
+    // ya está corriendo (en foreground o background reciente).
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action == PanicAccessibilityService.ACTION_TRIGGER) {
+            panicChannel?.invokeMethod("triggerVolumePanic", null)
+        }
+    }
+
+    private fun checkPendingAccessibilityPanic() {
+        val prefs = applicationContext.getSharedPreferences(
+            "panic_accessibility_prefs", Context.MODE_PRIVATE
+        )
+        val pendingTs = prefs.getLong("pending_panic_timestamp", 0L)
+        if (pendingTs == 0L) return
+
+        val ageMs = System.currentTimeMillis() - pendingTs
+        prefs.edit().remove("pending_panic_timestamp").apply()
+
+        // Solo procesar si el trigger ocurrió en los últimos 10 segundos.
+        if (ageMs <= 10_000L) {
+            Log.d("MainActivity", "Pending panic desde AccessibilityService — disparando")
+            panicChannel?.invokeMethod("triggerVolumePanic", null)
+        }
+    }
+
+    private fun isPanicAccessibilityServiceEnabled(): Boolean {
+        val enabledServices = Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        val componentName = "$packageName/.PanicAccessibilityService"
+        return enabledServices.split(':').any { it.equals(componentName, ignoreCase = true) }
+    }
+
+    private fun vibrateConfirmation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val manager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            manager.defaultVibrator.vibrate(VibrationEffect.createOneShot(200, 80))
+        } else {
+            @Suppress("DEPRECATION")
+            val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(200, 80))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(200)
             }
         }
     }
 
-    // Detecta 3 pulsaciones del botón de volumen en menos de 2 segundos
-    // y notifica a Flutter para activar el modo pánico.
+    // Detecta 3 pulsaciones del botón de volumen en menos de 2 segundos.
+    // Solo dispara si el AccessibilityService NO está activo — cuando lo está,
+    // PanicAccessibilityService ya maneja el triple-press y evita el doble disparo.
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
             val now = System.currentTimeMillis()
