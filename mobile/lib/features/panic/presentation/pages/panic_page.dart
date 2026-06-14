@@ -176,7 +176,7 @@ class _PanicPageState extends State<PanicPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Permiso de cámara denegado — activando sin grabación de video.',
+                'Permiso de cámara denegado - activando sin grabación de video.',
               ),
               backgroundColor: AppColors.secondary,
               behavior: SnackBarBehavior.floating,
@@ -348,7 +348,7 @@ class _IdleView extends StatelessWidget {
                     _PanicHeroButton(onTap: onPanicTap),
                     const SizedBox(height: 32),
                     const _ComingSoonHint(
-                      text: 'o presioná el volumen 3 veces',
+                      text: 'o presiona el volumen 3 veces',
                       isComingSoon: false,
                     ),
                     const SizedBox(height: 6),
@@ -786,7 +786,7 @@ class _TrustedContactStatusCard extends StatelessWidget {
                     const SizedBox(width: 12),
                     const Expanded(
                       child: Text(
-                        'Configurá un contacto de confianza',
+                        'Configura un contacto de confianza',
                         style: AppTextStyles.titleSm,
                       ),
                     ),
@@ -930,7 +930,7 @@ class _ActiveView extends StatelessWidget {
                   // Preview de cámara 1×1 (invisible) para anclar la textura
                   // de CameraController mientras grabamos en Modo Combinado.
                   if (state.recordVideo)
-                    Positioned(
+                    const Positioned(
                       top: 0,
                       left: 0,
                       child: _CameraPreviewAnchor(),
@@ -1305,7 +1305,7 @@ class _ActiveTrustedContactCard extends StatelessWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'Configurá uno desde Configuración Personal.',
+                        'Configura uno desde Configuración Personal.',
                         style: AppTextStyles.bodySm,
                       ),
                     ],
@@ -1470,7 +1470,7 @@ class _PinLockedCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Excediste los intentos de PIN. Llamá al 105 para que la policía te ayude.',
+            'Excediste los intentos de PIN. Llama al 105 para que la policía te ayude.',
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMd,
           ),
