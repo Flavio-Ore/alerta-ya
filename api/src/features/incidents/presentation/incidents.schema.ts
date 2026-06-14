@@ -8,7 +8,8 @@ export const createReportSchema = z.object({
   formData: z.record(z.unknown()),
   // URLs de evidencia subidas desde el dispositivo (Firebase Storage o GCS)
   // El cliente sube primero, luego manda las URLs aquí
-  mediaUrls: z.array(z.string().url()).max(5).default([]),
+  // Acepta https:// (Cloudinary legacy) y gs:// (Firebase Storage)
+  mediaUrls: z.array(z.string().min(1)).max(5).default([]),
 });
 
 export const listIncidentsQuerySchema = z.object({
