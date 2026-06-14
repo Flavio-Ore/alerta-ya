@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
@@ -13,6 +16,48 @@ import 'package:alertaya/features/panic/presentation/pages/panic_page.dart';
 import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 
 const _kCall105OnLock = 'panic_call_105_on_lock';
+const _kSendSms = 'panic_send_sms';
+
+// ─── Modo de emergencia ───────────────────────────────────────────────────────
+
+enum _PanicMode {
+  visible,
+  silencioso,
+  combinado;
+
+  // Deriva el modo desde las preferencias actuales del usuario.
+  static _PanicMode fromPrefs({required bool alarm, required bool record}) {
+    if (alarm && !record) return _PanicMode.visible;
+    if (!alarm && record) return _PanicMode.silencioso;
+    return _PanicMode.combinado;
+  }
+
+  String get label => switch (this) {
+        _PanicMode.visible => 'Visible',
+        _PanicMode.silencioso => 'Silencioso',
+        _PanicMode.combinado => 'Combinado',
+      };
+
+  String get description => switch (this) {
+        _PanicMode.visible =>
+          'Alarma sonora máxima. Para cuando querés llamar la atención.',
+        _PanicMode.silencioso =>
+          'Sin alarma ni vibración. Para cuando la discreción es crítica.',
+        _PanicMode.combinado =>
+          'Alarma + grabación de audio cifrado. Cobertura máxima.',
+      };
+
+  IconData get icon => switch (this) {
+        _PanicMode.visible => Icons.campaign_outlined,
+        _PanicMode.silencioso => Icons.visibility_off_outlined,
+        _PanicMode.combinado => Icons.security_outlined,
+      };
+
+  bool get derivedAlarm => this != _PanicMode.silencioso;
+  bool get derivedRecord => this != _PanicMode.visible;
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 class PanicSettingsPage extends StatefulWidget {
   const PanicSettingsPage({super.key});
@@ -29,6 +74,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   TrustedContact? _currentContact;
   bool _deletingAccount = false;
   bool _call105OnLock = true;
+  bool _sendSms = true;
   bool _hasSavedPin = false;
 
   @override
@@ -36,6 +82,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     super.initState();
     _loadContact();
     _loadCall105();
+    _loadSendSms();
     _loadSavedPin();
   }
 
@@ -56,9 +103,83 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     }
   }
 
+  Future<void> _loadSendSms() async {
+    final raw = await _storage.read(_kSendSms);
+    if (mounted) setState(() => _sendSms = raw != 'false');
+  }
+
   Future<void> _toggleCall105(bool value) async {
     setState(() => _call105OnLock = value);
     await _storage.write(_kCall105OnLock, value ? 'true' : 'false');
+  }
+
+  Future<void> _toggleSendSms(bool value) async {
+    setState(() => _sendSms = value);
+    await _storage.write(_kSendSms, value ? 'true' : 'false');
+  }
+
+  void _onModeSelected(_PanicMode mode, BuildContext context) {
+    context.read<ProfileBloc>().add(
+          ProfilePanicRecordAudioToggled(enabled: mode.derivedRecord),
+        );
+    context.read<ProfileBloc>().add(
+          ProfilePanicAlarmSoundToggled(enabled: mode.derivedAlarm),
+        );
+  }
+
+  Future<void> _deleteRecordings(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainerHigh,
+        title: const Text('Eliminar grabaciones', style: AppTextStyles.titleLg),
+        content: const Text(
+          'Se borrarán todos los archivos de audio cifrados almacenados localmente en este dispositivo.',
+          style: AppTextStyles.bodyMd,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Eliminar',
+              style: AppTextStyles.labelMd
+                  .copyWith(color: AppColors.severityCritical),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final dir = await getApplicationDocumentsDirectory();
+    final entities = await dir.list().toList();
+    int count = 0;
+    for (final e in entities) {
+      if (e is File &&
+          e.path.contains('panic_') &&
+          e.path.endsWith('_enc.bin')) {
+        await e.delete();
+        count++;
+      }
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            count == 0
+                ? 'No hay grabaciones locales almacenadas'
+                : '$count archivo${count == 1 ? '' : 's'} eliminado${count == 1 ? '' : 's'}',
+          ),
+          backgroundColor: AppColors.primaryContainer,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _showPinSetup() async {
@@ -112,6 +233,37 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
         children: [
+          // ── 0. MODO DE EMERGENCIA ──────────────────────────────────────────
+          const _SectionHeader(
+            icon: Icons.emergency_outlined,
+            label: 'MODO DE EMERGENCIA',
+          ),
+          BlocBuilder<ProfileBloc, ProfileState>(
+            builder: (context, state) {
+              final prefs = state is ProfileData ? state.preferences : null;
+              final alarm = prefs?.panicAlarmSound ?? true;
+              final record = prefs?.panicRecordAudio ?? true;
+              final currentMode =
+                  _PanicMode.fromPrefs(alarm: alarm, record: record);
+              return Column(
+                children: [
+                  for (int i = 0; i < _PanicMode.values.length; i++) ...[
+                    _ModeCard(
+                      mode: _PanicMode.values[i],
+                      selected: currentMode == _PanicMode.values[i],
+                      onTap: prefs == null
+                          ? null
+                          : () => _onModeSelected(
+                              _PanicMode.values[i], context),
+                    ),
+                    if (i < _PanicMode.values.length - 1)
+                      const SizedBox(height: 8),
+                  ],
+                ],
+              );
+            },
+          ),
+
           // ── 1. SEGURIDAD PERSONAL ──────────────────────────────────────────
           const _SectionHeader(
             icon: Icons.shield_outlined,
@@ -132,6 +284,18 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
                         color: AppColors.secondary,
                       ),
                 onTap: _showContactSheet,
+              ),
+              _SettingsItem(
+                icon: Icons.sms_outlined,
+                title: 'Enviar SMS al activar',
+                subtitle: _sendSms
+                    ? 'Notifica a tu contacto de confianza al activar'
+                    : 'No se enviará SMS automático',
+                trailing: Switch(
+                  value: _sendSms,
+                  onChanged: _toggleSendSms,
+                  activeThumbColor: AppColors.secondary,
+                ),
               ),
               _SettingsItem(
                 icon: Icons.pin_outlined,
@@ -235,7 +399,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
                     title: 'Eliminar grabaciones anteriores',
                     subtitle: 'Borrar todos los archivos locales encriptados',
                     isDestructive: true,
-                    onTap: () => _showComingSoon(context),
+                    onTap: () => _deleteRecordings(context),
                   ),
                 ],
               );
@@ -269,16 +433,6 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  static void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Próximamente disponible'),
-        backgroundColor: AppColors.primaryContainer,
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -396,6 +550,77 @@ class _SectionHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Mode Card ────────────────────────────────────────────────────────────────
+
+class _ModeCard extends StatelessWidget {
+  const _ModeCard({
+    required this.mode,
+    required this.selected,
+    this.onTap,
+  });
+
+  final _PanicMode mode;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected
+          ? AppColors.secondary.withValues(alpha: 0.08)
+          : AppColors.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: selected
+            ? const BorderSide(color: AppColors.secondary, width: 1.5)
+            : BorderSide.none,
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(
+                mode.icon,
+                color: selected ? AppColors.secondary : AppColors.onSurface,
+                size: 24,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      mode.label,
+                      style: AppTextStyles.titleSm.copyWith(
+                        color:
+                            selected ? AppColors.secondary : AppColors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(mode.description, style: AppTextStyles.bodySm),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                selected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                color: selected ? AppColors.secondary : AppColors.outline,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

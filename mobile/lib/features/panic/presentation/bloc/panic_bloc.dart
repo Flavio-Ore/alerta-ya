@@ -31,6 +31,7 @@ const _kLng = 'panic_lng';
 const _kFailedAttempts = 'panic_failed_attempts';
 const _kRecordAudio = 'panic_record_audio';
 const _kAlarmSound = 'panic_alarm_sound';
+const _kSendSms = 'panic_send_sms';
 
 @lazySingleton
 class PanicBloc extends Bloc<PanicEvent, PanicState> {
@@ -148,9 +149,9 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
           recordAudio: event.recordAudio,
           alarmSound: event.alarmSound,
         );
-        // Enviar SMS automático al contacto de confianza — fire-and-forget,
-        // no interrumpe el flujo de pánico si falla o si no hay contacto.
-        unawaited(_sendEmergencySms(contact, startResult.session));
+        // Enviar SMS automático — respeta la preferencia del usuario.
+        final sendSms = (await _storage.read(_kSendSms)) != 'false';
+        if (sendSms) unawaited(_sendEmergencySms(contact, startResult.session));
       },
     );
   }
