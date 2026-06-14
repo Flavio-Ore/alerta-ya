@@ -34,9 +34,12 @@ class FirebaseStorageService {
       final ext = _extensionFor(file);
       final ref = _storage.ref('reports/$userId/$reportId/${_uuid.v4()}$ext');
       await ref.putFile(f);
-      final url = await ref.getDownloadURL();
-      debugPrint('[FirebaseStorage] reporte OK → $url');
-      urls.add(url);
+      // No usamos getDownloadURL() — las reglas de Storage tienen read:false por
+      // diseño (la evidencia solo la lee el backend vía Admin SDK). Guardamos la
+      // ruta gs:// y el backend la resuelve cuando necesita acceder al archivo.
+      final gsPath = 'gs://${ref.bucket}/${ref.fullPath}';
+      debugPrint('[FirebaseStorage] reporte OK → $gsPath');
+      urls.add(gsPath);
     }
     return urls;
   }
