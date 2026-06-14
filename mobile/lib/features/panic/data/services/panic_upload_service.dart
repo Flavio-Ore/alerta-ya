@@ -10,12 +10,21 @@ class PanicUploadService {
 
   /// Sube un bloque de audio cifrado (AES-256) a Firebase Storage.
   /// Ruta: panic/{sessionId}/audio/block_{blockIndex}.bin
-  /// Fire-and-forget desde el BLoC: no lanza si el archivo no existe.
   Future<void> uploadBlock(
     String filePath,
     String sessionId,
     int blockIndex,
   ) async {
     await _storageService.uploadPanicBlock(filePath, sessionId, blockIndex);
+  }
+
+  /// Sube un clip de video cifrado (AES-256) a Firebase Storage.
+  /// Ruta: panic/{sessionId}/video/clip_{clipIndex}.bin
+  Future<void> uploadVideoClip(
+    String filePath,
+    String sessionId,
+    int clipIndex,
+  ) async {
+    await _storageService.uploadPanicVideoClip(filePath, sessionId, clipIndex);
   }
 }

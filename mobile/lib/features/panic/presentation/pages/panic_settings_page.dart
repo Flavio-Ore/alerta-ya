@@ -17,6 +17,7 @@ import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 
 const _kCall105OnLock = 'panic_call_105_on_lock';
 const _kSendSms = 'panic_send_sms';
+const _kRecordVideo = 'panic_record_video';
 
 // ─── Modo de emergencia ───────────────────────────────────────────────────────
 
@@ -25,11 +26,16 @@ enum _PanicMode {
   silencioso,
   combinado;
 
-  // Deriva el modo desde las preferencias actuales del usuario.
-  static _PanicMode fromPrefs({required bool alarm, required bool record}) {
-    if (alarm && !record) return _PanicMode.visible;
+  /// Deriva el modo desde las preferencias almacenadas.
+  /// Requiere los tres valores porque Visible y Combinado tienen alarm=true.
+  static _PanicMode fromPrefs({
+    required bool alarm,
+    required bool record,
+    required bool video,
+  }) {
     if (!alarm && record) return _PanicMode.silencioso;
-    return _PanicMode.combinado;
+    if (alarm && video) return _PanicMode.combinado;
+    return _PanicMode.visible;
   }
 
   String get label => switch (this) {
@@ -40,21 +46,24 @@ enum _PanicMode {
 
   String get description => switch (this) {
         _PanicMode.visible =>
-          'Alarma sonora máxima. Para cuando querés llamar la atención.',
+          'Alarma sonora máxima. Para cuando quieras llamar la atención.',
         _PanicMode.silencioso =>
-          'Sin alarma ni vibración. Para cuando la discreción es crítica.',
+          'Sin alarma ni vibración. Grabación de audio cifrada. Discreción total.',
         _PanicMode.combinado =>
-          'Alarma + grabación de audio cifrado. Cobertura máxima.',
+          'Alarma + grabación de video. Captura el rostro del agresor.',
       };
 
   IconData get icon => switch (this) {
         _PanicMode.visible => Icons.campaign_outlined,
         _PanicMode.silencioso => Icons.visibility_off_outlined,
-        _PanicMode.combinado => Icons.security_outlined,
+        _PanicMode.combinado => Icons.videocam_outlined,
       };
 
+  // audio activo solo en Silencioso
   bool get derivedAlarm => this != _PanicMode.silencioso;
-  bool get derivedRecord => this != _PanicMode.visible;
+  bool get derivedRecord => this == _PanicMode.silencioso;
+  // video activo solo en Combinado
+  bool get derivedVideo => this == _PanicMode.combinado;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -75,6 +84,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   bool _deletingAccount = false;
   bool _call105OnLock = true;
   bool _sendSms = true;
+  bool _recordVideo = false;
   bool _hasSavedPin = false;
 
   @override
@@ -83,6 +93,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     _loadContact();
     _loadCall105();
     _loadSendSms();
+    _loadRecordVideo();
     _loadSavedPin();
   }
 
@@ -108,6 +119,11 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     if (mounted) setState(() => _sendSms = raw != 'false');
   }
 
+  Future<void> _loadRecordVideo() async {
+    final raw = await _storage.read(_kRecordVideo);
+    if (mounted) setState(() => _recordVideo = raw == 'true');
+  }
+
   Future<void> _toggleCall105(bool value) async {
     setState(() => _call105OnLock = value);
     await _storage.write(_kCall105OnLock, value ? 'true' : 'false');
@@ -118,13 +134,15 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     await _storage.write(_kSendSms, value ? 'true' : 'false');
   }
 
-  void _onModeSelected(_PanicMode mode, BuildContext context) {
+  Future<void> _onModeSelected(_PanicMode mode, BuildContext context) async {
     context.read<ProfileBloc>().add(
           ProfilePanicRecordAudioToggled(enabled: mode.derivedRecord),
         );
     context.read<ProfileBloc>().add(
           ProfilePanicAlarmSoundToggled(enabled: mode.derivedAlarm),
         );
+    await _storage.write(_kRecordVideo, mode.derivedVideo.toString());
+    if (mounted) setState(() => _recordVideo = mode.derivedVideo);
   }
 
   Future<void> _deleteRecordings(BuildContext context) async {
@@ -243,8 +261,11 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
               final prefs = state is ProfileData ? state.preferences : null;
               final alarm = prefs?.panicAlarmSound ?? true;
               final record = prefs?.panicRecordAudio ?? true;
-              final currentMode =
-                  _PanicMode.fromPrefs(alarm: alarm, record: record);
+              final currentMode = _PanicMode.fromPrefs(
+                alarm: alarm,
+                record: record,
+                video: _recordVideo,
+              );
               return Column(
                 children: [
                   for (int i = 0; i < _PanicMode.values.length; i++) ...[
@@ -253,8 +274,9 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
                       selected: currentMode == _PanicMode.values[i],
                       onTap: prefs == null
                           ? null
-                          : () => _onModeSelected(
-                              _PanicMode.values[i], context),
+                          : () {
+                              _onModeSelected(_PanicMode.values[i], context);
+                            },
                     ),
                     if (i < _PanicMode.values.length - 1)
                       const SizedBox(height: 8),

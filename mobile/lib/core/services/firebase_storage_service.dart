@@ -68,6 +68,29 @@ class FirebaseStorageService {
     );
   }
 
+  /// Sube un clip de video cifrado (AES-256) del pánico.
+  /// Los clips se guardan en: panic/{sessionId}/video/clip_{index}.bin
+  Future<void> uploadPanicVideoClip(
+    String filePath,
+    String sessionId,
+    int clipIndex,
+  ) async {
+    final file = File(filePath);
+    final stat = await FileStat.stat(file.path);
+    if (stat.type == FileSystemEntityType.notFound) {
+      debugPrint('[FirebaseStorage] SKIP clip — archivo no existe: $filePath');
+      return;
+    }
+    final ref = _storage.ref('panic/$sessionId/video/clip_$clipIndex.bin');
+    await ref.putFile(
+      file,
+      SettableMetadata(contentType: 'application/octet-stream'),
+    );
+    debugPrint(
+      '[FirebaseStorage] clip OK → panic/$sessionId/video/clip_$clipIndex.bin',
+    );
+  }
+
   String _extensionFor(XFile file) {
     final mime = file.mimeType;
     if (mime != null) {

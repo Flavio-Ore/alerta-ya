@@ -15,13 +15,16 @@ class PanicActivationRequested extends PanicEvent {
     this.pin, // null = usar el PIN guardado previamente
     this.recordAudio = true,
     this.alarmSound = true,
+    this.recordVideo = false,
   });
   final double lat;
   final double lng;
   final String? pin;
-  // Toggles del usuario. Defaults true por seguridad — si no hay prefs cargadas, asumimos lo más protector.
+  // Toggles del usuario. Defaults por seguridad — si no hay prefs cargadas, asumimos lo más protector.
   final bool recordAudio;
   final bool alarmSound;
+  // Modo Combinado: graba video de la cámara trasera sin audio.
+  final bool recordVideo;
 }
 
 class PanicSavedPinUpdated extends PanicEvent {
@@ -43,6 +46,11 @@ class _PanicAmplitudeUpdated extends PanicEvent {
 
 class _PanicBlockCompleted extends PanicEvent {
   const _PanicBlockCompleted(this.filePath);
+  final String filePath;
+}
+
+class _PanicVideoClipCompleted extends PanicEvent {
+  const _PanicVideoClipCompleted(this.filePath);
   final String filePath;
 }
 

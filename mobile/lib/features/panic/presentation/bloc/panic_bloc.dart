@@ -10,10 +10,11 @@ import 'package:alertaya/core/constants/app_constants.dart';
 import 'package:alertaya/core/storage/secure_storage_service.dart';
 import 'package:alertaya/features/panic/data/services/audio_recording_service.dart';
 import 'package:alertaya/features/panic/data/services/panic_channel_service.dart';
-import 'package:alertaya/features/panic/data/services/panic_upload_service.dart';
 import 'package:alertaya/features/panic/data/services/panic_location_tracker.dart';
+import 'package:alertaya/features/panic/data/services/panic_upload_service.dart';
 import 'package:alertaya/features/panic/data/services/sms_service.dart';
 import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart';
+import 'package:alertaya/features/panic/data/services/video_recording_service.dart';
 import 'package:alertaya/features/panic/domain/entities/panic_session_entity.dart';
 import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart';
 import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart';
@@ -31,6 +32,7 @@ const _kLng = 'panic_lng';
 const _kFailedAttempts = 'panic_failed_attempts';
 const _kRecordAudio = 'panic_record_audio';
 const _kAlarmSound = 'panic_alarm_sound';
+const _kRecordVideo = 'panic_record_video';
 const _kSendSms = 'panic_send_sms';
 
 @lazySingleton
@@ -46,14 +48,15 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     this._smsService,
     this._locationTracker,
     this._panicRepo,
+    this._videoService,
   ) : super(const PanicIdle()) {
     on<PanicInitialized>(_onInitialized);
     on<PanicActivationRequested>(_onActivationRequested);
     on<PanicDeactivationRequested>(_onDeactivationRequested);
     on<PanicSavedPinUpdated>(_onSavedPinUpdated);
-    // Eventos internos del servicio de grabación
     on<_PanicAmplitudeUpdated>(_onAmplitudeUpdated);
     on<_PanicBlockCompleted>(_onBlockCompleted);
+    on<_PanicVideoClipCompleted>(_onVideoClipCompleted);
     on<_PanicLocationTick>(_onLocationTick);
   }
 
@@ -67,9 +70,11 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   final SmsService _smsService;
   final PanicLocationTracker _locationTracker;
   final PanicRepository _panicRepo;
+  final VideoRecordingService _videoService;
 
   StreamSubscription<double>? _amplitudeSub;
   StreamSubscription<String>? _blockSub;
+  StreamSubscription<String>? _videoClipSub;
 
   Future<void> _onInitialized(
     PanicInitialized event,
@@ -94,15 +99,18 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     );
 
     final contact = await _contactService.getContact();
-    // Restaurar flags de la sesión activa — defaults true por seguridad
+    // Restaurar flags de la sesión activa
     final recordAudio = (await _storage.read(_kRecordAudio)) != 'false';
     final alarmSound = (await _storage.read(_kAlarmSound)) != 'false';
+    final recordVideo = (await _storage.read(_kRecordVideo)) == 'true';
     emit(PanicActive(
       session: session,
       failedPinAttempts: failedAttempts,
       trustedContactName: contact?.name,
       recordAudio: recordAudio,
       alarmSound: alarmSound,
+      recordVideo: recordVideo,
+      currentVideoClip: recordVideo ? 1 : 0,
     ));
     // Retomar grabación si la app se cerró con pánico activo
     await _startRecording(
@@ -110,6 +118,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
       session.startedAt,
       recordAudio: recordAudio,
       alarmSound: alarmSound,
+      recordVideo: recordVideo,
     );
   }
 
@@ -142,12 +151,15 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
           trustedContactName: contact?.name,
           recordAudio: event.recordAudio,
           alarmSound: event.alarmSound,
+          recordVideo: event.recordVideo,
+          currentVideoClip: event.recordVideo ? 1 : 0,
         ));
         await _startRecording(
           startResult.session.id,
           startResult.session.startedAt,
           recordAudio: event.recordAudio,
           alarmSound: event.alarmSound,
+          recordVideo: event.recordVideo,
         );
         // Enviar SMS automático — respeta la preferencia del usuario.
         final sendSms = (await _storage.read(_kSendSms)) != 'false';
@@ -231,6 +243,26 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     ));
   }
 
+  void _onVideoClipCompleted(
+    _PanicVideoClipCompleted event,
+    Emitter<PanicState> emit,
+  ) {
+    if (state is! PanicActive) return;
+    final current = state as PanicActive;
+
+    final clipIndex = current.currentVideoClip - 1;
+    debugPrint('[PanicBloc] Clip de video completado: clip=$clipIndex');
+    unawaited(
+      _uploadService
+          .uploadVideoClip(event.filePath, current.session.id, clipIndex)
+          .catchError((dynamic e) {
+        debugPrint('[PanicBloc] Upload clip $clipIndex falló: $e');
+      }),
+    );
+
+    emit(current.copyWith(currentVideoClip: current.currentVideoClip + 1));
+  }
+
   Future<void> _onLocationTick(
     _PanicLocationTick event,
     Emitter<PanicState> emit,
@@ -268,9 +300,10 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     DateTime startedAt, {
     required bool recordAudio,
     required bool alarmSound,
+    required bool recordVideo,
   }) async {
-    // GPS y foreground service SIEMPRE corren — son obligatorios para que el
-    // panel autoridades reciba la sesión. Solo la grabación y la alarma respetan flags.
+    // GPS y foreground service SIEMPRE corren — son obligatorios.
+    // La grabación y la alarma respetan los flags del usuario.
     if (recordAudio) {
       await _audioService.start(sessionId);
       _amplitudeSub = _audioService.amplitudeStream.listen(
@@ -278,6 +311,13 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
       );
       _blockSub = _audioService.blockCompletedStream.listen(
         (path) => add(_PanicBlockCompleted(path)),
+      );
+    }
+
+    if (recordVideo) {
+      await _videoService.start(sessionId);
+      _videoClipSub = _videoService.clipCompletedStream.listen(
+        (path) => add(_PanicVideoClipCompleted(path)),
       );
     }
 
@@ -296,26 +336,45 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     _locationTracker.stop();
     await _amplitudeSub?.cancel();
     await _blockSub?.cancel();
+    await _videoClipSub?.cancel();
     _amplitudeSub = null;
     _blockSub = null;
+    _videoClipSub = null;
 
-    final finalPaths = await _audioService.stop();
-    debugPrint('[PanicBloc] _stopRecording — finalPaths: $finalPaths');
+    final finalAudioPaths = await _audioService.stop();
+    final finalVideoPaths = await _videoService.stop();
+    debugPrint('[PanicBloc] _stopRecording — audio: $finalAudioPaths video: $finalVideoPaths');
 
-    // Subir el bloque parcial final si la desactivación fue intencional
-    if (activeState != null && finalPaths.isNotEmpty) {
-      final blockIndex = activeState.session.currentBlock - 1;
-      debugPrint('[PanicBloc] Subiendo bloque parcial final — blockIndex=$blockIndex');
-      try {
-        await _uploadService
-            .uploadBlock(finalPaths.first, activeState.session.id, blockIndex)
-            .timeout(const Duration(seconds: 30));
-        debugPrint('[PanicBloc] Upload bloque parcial OK');
-      } catch (e) {
-        debugPrint('[PanicBloc] Upload bloque parcial FALLÓ: $e');
+    if (activeState != null) {
+      // Subir bloque de audio parcial final
+      if (finalAudioPaths.isNotEmpty) {
+        final blockIndex = activeState.session.currentBlock - 1;
+        debugPrint('[PanicBloc] Subiendo bloque audio final — blockIndex=$blockIndex');
+        try {
+          await _uploadService
+              .uploadBlock(
+                  finalAudioPaths.first, activeState.session.id, blockIndex)
+              .timeout(const Duration(seconds: 30));
+          debugPrint('[PanicBloc] Upload bloque audio OK');
+        } catch (e) {
+          debugPrint('[PanicBloc] Upload bloque audio FALLÓ: $e');
+        }
       }
-    } else {
-      debugPrint('[PanicBloc] SKIP upload parcial — activeState=$activeState finalPaths=$finalPaths');
+
+      // Subir clip de video parcial final
+      if (finalVideoPaths.isNotEmpty) {
+        final clipIndex = activeState.currentVideoClip - 1;
+        debugPrint('[PanicBloc] Subiendo clip video final — clipIndex=$clipIndex');
+        try {
+          await _uploadService
+              .uploadVideoClip(
+                  finalVideoPaths.first, activeState.session.id, clipIndex)
+              .timeout(const Duration(seconds: 30));
+          debugPrint('[PanicBloc] Upload clip video OK');
+        } catch (e) {
+          debugPrint('[PanicBloc] Upload clip video FALLÓ: $e');
+        }
+      }
     }
 
     await _channelService.stopService();

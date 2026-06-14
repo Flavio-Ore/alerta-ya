@@ -13,10 +13,11 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
     
-    <!-- Micrófono — save modo offline -->
+    <!-- Micrófono y cámara para grabación en pánico -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
 
     <!-- Red — requeridos para API/WebSocket y FCM -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -65,7 +66,7 @@
             android:value="2" />
         <service
         android:name=".PanicForegroundService"
-        android:foregroundServiceType="microphone"
+        android:foregroundServiceType="microphone|camera"
         android:exported="false"/>
     </application>
     <!-- Required to query activities that can process text, see:
