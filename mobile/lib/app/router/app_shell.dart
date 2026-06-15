@@ -4,9 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:alertaya/core/widgets/alertaya_bottom_nav.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, required this.navigationShell});
+  const AppShell({
+    super.key,
+    required this.navigationShell,
+    required this.location,
+  });
 
   final StatefulNavigationShell navigationShell;
+  final String location;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -79,9 +84,13 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     // BackButtonListener de go_router: se integra correctamente con
     // StatefulShellRoute y evita el bypass de PopScope en go_router 13+.
+    final keepBodyFixedDuringKeyboard =
+        widget.location.startsWith('/map/routes');
+
     return BackButtonListener(
       onBackButtonPressed: _onBackPressed,
       child: Scaffold(
+        resizeToAvoidBottomInset: !keepBodyFixedDuringKeyboard,
         body: widget.navigationShell,
         bottomNavigationBar: AlertaYaBottomNav(
           currentIndex: _toNavIndex(widget.navigationShell.currentIndex),
