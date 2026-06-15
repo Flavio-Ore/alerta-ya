@@ -93,6 +93,8 @@ model Incident {
   updatedAt    DateTime       @updatedAt
   unitAssigned  String?        // ID de unidad operativa asignada
   feedback      String?        // Mensaje de la autoridad visible al ciudadano (max 200 chars)
+  aiScore       Float?         // Confianza del verificador ML (0–1) — null si la IA no corrió
+  aiVerified    Boolean?       // true si el reporte pasó el verificador ML
   reports       Report[]
   notifications Notification[]
 

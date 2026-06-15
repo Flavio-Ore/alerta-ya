@@ -24,6 +24,10 @@ export interface PublicIncidentDTO {
   unitAssigned?: string | null;
   /** Mensaje de la autoridad visible al ciudadano al atender el incidente */
   feedback?: string | null;
+  /** Confianza del verificador ML (0–1) — null si la IA no corrió */
+  aiScore?: number | null;
+  /** true si el reporte pasó el verificador ML */
+  aiVerified?: boolean | null;
 }
 
 export interface ReportEvidenceDTO {
@@ -58,5 +62,7 @@ export function toPublicDTO(incident: Incident): PublicIncidentDTO {
     updatedAt: incident.updatedAt.toISOString(),
     unitAssigned: incident.unitAssigned,
     feedback: incident.feedback,
+    aiScore: incident.aiScore,
+    aiVerified: incident.aiVerified,
   };
 }

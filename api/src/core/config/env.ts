@@ -36,6 +36,12 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string(),
   CLOUDINARY_API_SECRET: z.string(),
   CLOUDINARY_UPLOAD_PRESET: z.string().default('alertaya_evidence'),
+
+  // GLM (Zhipu) — asistente IA de redacción de mensajes para autoridades.
+  // Opcional: sin key, el endpoint /suggest-message responde 503 (la web oculta el botón).
+  GLM_API_KEY: z.string().optional(),
+  GLM_API_URL: z.string().url().default('https://open.bigmodel.cn/api/paas/v4/chat/completions'),
+  GLM_MODEL: z.string().default('glm-4-flash'),
 });
 
 const parsed = envSchema.safeParse(process.env);

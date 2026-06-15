@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
-import { Siren, History, CheckCircle2, Clock, ArrowLeft, AlertCircle, FileText } from 'lucide-react';
+import { Siren, History, CheckCircle2, Clock, ArrowLeft, AlertCircle, FileText, Image as ImageIcon, Music, ExternalLink } from 'lucide-react';
 
 import { useIncidentDetail, useUpdateIncidentStatus } from '../infrastructure/incidents.api';
 import { IncidentsMap } from '../../dashboard/components/IncidentsMap';
+import { AiConfidenceBadge } from '../../../core/components/AiConfidenceBadge';
 import {
   incidentTypeLabel,
   severityLabel,
@@ -14,6 +15,60 @@ import {
   formatHHMM,
 } from '../presentation/utils/labels';
 import type { IncidentStatus } from '../../../core/api/types';
+import { parseFormData } from '../presentation/utils/form-labels';
+
+/** Detecta el tipo de media por la extensión de la URL (Cloudinary). */
+function mediaKind(url: string): 'image' | 'video' | 'audio' | 'other' {
+  const clean = url.split('?')[0].toLowerCase();
+  if (/\.(jpe?g|png|webp|gif|avif|heic)$/.test(clean)) return 'image';
+  if (/\.(mp4|webm|mov|m4v)$/.test(clean)) return 'video';
+  if (/\.(mp3|wav|m4a|aac|ogg)$/.test(clean)) return 'audio';
+  return 'other';
+}
+
+/** Thumbnail de una prueba adjunta. Imagen/video se previsualizan; audio/otros como chip. */
+function EvidenceMedia({ url, index }: { url: string; index: number }) {
+  const kind = mediaKind(url);
+
+  if (kind === 'image') {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="group block">
+        <img
+          src={url}
+          alt={`Prueba ${index + 1}`}
+          loading="lazy"
+          className="h-28 w-28 object-cover rounded-lg border border-ay-border group-hover:border-ay-accent transition-colors"
+        />
+      </a>
+    );
+  }
+
+  if (kind === 'video') {
+    return (
+      <video
+        src={url}
+        controls
+        preload="metadata"
+        className="h-28 w-auto max-w-[200px] rounded-lg border border-ay-border bg-black"
+      />
+    );
+  }
+
+  const Icon = kind === 'audio' ? Music : ExternalLink;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="h-28 w-28 flex flex-col items-center justify-center gap-2 rounded-lg border border-ay-border text-ay-text-secondary hover:border-ay-accent hover:text-ay-accent transition-colors"
+    >
+      <Icon size={22} />
+      <span className="text-[10px] font-bold uppercase">
+        {kind === 'audio' ? 'Audio' : `Adjunto ${index + 1}`}
+      </span>
+    </a>
+  );
+}
 
 export default function IncidentDetailPage() {
   const { incidentId } = useParams({ strict: false }) as { incidentId: string };
@@ -80,6 +135,10 @@ export default function IncidentDetailPage() {
             <span className={`text-xs font-black px-3 py-1 uppercase ${sev.text} ${sev.bg} border ${sev.border}`}>
               {severityLabel[incident.severity]}
             </span>
+            <AiConfidenceBadge
+              score={incident.aiScore}
+              verified={incident.aiVerified}
+            />
             <h1 className="text-2xl font-bold text-white tracking-tighter">
               {incidentTypeLabel[incident.type]} · {incident.district}
             </h1>
@@ -101,7 +160,13 @@ export default function IncidentDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="h-64 rounded-xl overflow-hidden relative">
-            <IncidentsMap incidents={[incident]} />
+            <IncidentsMap
+              incidents={[incident]}
+              theme="light"
+              center={[incident.lat, incident.lng]}
+              zoom={15}
+              highlightId={incident.id}
+            />
             <div className="absolute bottom-2 right-2 bg-stitch-surface/90 backdrop-blur-md px-3 py-1.5 rounded text-[10px] font-mono text-stitch-on-surface z-[1000]">
               {incident.lat.toFixed(5)}, {incident.lng.toFixed(5)}
             </div>
@@ -156,31 +221,64 @@ export default function IncidentDetailPage() {
                 <FileText size={14} /> Evidencia agregada ({incident.evidence.length} reportes)
               </h3>
               <div className="space-y-3">
-                {incident.evidence.map((ev, idx) => (
-                  <div key={idx} className="bg-ay-bg-dark border border-ay-border p-4 space-y-2">
-                    <p className="text-[10px] font-bold uppercase text-ay-text-secondary">
-                      Reporte #{idx + 1} · datos del formulario
-                    </p>
-                    <pre className="text-[11px] text-ay-text-muted whitespace-pre-wrap font-mono">
-                      {JSON.stringify(ev.formData, null, 2)}
-                    </pre>
-                    {ev.mediaUrls.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        {ev.mediaUrls.map((url, i) => (
-                          <a
-                            key={i}
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] font-bold uppercase text-ay-accent hover:underline"
-                          >
-                            Adjunto {i + 1}
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {incident.evidence.map((ev, idx) => {
+                  const fields = parseFormData(ev.formData);
+                  const chips = fields.filter((f) => !f.isFreeText);
+                  const notes = fields.filter((f) => f.isFreeText);
+                  return (
+                    <div key={idx} className="bg-ay-bg-dark border border-ay-border p-4 space-y-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-ay-text-secondary">
+                        Reporte #{idx + 1}
+                      </p>
+
+                      {chips.length > 0 && (
+                        <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+                          {chips.map((f) => (
+                            <div key={f.key} className="flex flex-col gap-1.5">
+                              <dt className="text-[10px] uppercase tracking-wider text-ay-text-secondary">
+                                {f.label}
+                              </dt>
+                              <dd>
+                                <span
+                                  className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-md ${
+                                    f.isDanger
+                                      ? 'bg-ay-critical/15 text-ay-critical border border-ay-critical/30'
+                                      : 'bg-ay-border/40 text-white'
+                                  }`}
+                                >
+                                  {f.isDanger && <Siren size={11} />}
+                                  {f.value}
+                                </span>
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
+
+                      {notes.map((f) => (
+                        <div key={f.key} className="border-l-2 border-ay-accent pl-3">
+                          <p className="text-[10px] uppercase tracking-wider text-ay-text-secondary mb-1">
+                            {f.label}
+                          </p>
+                          <p className="text-xs text-white italic leading-relaxed">"{f.value}"</p>
+                        </div>
+                      ))}
+
+                      {ev.mediaUrls.length > 0 && (
+                        <div className="pt-1 space-y-2">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-ay-text-secondary flex items-center gap-1.5">
+                            <ImageIcon size={12} /> Pruebas adjuntas ({ev.mediaUrls.length})
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {ev.mediaUrls.map((url, i) => (
+                              <EvidenceMedia key={i} url={url} index={i} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

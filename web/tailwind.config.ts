@@ -12,7 +12,9 @@ const config: Config = {
       },
       colors: {
         // ── Tokens de marca AlertaYa ─────────────────────────────────────
-        'ay-primary':    '#1B3A6B',
+        // Azul interactivo (aclarado para contraste sobre fondos oscuros).
+        // El azul noche de marca #1B3A6B se conserva en ay-dark y en el logo.
+        'ay-primary':    '#5B8FD9',
         'ay-accent':     '#F5A623',
         'ay-dark':       '#0D1B2A',
         'ay-bg-light':   '#FFFFFF',

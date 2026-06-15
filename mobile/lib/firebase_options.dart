@@ -53,11 +53,10 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDUXjjaO6HbmbJZhsuBDy_jn43yNT5MhYY',
-    appId: '1:883102795613:android:3b8dbbf42d049b60618ab4',
-    messagingSenderId: '883102795613',
-    projectId: 'prueba-alertaya',
-    storageBucket: 'prueba-alertaya.firebasestorage.app',
+    apiKey: 'AIzaSyAZGtveIa7-oBn-HU8uhgwTtCtikttxKA0',
+    appId: '1:562740646244:android:45b6b0e5ecaf08e87daa71',
+    messagingSenderId: '562740646244',
+    projectId: 'alertaya-1b963',
+    storageBucket: 'alertaya-1b963.firebasestorage.app',
   );
-
 }

@@ -13,6 +13,7 @@ import { updateIncidentStatus } from '../domain/usecases/update-incident-status.
 import { getMyReports } from '../domain/usecases/get-my-reports.usecase';
 import { PrismaNotificationRepository } from '../../notifications/infrastructure/prisma-notification.repository';
 import { generateReportUploadParams } from '../../panic/infrastructure/cloudinary.client';
+import { verifyReport } from '../infrastructure/ml.client';
 import { AppError } from '../../../core/errors/AppError';
 import { IncidentType, IncidentStatus } from '@prisma/client';
 const ZONE_CONFIRM_COOLDOWN = 30 * 60; // 30 minutos entre respuestas por zona
@@ -118,7 +119,7 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
         formData: body.formData,
         mediaUrls: body.mediaUrls ?? [],
       },
-      { incidentRepo, reportRepo, redis },
+      { incidentRepo, reportRepo, redis, verifyReport },
     );
 
     console.log(

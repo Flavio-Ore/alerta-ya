@@ -20,10 +20,27 @@ export interface CreateReportInput {
   mediaUrls: string[];
 }
 
+/**
+ * Puerto del verificador ML (la implementación vive en infraestructura — ml.client).
+ * Inyectado desde el controller para no acoplar el dominio a la infra.
+ */
+export interface VerifyReportPort {
+  (input: {
+    reportId: string;
+    lat: number;
+    lng: number;
+    type: IncidentType;
+    formData: Record<string, unknown>;
+    userReputation: number;
+  }): Promise<{ score: number; verified: boolean } | null>;
+}
+
 export interface CreateReportDeps {
   incidentRepo: IncidentRepository;
   reportRepo: ReportRepository;
   redis: Redis;
+  /** Opcional: si no se inyecta, el flujo sigue sin verificación (fail-open). */
+  verifyReport?: VerifyReportPort;
 }
 
 const WINDOW_20_MIN_SECONDS = 20 * 60;
@@ -104,6 +121,18 @@ export async function createReport(
     return dto;
   }
 
+  // Verificación ML del reporte que dispara la publicación (fail-open: null si la IA falla/tarda)
+  const ml = deps.verifyReport
+    ? await deps.verifyReport({
+        reportId: report.id,
+        lat: input.lat,
+        lng: input.lng,
+        type: input.type,
+        formData: input.formData as Record<string, unknown>,
+        userReputation: 0.5,
+      })
+    : null;
+
   // Primer incidente para esta zona+tipo — crear y vincular reportes huérfanos
   incident = await deps.incidentRepo.create({
     type: input.type,
@@ -112,6 +141,8 @@ export async function createReport(
     lng: input.lng,
     district,
     expiresAt,
+    aiScore: ml?.score ?? null,
+    aiVerified: ml?.verified ?? null,
   });
 
   const orphaned = await deps.reportRepo.findOrphanedNearby(

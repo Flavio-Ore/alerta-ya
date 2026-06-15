@@ -76,6 +76,8 @@ export class PrismaIncidentRepository implements IncidentRepository {
         reportCount: 1,
         confirmCount: 0,
         denyCount: 0,
+        aiScore: data.aiScore ?? null,
+        aiVerified: data.aiVerified ?? null,
       },
     });
   }

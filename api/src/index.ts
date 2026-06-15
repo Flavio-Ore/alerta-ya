@@ -20,6 +20,7 @@ import { zonesRouter } from "./features/zones/presentation/zones.router";
 import { panicRouter } from "./features/panic/presentation/panic.router";
 import { notificationsRouter } from "./features/notifications/presentation/notifications.router";
 import { meRouter } from "./features/me/presentation/me.router";
+import { aiRouter } from "./features/ai/presentation/ai.router";
 
 import { registerIncidentSocket } from "./sockets/incident.socket";
 import { registerSocketAuth } from "./sockets/auth.socket";
@@ -96,6 +97,7 @@ app.use("/zones", zonesRouter);
 app.use("/panic", panicRouter);
 app.use("/notifications", notificationsRouter);
 app.use("/me", meRouter);
+app.use("/ai", aiRouter);
 app.use("/internal/jobs", jobsRouter);
 
 // Error handler — siempre al final

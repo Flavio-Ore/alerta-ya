@@ -27,8 +27,11 @@ async def health_check() -> dict:
     }
 
 
-# TODO(features): montar routers de verificación y predicción
-# from .features.verification.presentation.router import router as verification_router
+from .features.verification.presentation.router import router as verification_router
+
+# /ml/verify — verificación de coherencia de reportes (ECOD + Isolation Forest)
+app.include_router(verification_router, prefix="/ml", tags=["verification"])
+
+# TODO(features): montar router de predicción cuando esté el serving espacial
 # from .features.prediction.presentation.router import router as prediction_router
-# app.include_router(verification_router, prefix="/verify", tags=["verification"])
 # app.include_router(prediction_router, prefix="/predict", tags=["prediction"])

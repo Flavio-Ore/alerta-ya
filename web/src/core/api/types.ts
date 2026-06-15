@@ -31,6 +31,10 @@ export interface PublicIncidentDTO {
   updatedAt: string;
   unitAssigned?: string | null;
   feedback?: string | null;
+  /** Confianza del verificador ML (0–1) — null si la IA no corrió */
+  aiScore?: number | null;
+  /** true si el reporte pasó el verificador ML */
+  aiVerified?: boolean | null;
 }
 
 export interface ReportEvidenceDTO {

@@ -7,6 +7,8 @@ export interface CreateIncidentData {
   lng: number;
   district: string;
   expiresAt: Date;
+  aiScore?: number | null;
+  aiVerified?: boolean | null;
 }
 
 export interface IncidentFilters {
