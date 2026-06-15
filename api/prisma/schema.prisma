@@ -128,8 +128,21 @@ model PanicSession {
   status        PanicStatus @default(ACTIVE)
   deactivatedBy String?     // "pin" | "timeout"
   user          User        @relation(fields: [userId], references: [id])
+  locationPoints PanicLocationPoint[]
 
   @@map("panic_sessions")
+}
+
+model PanicLocationPoint {
+  id        String       @id @default(uuid())
+  sessionId String
+  lat       Float
+  lng       Float
+  createdAt DateTime     @default(now())
+  session   PanicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("panic_location_points")
 }
 
 // Token FCM del dispositivo — para push notifications por zona

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 
@@ -43,6 +44,19 @@ class PanicRepositoryImpl implements PanicRepository {
       return Left(Failure.server(statusCode: e.statusCode, message: e.message));
     } catch (e) {
       return Left(Failure.unknown(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<void> updateLocation({
+    required String sessionId,
+    required double lat,
+    required double lng,
+  }) async {
+    try {
+      await _remote.updateLocation(sessionId: sessionId, lat: lat, lng: lng);
+    } catch (e) {
+      debugPrint('[PanicRepo] updateLocation falló (descartado): $e');
     }
   }
 }

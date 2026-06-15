@@ -22,10 +22,14 @@ class AppConstants {
   static const int massEventWindowMinutes = 5;
   static const int forceCriticalFormCount = 3;
 
-  // Pánico
+  // Pánico — audio
   static const int panicMaxRecordingMinutes = 60;
   static const int panicBlockMinutes = 10;
   static const int panicPinMaxAttempts = 3;
+
+  // Pánico — video (Modo Combinado)
+  static const int panicVideoClipMinutes = 2;
+  static const int panicMaxVideoClips = 10;
 
   // Geofencing — Lima Metropolitana
   static const double limaLatMin = -12.28;

@@ -15,7 +15,7 @@ const envSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().email(),
   FIREBASE_PRIVATE_KEY: z.string(),
 
-  // Google Cloud Storage — no usado en MVP, Cloudinary reemplaza para grabaciones de pánico
+  // Google Cloud Storage
   GCS_BUCKET_NAME: z.string().optional(),
   GCP_PROJECT_ID: z.string().optional(),
 
@@ -31,11 +31,6 @@ const envSchema = z.object({
   // Jobs — secret que Cloud Scheduler manda en X-Job-Secret
   JOB_SECRET: z.string().min(16).default('dev-job-secret-change-in-prod'),
 
-  // Cloudinary — evidencia de imágenes/videos en reportes
-  CLOUDINARY_CLOUD_NAME: z.string(),
-  CLOUDINARY_API_KEY: z.string(),
-  CLOUDINARY_API_SECRET: z.string(),
-  CLOUDINARY_UPLOAD_PRESET: z.string().default('alertaya_evidence'),
 });
 
 const parsed = envSchema.safeParse(process.env);

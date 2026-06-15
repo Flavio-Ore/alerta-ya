@@ -1,0 +1,3 @@
+<resources>
+    <string name="accessibility_service_description">Permite activar el botón de pánico de AlertaYa con triple pulsación del botón de volumen, incluso con la aplicación cerrada.</string>
+</resources>

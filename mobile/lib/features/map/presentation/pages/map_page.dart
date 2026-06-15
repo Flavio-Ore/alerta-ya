@@ -201,7 +201,7 @@ class _MapPageState extends State<MapPage> {
     // Cuando se cierra (por cualquier vía), limpiar flag y dismiss en bloc.
     _confirmRequestSheetShown = false;
     if (mounted) {
-      context.read<IncidentsBloc>().add(const ConfirmRequestDismissed());
+      this.context.read<IncidentsBloc>().add(const ConfirmRequestDismissed());
     }
   }
 

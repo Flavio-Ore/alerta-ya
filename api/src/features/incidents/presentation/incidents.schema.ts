@@ -8,7 +8,8 @@ export const createReportSchema = z.object({
   formData: z.record(z.unknown()),
   // URLs de evidencia subidas desde el dispositivo (Firebase Storage o GCS)
   // El cliente sube primero, luego manda las URLs aquí
-  mediaUrls: z.array(z.string().url()).max(5).default([]),
+  // Acepta https:// (Cloudinary legacy) y gs:// (Firebase Storage)
+  mediaUrls: z.array(z.string().min(1)).max(5).default([]),
 });
 
 export const listIncidentsQuerySchema = z.object({
@@ -51,12 +52,6 @@ export const listMyReportsQuerySchema = z.object({
 export const reportIdParamSchema = z.object({
   // Mismo criterio que idParamSchema — acepta seeds custom además de UUIDs.
   reportId: z.string().min(1),
-});
-
-// Body para pedir N upload params para evidencia de un reporte.
-// Limitamos a 10 para no abusar de Cloudinary.
-export const uploadParamsRequestSchema = z.object({
-  count: z.number().int().min(1).max(10),
 });
 
 export type ListMyReportsQuery = z.infer<typeof listMyReportsQuerySchema>;
