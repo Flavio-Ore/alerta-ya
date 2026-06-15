@@ -18,6 +18,7 @@ import IncidentDetailPage from './features/incidents/pages/IncidentDetailPage';
 import PredictionsPage from './features/predictions/pages/PredictionsPage';
 import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import ExportPage from './features/export/pages/ExportPage';
+import AdminUsersPage from './features/admin/pages/AdminUsersPage';
 
 function isAuthorized() {
   const user = useAuthStore.getState().user;
@@ -122,6 +123,18 @@ const exportRoute = createRoute({
   component: ExportPage,
 });
 
+const adminUsersRoute = createRoute({
+  getParentRoute: () => authLayoutRoute,
+  path: '/admin/users',
+  component: AdminUsersPage,
+  beforeLoad: () => {
+    const user = useAuthStore.getState().user;
+    if (user?.role !== 'ADMIN') {
+      throw redirect({ to: '/dashboard' });
+    }
+  },
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authLayoutRoute.addChildren([
@@ -131,6 +144,7 @@ const routeTree = rootRoute.addChildren([
     predictionsRoute,
     statisticsRoute,
     exportRoute,
+    adminUsersRoute,
   ]),
 ]);
 

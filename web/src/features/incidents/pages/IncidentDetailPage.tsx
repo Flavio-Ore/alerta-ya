@@ -166,6 +166,7 @@ export default function IncidentDetailPage() {
               center={[incident.lat, incident.lng]}
               zoom={15}
               highlightId={incident.id}
+              showHeatmap={false}
             />
             <div className="absolute bottom-2 right-2 bg-stitch-surface/90 backdrop-blur-md px-3 py-1.5 rounded text-[10px] font-mono text-stitch-on-surface z-[1000]">
               {incident.lat.toFixed(5)}, {incident.lng.toFixed(5)}

@@ -7,6 +7,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/predictions": "Predicciones IA",
   "/statistics": "Estadísticas",
   "/export": "Exportar",
+  "/admin/users": "Administrar Autoridades",
 };
 
 function getCurrentLabel(pathname: string): string {

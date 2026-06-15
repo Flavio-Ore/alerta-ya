@@ -1,6 +1,6 @@
 import { PanicSessionRepository } from '../repositories/panic-session.repository';
 import { PublicPanicSessionDTO, toPanicDTO } from '../entities/panic-session.entity';
-import { CloudinaryUploadParams } from '../../infrastructure/cloudinary.client';
+import { UploadParams } from '../entities/upload-params.entity';
 import { AppError } from '../../../../core/errors/AppError';
 
 const UPLOAD_SLOTS = 6; // 6 bloques de 10 min = 60 min máximo
@@ -13,7 +13,7 @@ export interface StartPanicInput {
 
 export interface StartPanicDeps {
   panicRepo: PanicSessionRepository;
-  generateUploadParams: (sessionId: string, count: number) => CloudinaryUploadParams[];
+  generateUploadParams: (sessionId: string, count: number) => UploadParams[];
 }
 
 export async function startPanic(

@@ -14,46 +14,16 @@ import type {
   IncidentType,
   IncidentStatus,
 } from "../../../core/api/types";
-
-const SEVERITY_OPTIONS: Array<Severity | "ALL"> = [
-  "ALL",
-  "CRITICAL",
-  "MODERATE",
-  "LOW",
-];
-const TYPE_OPTIONS: Array<IncidentType | "ALL"> = [
-  "ALL",
-  "ROBBERY",
-  "ACCIDENT",
-  "HARASSMENT",
-  "EXTORTION",
-  "SUSPICIOUS",
-];
-const STATUS_OPTIONS: Array<IncidentStatus | "ALL"> = [
-  "ALL",
-  "ACTIVE",
-  "IN_ATTENTION",
-  "CLOSED",
-];
-const SINCE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "ALL", label: "Cualquier fecha" },
-  { value: "24h", label: "Hoy" },
-  { value: "7d", label: "Últimos 7 días" },
-  { value: "30d", label: "Últimos 30 días" },
-];
-
-function sinceToISO(window: string): string | undefined {
-  if (window === "ALL") return undefined;
-  const now = Date.now();
-  const map: Record<string, number> = {
-    "24h": 24 * 60 * 60 * 1000,
-    "7d": 7 * 24 * 60 * 60 * 1000,
-    "30d": 30 * 24 * 60 * 60 * 1000,
-  };
-  const delta = map[window];
-  if (!delta) return undefined;
-  return new Date(now - delta).toISOString();
-}
+import {
+  FilterSelect,
+  TYPE_OPTIONS,
+  SEVERITY_OPTIONS,
+  STATUS_OPTIONS,
+  DISTRICT_OPTIONS,
+  DATE_PRESETS,
+  todayISO,
+  daysAgoISO,
+} from "../../../core/components/ui/FilterSelect";
 
 // ── Estilos Stitch por severidad / status ─────────────────────────────────────
 const SEVERITY_BAR: Record<Severity, string> = {
@@ -80,34 +50,51 @@ export default function IncidentsListPage() {
   const [page, setPage] = useState(1);
   const [severityFilter, setSeverityFilter] = useState<Severity | "ALL">("ALL");
   const [typeFilter, setTypeFilter] = useState<IncidentType | "ALL">("ALL");
-  const [statusFilter, setStatusFilter] = useState<IncidentStatus | "ALL">(
-    "ALL",
-  );
-  const [sinceFilter, setSinceFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<IncidentStatus | "ALL">("ALL");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [districtFilter, setDistrictFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const query = useMemo(() => {
-    const since = sinceToISO(sinceFilter);
+    const since = dateFrom
+      ? new Date(dateFrom + "T00:00:00.000Z").toISOString()
+      : undefined;
     return {
       page,
       pageSize: 20,
-      // status va al server: si el user eligió uno específico lo pasamos,
-      // si está en ALL pedimos 'ALL' para que el backend NO aplique el default
-      // de "solo ACTIVE no expirados" (panel autoridad debe ver TODO el histórico).
       status: statusFilter === "ALL" ? ("ALL" as const) : statusFilter,
       ...(severityFilter !== "ALL" && { severity: severityFilter }),
       ...(since && { since }),
+      ...(districtFilter !== "ALL" && { district: districtFilter }),
     };
-  }, [page, severityFilter, sinceFilter, statusFilter]);
+  }, [page, severityFilter, statusFilter, dateFrom, districtFilter]);
 
   const { data, isLoading, isError, error } = useIncidentsList(query);
 
-  // Filtro cliente-side: solo type (no soportado por API como query param).
-  // status YA viene filtrado del backend.
   const filtered = useMemo(() => {
     const items = data?.items ?? [];
-    if (typeFilter === "ALL") return items;
-    return items.filter((i) => i.type === typeFilter);
-  }, [data?.items, typeFilter]);
+    return items.filter((i) => {
+      if (typeFilter !== "ALL" && i.type !== typeFilter) return false;
+
+      if (dateTo) {
+        const endOfDay = new Date(dateTo + "T23:59:59.999Z");
+        if (new Date(i.createdAt) > endOfDay) return false;
+      }
+
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matches =
+          i.district.toLowerCase().includes(q) ||
+          incidentTypeLabel[i.type].toLowerCase().includes(q) ||
+          statusLabel[i.status].toLowerCase().includes(q) ||
+          severityLabel[i.severity].toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+
+      return true;
+    });
+  }, [data?.items, typeFilter, dateTo, searchQuery]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / 20)) : 1;
   const activeCount = filtered.filter((i) => i.status === "ACTIVE").length;
@@ -116,13 +103,44 @@ export default function IncidentsListPage() {
     severityFilter !== "ALL" ||
     typeFilter !== "ALL" ||
     statusFilter !== "ALL" ||
-    sinceFilter !== "ALL";
+    dateFrom !== "" ||
+    dateTo !== "" ||
+    districtFilter !== "ALL" ||
+    searchQuery !== "";
 
   function clearFilters() {
     setSeverityFilter("ALL");
     setTypeFilter("ALL");
     setStatusFilter("ALL");
-    setSinceFilter("ALL");
+    setDateFrom("");
+    setDateTo("");
+    setDistrictFilter("ALL");
+    setSearchQuery("");
+    setPage(1);
+  }
+
+  function applyDatePreset(preset: string) {
+    const today = todayISO();
+    switch (preset) {
+      case "today":
+        setDateFrom(today);
+        setDateTo(today);
+        break;
+      case "yesterday": {
+        const yesterday = daysAgoISO(1);
+        setDateFrom(yesterday);
+        setDateTo(yesterday);
+        break;
+      }
+      case "7d":
+        setDateFrom(daysAgoISO(7));
+        setDateTo(today);
+        break;
+      case "30d":
+        setDateFrom(daysAgoISO(30));
+        setDateTo(today);
+        break;
+    }
     setPage(1);
   }
 
@@ -151,73 +169,139 @@ export default function IncidentsListPage() {
       </header>
 
       {/* Filter Bar */}
-      <section className="px-10 mb-6">
-        <div className="bg-ay-bg-dark2 rounded-[10px] border border-ay-border p-4 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <FilterSelect
-              value={typeFilter}
-              onChange={(v) => {
-                setTypeFilter(v as IncidentType | "ALL");
-                setPage(1);
-              }}
-              options={TYPE_OPTIONS.map((opt) => ({
-                value: opt,
-                label:
-                  opt === "ALL" ? "Todos los tipos" : incidentTypeLabel[opt],
-              }))}
-            />
-            <div className="w-[1px] h-4 bg-ay-border" />
-            <FilterSelect
-              value={severityFilter}
-              onChange={(v) => {
-                setSeverityFilter(v as Severity | "ALL");
-                setPage(1);
-              }}
-              options={SEVERITY_OPTIONS.map((opt) => ({
-                value: opt,
-                label: opt === "ALL" ? "Severidad" : severityLabel[opt],
-              }))}
-            />
-            <div className="w-[1px] h-4 bg-ay-border" />
-            <FilterSelect
-              value={statusFilter}
-              onChange={(v) => {
-                setStatusFilter(v as IncidentStatus | "ALL");
-                setPage(1);
-              }}
-              options={STATUS_OPTIONS.map((opt) => ({
-                value: opt,
-                label: opt === "ALL" ? "Estado" : statusLabel[opt],
-              }))}
-            />
-            <div className="w-[1px] h-4 bg-ay-border" />
-            <FilterSelect
-              value={sinceFilter}
-              onChange={(v) => {
-                setSinceFilter(v);
-                setPage(1);
-              }}
-              options={SINCE_OPTIONS}
-              icon="calendar_today"
-            />
-          </div>
-
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="text-ay-accent text-sm font-semibold hover:underline"
-            >
-              Limpiar filtros
-            </button>
-          )}
+      <section className="px-10 mb-6 flex flex-col gap-4">
+        {/* Search */}
+        <div className="relative">
+          <span className="material-symbols-outlined text-[18px] text-stitch-outline absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            search
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Buscar por distrito, tipo, estado…"
+            className="w-full bg-ay-bg-dark2 rounded-[10px] border border-ay-border pl-10 pr-4 py-2.5 text-sm text-white outline-none focus:border-ay-accent transition-colors placeholder:text-stitch-outline"
+          />
         </div>
 
-        <div className="mt-4">
+        <div className="bg-ay-bg-dark2 rounded-[10px] border border-ay-border p-4 flex flex-col gap-4">
+          {/* Dropdown filters left + Date range right */}
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex items-center gap-4 flex-wrap">
+              <FilterSelect
+                value={typeFilter}
+                onChange={(v) => {
+                  setTypeFilter(v as IncidentType | "ALL");
+                  setPage(1);
+                }}
+                options={TYPE_OPTIONS.map((opt) => ({
+                  value: opt,
+                  label:
+                    opt === "ALL" ? "Todos los tipos" : incidentTypeLabel[opt],
+                }))}
+              />
+              <div className="w-px h-4 bg-ay-border" />
+              <FilterSelect
+                value={severityFilter}
+                onChange={(v) => {
+                  setSeverityFilter(v as Severity | "ALL");
+                  setPage(1);
+                }}
+                options={SEVERITY_OPTIONS.map((opt) => ({
+                  value: opt,
+                  label: opt === "ALL" ? "Severidad" : severityLabel[opt],
+                }))}
+              />
+              <div className="w-px h-4 bg-ay-border" />
+              <FilterSelect
+                value={statusFilter}
+                onChange={(v) => {
+                  setStatusFilter(v as IncidentStatus | "ALL");
+                  setPage(1);
+                }}
+                options={STATUS_OPTIONS.map((opt) => ({
+                  value: opt,
+                  label: opt === "ALL" ? "Estado" : statusLabel[opt],
+                }))}
+              />
+              <div className="w-px h-4 bg-ay-border" />
+              <FilterSelect
+                value={districtFilter}
+                onChange={(v) => {
+                  setDistrictFilter(v);
+                  setPage(1);
+                }}
+                options={DISTRICT_OPTIONS.map((opt) => ({
+                  value: opt,
+                  label: opt === "ALL" ? "Distrito" : opt,
+                }))}
+                icon="location_on"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="material-symbols-outlined text-[18px] text-stitch-outline">
+                calendar_today
+              </span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-ay-bg-dark border border-ay-border rounded px-3 py-1.5 text-sm text-white outline-none focus:border-ay-accent [color-scheme:dark]"
+              />
+              <span className="text-stitch-outline text-sm">—</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-ay-bg-dark border border-ay-border rounded px-3 py-1.5 text-sm text-white outline-none focus:border-ay-accent [color-scheme:dark]"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              {DATE_PRESETS.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => applyDatePreset(preset.value)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-md border border-ay-border text-stitch-outline hover:text-white hover:border-white transition-all"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="text-ay-accent text-sm font-semibold hover:underline shrink-0"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
           <span className="text-[13px] font-medium text-ay-text-sec">
             Mostrando {filtered.length}{" "}
             {filtered.length === 1 ? "incidente" : "incidentes"}
             {hasActiveFilters && " (con filtros aplicados)"}
           </span>
+          {searchQuery && filtered.length === 0 && !isLoading && !isError && (
+            <span className="text-[13px] text-stitch-outline italic">
+              Sin resultados para "{searchQuery}"
+            </span>
+          )}
         </div>
       </section>
 
@@ -380,55 +464,5 @@ export default function IncidentsListPage() {
         </div>
       </footer>
     </div>
-  );
-}
-
-// ── Componente auxiliar — dropdown con estilo Stitch ──────────────────────────
-interface FilterSelectOption {
-  value: string;
-  label: string;
-}
-
-function FilterSelect({
-  value,
-  onChange,
-  options,
-  icon,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: FilterSelectOption[];
-  icon?: string;
-}) {
-  const isDefault = value === "ALL";
-  return (
-    <label className="flex items-center gap-2 text-sm cursor-pointer relative">
-      {icon && (
-        <span className="material-symbols-outlined text-[18px] text-stitch-outline pointer-events-none">
-          {icon}
-        </span>
-      )}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ backgroundImage: "none" }}
-        className={`bg-transparent appearance-none pr-6 pl-0 py-0 border-0 outline-none focus:ring-0 cursor-pointer ${
-          isDefault ? "text-stitch-outline" : "text-white font-semibold"
-        }`}
-      >
-        {options.map((opt) => (
-          <option
-            key={opt.value}
-            value={opt.value}
-            className="bg-ay-bg-dark2 text-white"
-          >
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <span className="material-symbols-outlined text-[18px] text-stitch-outline absolute right-0 pointer-events-none">
-        expand_more
-      </span>
-    </label>
   );
 }

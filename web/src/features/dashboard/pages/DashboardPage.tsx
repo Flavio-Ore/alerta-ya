@@ -12,7 +12,20 @@ import {
 } from "../../incidents/presentation/utils/labels";
 import { IncidentsMap } from "../components/IncidentsMap";
 import { AiConfidenceBadge } from "../../../core/components/AiConfidenceBadge";
-import type { PublicIncidentDTO, Severity } from "../../../core/api/types";
+import type { PublicIncidentDTO, Severity, IncidentType } from "../../../core/api/types";
+import {
+  FilterSelect,
+  TYPE_OPTIONS,
+  SEVERITY_OPTIONS,
+  DISTRICT_OPTIONS,
+} from "../../../core/components/ui/FilterSelect";
+
+function filterTypeLabel(value: typeof TYPE_OPTIONS[number]): string {
+  return value === 'ALL' ? 'Todos los tipos' : incidentTypeLabel[value as IncidentType];
+}
+function filterSeverityLabel(value: typeof SEVERITY_OPTIONS[number]): string {
+  return value === 'ALL' ? 'Severidad' : severityLabel[value as Severity];
+}
 
 const SEVERITY_BAR: Record<Severity, string> = {
   CRITICAL: "border-stitch-error",
@@ -161,6 +174,25 @@ export default function DashboardPage() {
 
   const [sortMode, setSortMode] = useState<SortMode>("triage");
 
+  // ── Filter state ──────────────────────────────────────────────
+  const [typeFilter, setTypeFilter] = useState<IncidentType | 'ALL'>('ALL');
+  const [severityFilter, setSeverityFilter] = useState<Severity | 'ALL'>('ALL');
+  const [districtFilter, setDistrictFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const hasActiveFilters =
+    typeFilter !== 'ALL' ||
+    severityFilter !== 'ALL' ||
+    districtFilter !== 'ALL' ||
+    searchQuery !== '';
+
+  function clearFilters() {
+    setTypeFilter('ALL');
+    setSeverityFilter('ALL');
+    setDistrictFilter('ALL');
+    setSearchQuery('');
+  }
+
   // Métricas live-scoped: cuentan lo que necesita acción AHORA, no el histórico.
   const stats = useMemo(() => {
     const items = data?.items ?? [];
@@ -173,12 +205,28 @@ export default function DashboardPage() {
     return { activeNow, criticalActive, inAttention };
   }, [data]);
 
-  const activeIncidents = useMemo(() => {
+  // Activos reales + filtros (#19) + orden seleccionado (sortMode). Alimenta
+  // mapa y lista lateral.
+  const filteredIncidents = useMemo(() => {
     const now = Date.now();
     const items = (data?.items ?? []).filter((i) =>
       isEffectivelyActive(i, now),
     );
-    const sorted = [...items];
+    const filtered = items.filter((i) => {
+      if (typeFilter !== 'ALL' && i.type !== typeFilter) return false;
+      if (severityFilter !== 'ALL' && i.severity !== severityFilter) return false;
+      if (districtFilter !== 'ALL' && i.district !== districtFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matches =
+          i.district.toLowerCase().includes(q) ||
+          incidentTypeLabel[i.type].toLowerCase().includes(q) ||
+          severityLabel[i.severity].toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+      return true;
+    });
+    const sorted = [...filtered];
     if (sortMode === "recent") {
       sorted.sort(
         (a, b) =>
@@ -190,12 +238,13 @@ export default function DashboardPage() {
       sorted.sort((a, b) => triageScore(b, now) - triageScore(a, now));
     }
     return sorted;
-  }, [data, sortMode]);
+  }, [data, sortMode, typeFilter, severityFilter, districtFilter, searchQuery]);
 
   return (
     <div className="flex-1 p-4 sm:p-6 overflow-y-auto lg:overflow-hidden flex flex-col gap-4 sm:gap-6">
       {/* Stat Cards Row — 2 columnas en móvil, 4 en desktop */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+
         <StatCard
           label="Activos ahora"
           value={isLoading ? "—" : stats.activeNow}
@@ -232,7 +281,7 @@ export default function DashboardPage() {
         <section className="w-full lg:w-[65%] h-[55vh] lg:h-auto shrink-0 lg:shrink bg-stitch-surface-container-low rounded-xl relative overflow-hidden flex flex-col">
           <div className="absolute inset-0">
             <IncidentsMap
-              incidents={activeIncidents}
+              incidents={filteredIncidents}
               panicSessions={panicSessions}
               theme="light"
               onPinClick={(id) =>
@@ -342,6 +391,64 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Filter bar with styled inputs */}
+          <div className="bg-stitch-surface-container-low rounded-[10px] border border-stitch-outline/20 p-4 flex flex-col gap-3">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar…"
+                className="w-full bg-stitch-surface rounded-md border border-stitch-outline/20 pl-3 pr-3 py-2 text-xs text-white outline-none focus:border-stitch-primary transition-colors placeholder:text-stitch-outline"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
+                  <FilterSelect
+                    value={typeFilter}
+                    onChange={(v) => setTypeFilter(v as IncidentType | 'ALL')}
+                    options={TYPE_OPTIONS.map((opt) => ({ value: opt, label: filterTypeLabel(opt) }))}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
+                  <FilterSelect
+                    value={severityFilter}
+                    onChange={(v) => setSeverityFilter(v as Severity | 'ALL')}
+                    options={SEVERITY_OPTIONS.map((opt) => ({ value: opt, label: filterSeverityLabel(opt) }))}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
+                  <FilterSelect
+                    value={districtFilter}
+                    onChange={(v) => setDistrictFilter(v)}
+                    options={DISTRICT_OPTIONS.map((opt) => ({
+                      value: opt,
+                      label: opt === 'ALL' ? 'Distrito' : opt,
+                    }))}
+                    icon="location_on"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-stitch-primary text-[10px] font-bold hover:underline shrink-0 uppercase tracking-wider"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="text-[10px] text-stitch-on-surface-variant font-medium">
+              {filteredIncidents.length}{' '}
+              {filteredIncidents.length === 1 ? 'activo' : 'activos'}
+              {hasActiveFilters && ' filtrados'}
+            </div>
+          </div>
+
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             {isLoading && (
               <div className="text-center text-stitch-on-surface-variant py-8 text-xs">
@@ -349,13 +456,15 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {!isLoading && activeIncidents.length === 0 && (
+            {!isLoading && filteredIncidents.length === 0 && (
               <div className="text-center text-stitch-on-surface-variant py-8 text-xs">
-                No hay incidentes activos en este momento.
+                {hasActiveFilters
+                  ? 'No hay incidentes activos con los filtros seleccionados.'
+                  : 'No hay incidentes activos en este momento.'}
               </div>
             )}
 
-            {activeIncidents.map((inc) => (
+            {filteredIncidents.map((inc) => (
               <IncidentCard
                 key={inc.id}
                 incident={inc}

@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 
 import type { PublicIncidentDTO, PanicSessionDTO, Severity } from '../../../core/api/types';
 import { incidentTypeLabel } from '../../incidents/presentation/utils/labels';
+import { HeatmapLayer } from './HeatmapLayer';
 
 const LIMA_CENTER: [number, number] = [-12.046374, -77.042793];
 
@@ -51,6 +52,8 @@ interface Props {
   zoom?: number;
   /** Id del incidente a destacar: halo + punto grande + tooltip permanente. */
   highlightId?: string;
+  /** Muestra la capa de calor cuando hay más de un incidente. Default true. */
+  showHeatmap?: boolean;
 }
 
 const TILE_THEME = {
@@ -66,6 +69,7 @@ export const IncidentsMap: FC<Props> = ({
   center,
   zoom,
   highlightId,
+  showHeatmap = true,
 }) => {
   const tile = TILE_THEME[theme];
   return (
@@ -80,6 +84,9 @@ export const IncidentsMap: FC<Props> = ({
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
         url={tile.url}
       />
+      {showHeatmap && incidents.length > 1 && (
+        <HeatmapLayer incidents={incidents} />
+      )}
       {incidents.map((inc) => {
         const color = SEVERITY_HEX[inc.severity];
         const highlighted = inc.id === highlightId;
