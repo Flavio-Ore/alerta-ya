@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-
-import { apiClient } from '../../../core/lib/axios';
 import type { PanicSessionDTO } from '../../../core/api/types';
+import { apiClient } from '../../../core/lib/axios';
 
 export const panicKeys = {
   activeSessions: () => ['panic', 'active'] as const,
@@ -19,8 +18,8 @@ async function fetchActivePanicSessions(): Promise<PanicSessionDTO[]> {
 export function useActivePanicSessions() {
   return useQuery({
     queryKey: panicKeys.activeSessions(),
-    queryFn:  fetchActivePanicSessions,
+    queryFn: fetchActivePanicSessions,
     refetchInterval: 30_000,
-    staleTime:       10_000,
+    staleTime: 10_000,
   });
 }

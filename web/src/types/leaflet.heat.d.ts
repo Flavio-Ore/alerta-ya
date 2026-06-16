@@ -1,4 +1,4 @@
-import type { Layer } from 'leaflet';
+import 'leaflet';
 
 declare module 'leaflet' {
   function heatLayer(

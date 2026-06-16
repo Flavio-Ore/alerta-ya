@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import type { Socket } from 'socket.io-client';
-
 import { getSocket } from '../../../core/lib/socket';
 import { panicKeys } from './panic.api';
 

@@ -1,25 +1,35 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
-
-import type { AdminUserDTO, AdminRole, CreateAdminUserInput, UpdateAdminUserInput } from '../../../core/api/types';
+import { X } from "lucide-react";
+import { useState } from "react";
+import type {
+  AdminRole,
+  AdminUserDTO,
+  CreateAdminUserInput,
+  UpdateAdminUserInput,
+} from "../../../core/api/types";
 
 interface Props {
-  mode: 'create' | 'edit';
+  mode: "create" | "edit";
   user?: AdminUserDTO;
   onSave: (input: CreateAdminUserInput | UpdateAdminUserInput) => void;
   onClose: () => void;
   isPending: boolean;
 }
 
-export function UserFormDialog({ mode, user, onSave, onClose, isPending }: Props) {
-  const [email, setEmail] = useState(user?.email ?? '');
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState(user?.displayName ?? '');
-  const [role, setRole] = useState<AdminRole>(user?.role ?? 'AUTHORITY');
+export function UserFormDialog({
+  mode,
+  user,
+  onSave,
+  onClose,
+  isPending,
+}: Props) {
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
+  const [role, setRole] = useState<AdminRole>(user?.role ?? "AUTHORITY");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (mode === 'create') {
+    if (mode === "create") {
       onSave({ email, password, displayName, role } as CreateAdminUserInput);
     } else {
       const input: UpdateAdminUserInput = {};
@@ -34,7 +44,7 @@ export function UserFormDialog({ mode, user, onSave, onClose, isPending }: Props
       <div className="bg-stitch-surface-container-low rounded-xl border border-stitch-surface-container-high w-full max-w-md mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-stitch-surface-container-high">
           <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-            {mode === 'create' ? 'Nueva autoridad' : 'Editar autoridad'}
+            {mode === "create" ? "Nueva autoridad" : "Editar autoridad"}
           </h2>
           <button
             onClick={onClose}
@@ -54,13 +64,13 @@ export function UserFormDialog({ mode, user, onSave, onClose, isPending }: Props
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              disabled={mode === 'edit'}
+              disabled={mode === "edit"}
               className="w-full bg-stitch-surface border border-stitch-surface-container-high px-3 py-2.5 text-sm text-white outline-none focus:border-stitch-primary disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="autoridad@ejemplo.pe"
             />
           </div>
 
-          {mode === 'create' && (
+          {mode === "create" && (
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-stitch-on-surface-variant font-label">
                 Contraseña temporal
@@ -100,8 +110,12 @@ export function UserFormDialog({ mode, user, onSave, onClose, isPending }: Props
               onChange={(e) => setRole(e.target.value as AdminRole)}
               className="w-full bg-stitch-surface border border-stitch-surface-container-high px-3 py-2.5 text-sm text-white outline-none focus:border-stitch-primary"
             >
-              <option value="AUTHORITY" className="bg-stitch-surface">Autoridad</option>
-              <option value="ADMIN" className="bg-stitch-surface">Administrador</option>
+              <option value="AUTHORITY" className="bg-stitch-surface">
+                Autoridad
+              </option>
+              <option value="ADMIN" className="bg-stitch-surface">
+                Administrador
+              </option>
             </select>
           </div>
 
@@ -118,7 +132,11 @@ export function UserFormDialog({ mode, user, onSave, onClose, isPending }: Props
               disabled={isPending}
               className="flex-1 bg-stitch-primary text-white py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-stitch-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {isPending ? 'Guardando…' : mode === 'create' ? 'Crear' : 'Guardar'}
+              {isPending
+                ? "Guardando…"
+                : mode === "create"
+                  ? "Crear"
+                  : "Guardar"}
             </button>
           </div>
         </form>

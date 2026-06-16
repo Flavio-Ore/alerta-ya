@@ -1,41 +1,59 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState } from "react";
 
-import { useIncidentsList } from '../../incidents/infrastructure/incidents.api';
+import { useIncidentsList } from "../../incidents/infrastructure/incidents.api";
 import {
   filterForExport,
   generateExport,
   getRecentExports,
   saveRecentExport,
+  type RecentExport,
   type ReportFormat,
   type ReportType,
-  type RecentExport,
-} from '../infrastructure/export.utils';
+} from "../infrastructure/export.utils";
 
-type DatePreset = 'week' | 'month' | 'quarter' | 'custom';
+type DatePreset = "week" | "month" | "quarter" | "custom";
 
 interface ReportTypeOption {
-  id:          ReportType | 'ai_patterns';
-  label:       string;
+  id: ReportType | "ai_patterns";
+  label: string;
   description: string;
-  disabled?:   boolean;
-  reason?:     string;
+  disabled?: boolean;
+  reason?: string;
 }
 
 const REPORT_TYPES: ReportTypeOption[] = [
-  { id: 'executive',     label: 'Resumen Ejecutivo',      description: 'KPIs agregados + distribución por tipo.' },
-  { id: 'detail',        label: 'Detalle por Incidente',  description: 'Tabla con todos los incidentes del período.' },
-  { id: 'ai_patterns',   label: 'Análisis de Patrones IA', description: 'Detección de patrones recurrentes.', disabled: true, reason: 'Requiere ML service' },
-  { id: 'form_responses', label: 'Respuestas del Formulario', description: 'Datos brutos del formulario por incidente.' },
+  {
+    id: "executive",
+    label: "Resumen Ejecutivo",
+    description: "KPIs agregados + distribución por tipo.",
+  },
+  {
+    id: "detail",
+    label: "Detalle por Incidente",
+    description: "Tabla con todos los incidentes del período.",
+  },
+  {
+    id: "ai_patterns",
+    label: "Análisis de Patrones IA",
+    description: "Detección de patrones recurrentes.",
+    disabled: true,
+    reason: "Requiere ML service",
+  },
+  {
+    id: "form_responses",
+    label: "Respuestas del Formulario",
+    description: "Datos brutos del formulario por incidente.",
+  },
 ];
 
 function presetRange(preset: DatePreset): { from: Date; to: Date } | null {
-  if (preset === 'custom') return null;
+  if (preset === "custom") return null;
   const to = new Date();
   to.setHours(23, 59, 59, 999);
   const from = new Date(to);
-  if (preset === 'week')    from.setDate(from.getDate() - 7);
-  if (preset === 'month')   from.setDate(from.getDate() - 30);
-  if (preset === 'quarter') from.setDate(from.getDate() - 90);
+  if (preset === "week") from.setDate(from.getDate() - 7);
+  if (preset === "month") from.setDate(from.getDate() - 30);
+  if (preset === "quarter") from.setDate(from.getDate() - 90);
   from.setHours(0, 0, 0, 0);
   return { from, to };
 }
@@ -44,19 +62,139 @@ function toInputDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default function ExportPage() {
+const ReportPreview = ({
+  count,
+  from,
+  to,
+  format,
+}: {
+  count: number;
+  from: string;
+  to: string;
+  format: ReportFormat;
+}) => {
+  return (
+    <div className="aspect-[1/1.4] bg-white rounded-sm shadow-xl overflow-hidden p-6 flex flex-col text-stitch-surface">
+      {/* PDF Header */}
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-stitch-primary-container flex items-center justify-center rounded">
+            <span
+              className="material-symbols-outlined text-white text-base"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              security
+            </span>
+          </div>
+          <span className="font-bold text-[10px] tracking-tighter text-stitch-primary-container">
+            ALERTAYA
+          </span>
+        </div>
+        <div className="text-[8px] text-right text-gray-400">
+          Documento ID: #AYA-{Date.now().toString(36).toUpperCase().slice(-8)}
+          <br />
+          Emitido: {new Date().toLocaleString("es-PE", { dateStyle: "short" })}
+        </div>
+      </div>
+
+      <h4 className="text-lg font-black uppercase mb-1">REPORTE ESTADÍSTICO</h4>
+      <p className="text-[10px] text-gray-500 mb-6 pb-3 border-b border-gray-200">
+        Inteligencia de Datos & Análisis de Seguridad Ciudadana — Lima
+      </p>
+
+      <div className="grid grid-cols-2 gap-6 mb-6">
+        <div>
+          <p className="text-[7px] font-bold text-gray-400 uppercase mb-1">
+            Período
+          </p>
+          <p className="text-[10px] font-bold text-gray-800">
+            {new Date(from).toLocaleDateString("es-PE")} —{" "}
+            {new Date(to).toLocaleDateString("es-PE")}
+          </p>
+        </div>
+        <div>
+          <p className="text-[7px] font-bold text-gray-400 uppercase mb-1">
+            Formato
+          </p>
+          <p className="text-[10px] font-bold text-gray-800">
+            {format.toUpperCase()}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-6">
+        <div className="p-2 bg-gray-50 rounded border border-gray-100">
+          <p className="text-[6px] font-bold text-gray-400 mb-0.5">
+            INCIDENTES
+          </p>
+          <p className="text-sm font-bold text-stitch-primary-container">
+            {count}
+          </p>
+        </div>
+        <div className="p-2 bg-gray-50 rounded border border-gray-100">
+          <p className="text-[6px] font-bold text-gray-400 mb-0.5">PÁGINAS</p>
+          <p className="text-sm font-bold text-stitch-primary-container">
+            {Math.max(1, Math.ceil(count / 25))}
+          </p>
+        </div>
+        <div className="p-2 bg-gray-50 rounded border border-gray-100">
+          <p className="text-[6px] font-bold text-gray-400 mb-0.5">
+            CONFIDENCIAL
+          </p>
+          <p className="text-sm font-bold text-green-600">SÍ</p>
+        </div>
+      </div>
+
+      <div className="flex-grow bg-gray-50 rounded border border-gray-100 flex items-end p-3 gap-1.5">
+        {[40, 60, 75, 90, 70, 50].map((h, i) => (
+          <div
+            key={i}
+            className="w-full rounded-t-sm"
+            style={{
+              height: `${h}%`,
+              backgroundColor:
+                i === 3
+                  ? "#1B3A6B"
+                  : i === 4
+                    ? "#F5A623"
+                    : "rgba(27,58,107,0.4)",
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="mt-4 pt-3 border-t-2 border-stitch-primary-container flex justify-between items-center">
+        <p className="text-[7px] font-bold text-stitch-primary-container">
+          CONFIDENCIAL
+        </p>
+        <p className="text-[7px] text-gray-400">Vista previa</p>
+      </div>
+    </div>
+  );
+};
+
+const ExportPage = () => {
   // status:'ALL' es CRÍTICO acá — el export debe poder incluir cerrados, en atención,
   // expirados. Si no pasamos 'ALL', el backend devuelve solo ACTIVE (default móvil).
-  const { data, isLoading } = useIncidentsList({ pageSize: 100, status: 'ALL' });
+  const { data, isLoading } = useIncidentsList({
+    pageSize: 100,
+    status: "ALL",
+  });
 
-  const [reportType, setReportType] = useState<ReportType>('executive');
-  const [format, setFormat] = useState<ReportFormat>('pdf');
-  const [datePreset, setDatePreset] = useState<DatePreset>('month');
-  const [from, setFrom] = useState<string>(() => toInputDate(presetRange('month')!.from));
-  const [to, setTo]     = useState<string>(() => toInputDate(presetRange('month')!.to));
+  const [reportType, setReportType] = useState<ReportType>("executive");
+  const [format, setFormat] = useState<ReportFormat>("pdf");
+  const [datePreset, setDatePreset] = useState<DatePreset>("month");
+  const [from, setFrom] = useState<string>(() =>
+    toInputDate(presetRange("month")!.from),
+  );
+  const [to, setTo] = useState<string>(() =>
+    toInputDate(presetRange("month")!.to),
+  );
   const [districts, setDistricts] = useState<string[]>([]);
   const [onlyWithFeedback, setOnlyWithFeedback] = useState(false);
-  const [recent, setRecent] = useState<RecentExport[]>(() => getRecentExports());
+  const [recent, setRecent] = useState<RecentExport[]>(() =>
+    getRecentExports(),
+  );
   const [generating, setGenerating] = useState(false);
 
   function applyPreset(preset: DatePreset) {
@@ -76,15 +214,17 @@ export default function ExportPage() {
   const filteredCount = useMemo(() => {
     if (!data) return 0;
     return filterForExport(data.items, {
-      from:             new Date(from),
-      to:               new Date(`${to}T23:59:59`),
+      from: new Date(from),
+      to: new Date(`${to}T23:59:59`),
       districts,
       onlyWithFeedback,
     }).length;
   }, [data, from, to, districts, onlyWithFeedback]);
 
   function toggleDistrict(d: string) {
-    setDistricts((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
+    setDistricts((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d],
+    );
   }
 
   async function handleGenerate() {
@@ -92,19 +232,24 @@ export default function ExportPage() {
     setGenerating(true);
     try {
       const filters = {
-        from:             new Date(from),
-        to:               new Date(`${to}T23:59:59`),
+        from: new Date(from),
+        to: new Date(`${to}T23:59:59`),
         districts,
         onlyWithFeedback,
       };
       const incidents = filterForExport(data.items, filters);
-      const result = await generateExport(incidents, filters, format, reportType);
+      const result = await generateExport(
+        incidents,
+        filters,
+        format,
+        reportType,
+      );
       const updated = saveRecentExport({
         filename: result.filename,
         format,
-        type:     reportType,
-        sizeKb:   result.sizeKb,
-        ts:       new Date().toISOString(),
+        type: reportType,
+        sizeKb: result.sizeKb,
+        ts: new Date().toISOString(),
       });
       setRecent(updated);
     } finally {
@@ -123,8 +268,8 @@ export default function ExportPage() {
           <div className="flex items-center gap-2 text-ay-text-sec text-[13px]">
             <span className="material-symbols-outlined text-base">lock</span>
             <p>
-              Todos los reportes son anónimos. No incluyen datos personales. Cumplimiento Ley N°
-              29733.
+              Todos los reportes son anónimos. No incluyen datos personales.
+              Cumplimiento Ley N° 29733.
             </p>
           </div>
         </div>
@@ -140,7 +285,9 @@ export default function ExportPage() {
                     key={opt.id}
                     option={opt}
                     selected={opt.id === reportType}
-                    onSelect={() => !opt.disabled && setReportType(opt.id as ReportType)}
+                    onSelect={() =>
+                      !opt.disabled && setReportType(opt.id as ReportType)
+                    }
                   />
                 ))}
               </div>
@@ -149,22 +296,24 @@ export default function ExportPage() {
             {/* Período */}
             <Card title="Período">
               <div className="flex justify-end gap-2 mb-5 flex-wrap">
-                {(['week', 'month', 'quarter', 'custom'] as DatePreset[]).map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => applyPreset(preset)}
-                    className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase transition-colors ${
-                      datePreset === preset
-                        ? 'bg-stitch-primary-container text-white'
-                        : 'bg-stitch-surface-container-low text-ay-text-sec hover:text-white'
-                    }`}
-                  >
-                    {preset === 'week' && 'Esta semana'}
-                    {preset === 'month' && 'Este mes'}
-                    {preset === 'quarter' && 'Último trimestre'}
-                    {preset === 'custom' && 'Personalizado'}
-                  </button>
-                ))}
+                {(["week", "month", "quarter", "custom"] as DatePreset[]).map(
+                  (preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => applyPreset(preset)}
+                      className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase transition-colors ${
+                        datePreset === preset
+                          ? "bg-stitch-primary-container text-white"
+                          : "bg-stitch-surface-container-low text-ay-text-sec hover:text-white"
+                      }`}
+                    >
+                      {preset === "week" && "Esta semana"}
+                      {preset === "month" && "Este mes"}
+                      {preset === "quarter" && "Último trimestre"}
+                      {preset === "custom" && "Personalizado"}
+                    </button>
+                  ),
+                )}
               </div>
               <div className="grid grid-cols-2 gap-6">
                 <DateInput
@@ -172,7 +321,7 @@ export default function ExportPage() {
                   value={from}
                   onChange={(v) => {
                     setFrom(v);
-                    setDatePreset('custom');
+                    setDatePreset("custom");
                   }}
                 />
                 <DateInput
@@ -180,7 +329,7 @@ export default function ExportPage() {
                   value={to}
                   onChange={(v) => {
                     setTo(v);
-                    setDatePreset('custom');
+                    setDatePreset("custom");
                   }}
                 />
               </div>
@@ -200,18 +349,23 @@ export default function ExportPage() {
                       className="flex items-center gap-2 px-3 py-1.5 bg-stitch-primary-container/40 border border-stitch-primary-container text-white text-xs rounded-full hover:bg-stitch-primary-container/60"
                     >
                       {d}
-                      <span className="material-symbols-outlined text-xs">close</span>
+                      <span className="material-symbols-outlined text-xs">
+                        close
+                      </span>
                     </button>
                   ))}
 
                   <DistrictPicker
-                    options={availableDistricts.filter((d) => !districts.includes(d))}
+                    options={availableDistricts.filter(
+                      (d) => !districts.includes(d),
+                    )}
                     onPick={toggleDistrict}
                   />
                 </div>
                 {availableDistricts.length === 0 && !isLoading && (
                   <p className="text-[11px] text-ay-text-sec mt-3">
-                    No hay distritos disponibles. Cargá data con el seed primero.
+                    No hay distritos disponibles. Cargá data con el seed
+                    primero.
                   </p>
                 )}
               </div>
@@ -241,15 +395,15 @@ export default function ExportPage() {
             <Card title="Formato de exportación">
               <div className="flex gap-4">
                 <FormatButton
-                  selected={format === 'pdf'}
-                  onClick={() => setFormat('pdf')}
+                  selected={format === "pdf"}
+                  onClick={() => setFormat("pdf")}
                   icon="picture_as_pdf"
                   title="PDF"
                   subtitle="Para MININTER"
                 />
                 <FormatButton
-                  selected={format === 'xlsx'}
-                  onClick={() => setFormat('xlsx')}
+                  selected={format === "xlsx"}
+                  onClick={() => setFormat("xlsx")}
                   icon="table_view"
                   title="Excel"
                   subtitle="Análisis avanzado"
@@ -264,13 +418,13 @@ export default function ExportPage() {
               className="w-full h-[52px] bg-stitch-primary-container text-white font-bold rounded-[10px] hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined">
-                {generating ? 'hourglass_empty' : 'file_download'}
+                {generating ? "hourglass_empty" : "file_download"}
               </span>
               {generating
-                ? 'Generando…'
+                ? "Generando…"
                 : filteredCount === 0
-                  ? 'Sin incidentes en el período seleccionado'
-                  : `Generar Reporte (${filteredCount} ${filteredCount === 1 ? 'incidente' : 'incidentes'})`}
+                  ? "Sin incidentes en el período seleccionado"
+                  : `Generar Reporte (${filteredCount} ${filteredCount === 1 ? "incidente" : "incidentes"})`}
             </button>
           </section>
 
@@ -281,7 +435,8 @@ export default function ExportPage() {
               title="Vista previa del reporte"
               badge={
                 <span className="px-3 py-1 bg-stitch-primary-container/20 text-stitch-primary text-[10px] font-bold uppercase rounded">
-                  {format.toUpperCase()} · {REPORT_TYPES.find((r) => r.id === reportType)?.label}
+                  {format.toUpperCase()} ·{" "}
+                  {REPORT_TYPES.find((r) => r.id === reportType)?.label}
                 </span>
               }
             >
@@ -308,12 +463,15 @@ export default function ExportPage() {
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="material-symbols-outlined text-ay-text-sec shrink-0">
-                          {r.format === 'pdf' ? 'description' : 'grid_on'}
+                          {r.format === "pdf" ? "description" : "grid_on"}
                         </span>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-white truncate">{r.filename}</p>
+                          <p className="text-xs font-bold text-white truncate">
+                            {r.filename}
+                          </p>
                           <p className="text-[10px] text-ay-text-sec">
-                            {new Date(r.ts).toLocaleString('es-PE')} · {r.sizeKb} KB
+                            {new Date(r.ts).toLocaleString("es-PE")} ·{" "}
+                            {r.sizeKb} KB
                           </p>
                         </div>
                       </div>
@@ -327,7 +485,7 @@ export default function ExportPage() {
       </div>
     </div>
   );
-}
+};
 
 // ── Subcomponentes ───────────────────────────────────────────────────────────
 function Card({
@@ -342,7 +500,9 @@ function Card({
   return (
     <div className="bg-ay-bg-dark2 rounded-[12px] border border-ay-border p-6">
       <div className="flex justify-between items-center mb-5">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wide">{title}</h3>
+        <h3 className="text-sm font-bold text-white uppercase tracking-wide">
+          {title}
+        </h3>
         {badge}
       </div>
       {children}
@@ -355,7 +515,7 @@ function ReportTypeCard({
   selected,
   onSelect,
 }: {
-  option:   ReportTypeOption;
+  option: ReportTypeOption;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -364,10 +524,10 @@ function ReportTypeCard({
       onClick={onSelect}
       className={`flex flex-col gap-2 p-4 rounded-lg cursor-pointer transition-colors ${
         option.disabled
-          ? 'bg-stitch-surface-container-low/50 cursor-not-allowed opacity-50'
+          ? "bg-stitch-surface-container-low/50 cursor-not-allowed opacity-50"
           : selected
-            ? 'bg-stitch-surface-container border border-stitch-primary-container'
-            : 'bg-stitch-surface-container-low border border-transparent hover:bg-stitch-surface-container-highest'
+            ? "bg-stitch-surface-container border border-stitch-primary-container"
+            : "bg-stitch-surface-container-low border border-transparent hover:bg-stitch-surface-container-highest"
       }`}
       title={option.reason}
     >
@@ -379,7 +539,9 @@ function ReportTypeCard({
           disabled={option.disabled}
           className="text-stitch-tertiary focus:ring-0 bg-transparent border-stitch-outline"
         />
-        <span className={`text-sm font-medium ${selected ? 'text-white' : 'text-ay-text-muted'}`}>
+        <span
+          className={`text-sm font-medium ${selected ? "text-white" : "text-ay-text-muted"}`}
+        >
           {option.label}
         </span>
       </div>
@@ -398,15 +560,19 @@ function DateInput({
   value,
   onChange,
 }: {
-  label:    string;
-  value:    string;
+  label: string;
+  value: string;
   onChange: (v: string) => void;
 }) {
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-bold text-ay-text-sec uppercase">{label}</label>
+      <label className="text-[10px] font-bold text-ay-text-sec uppercase">
+        {label}
+      </label>
       <div className="flex items-center gap-3 p-3 bg-stitch-surface-container-low rounded-lg">
-        <span className="material-symbols-outlined text-ay-text-sec text-sm">calendar_today</span>
+        <span className="material-symbols-outlined text-ay-text-sec text-sm">
+          calendar_today
+        </span>
         <input
           type="date"
           value={value}
@@ -463,16 +629,16 @@ function CheckboxRow({
   disabled,
   hint,
 }: {
-  label:     string;
-  checked:   boolean;
+  label: string;
+  checked: boolean;
   onChange?: (v: boolean) => void;
   disabled?: boolean;
-  hint?:     string;
+  hint?: string;
 }) {
   return (
     <label
       className={`flex items-start gap-3 cursor-pointer ${
-        disabled ? 'opacity-60 cursor-not-allowed' : ''
+        disabled ? "opacity-60 cursor-not-allowed" : ""
       }`}
     >
       <input
@@ -484,7 +650,9 @@ function CheckboxRow({
       />
       <div className="flex flex-col">
         <span className="text-sm text-ay-text-muted">{label}</span>
-        {hint && <span className="text-[10px] text-ay-text-sec mt-0.5">{hint}</span>}
+        {hint && (
+          <span className="text-[10px] text-ay-text-sec mt-0.5">{hint}</span>
+        )}
       </div>
     </label>
   );
@@ -498,9 +666,9 @@ function FormatButton({
   subtitle,
 }: {
   selected: boolean;
-  onClick:  () => void;
-  icon:     string;
-  title:    string;
+  onClick: () => void;
+  icon: string;
+  title: string;
   subtitle: string;
 }) {
   return (
@@ -508,8 +676,8 @@ function FormatButton({
       onClick={onClick}
       className={`flex-1 flex flex-col items-center gap-2 p-5 rounded-xl transition-all ${
         selected
-          ? 'bg-stitch-primary-container border-2 border-stitch-primary text-white'
-          : 'bg-stitch-surface-container-low border border-transparent text-ay-text-sec hover:bg-stitch-surface-container-high'
+          ? "bg-stitch-primary-container border-2 border-stitch-primary text-white"
+          : "bg-stitch-surface-container-low border border-transparent text-ay-text-sec hover:bg-stitch-surface-container-high"
       }`}
     >
       <span
@@ -526,94 +694,4 @@ function FormatButton({
   );
 }
 
-function ReportPreview({
-  count,
-  from,
-  to,
-  format,
-}: {
-  count:  number;
-  from:   string;
-  to:     string;
-  format: ReportFormat;
-}) {
-  return (
-    <div className="aspect-[1/1.4] bg-white rounded-sm shadow-xl overflow-hidden p-6 flex flex-col text-stitch-surface">
-      {/* PDF Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-stitch-primary-container flex items-center justify-center rounded">
-            <span
-              className="material-symbols-outlined text-white text-base"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              security
-            </span>
-          </div>
-          <span className="font-bold text-[10px] tracking-tighter text-stitch-primary-container">
-            ALERTAYA
-          </span>
-        </div>
-        <div className="text-[8px] text-right text-gray-400">
-          Documento ID: #AYA-{Date.now().toString(36).toUpperCase().slice(-8)}
-          <br />
-          Emitido: {new Date().toLocaleString('es-PE', { dateStyle: 'short' })}
-        </div>
-      </div>
-
-      <h4 className="text-lg font-black uppercase mb-1">REPORTE ESTADÍSTICO</h4>
-      <p className="text-[10px] text-gray-500 mb-6 pb-3 border-b border-gray-200">
-        Inteligencia de Datos & Análisis de Seguridad Ciudadana — Lima
-      </p>
-
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        <div>
-          <p className="text-[7px] font-bold text-gray-400 uppercase mb-1">Período</p>
-          <p className="text-[10px] font-bold text-gray-800">
-            {new Date(from).toLocaleDateString('es-PE')} —{' '}
-            {new Date(to).toLocaleDateString('es-PE')}
-          </p>
-        </div>
-        <div>
-          <p className="text-[7px] font-bold text-gray-400 uppercase mb-1">Formato</p>
-          <p className="text-[10px] font-bold text-gray-800">{format.toUpperCase()}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        <div className="p-2 bg-gray-50 rounded border border-gray-100">
-          <p className="text-[6px] font-bold text-gray-400 mb-0.5">INCIDENTES</p>
-          <p className="text-sm font-bold text-stitch-primary-container">{count}</p>
-        </div>
-        <div className="p-2 bg-gray-50 rounded border border-gray-100">
-          <p className="text-[6px] font-bold text-gray-400 mb-0.5">PÁGINAS</p>
-          <p className="text-sm font-bold text-stitch-primary-container">
-            {Math.max(1, Math.ceil(count / 25))}
-          </p>
-        </div>
-        <div className="p-2 bg-gray-50 rounded border border-gray-100">
-          <p className="text-[6px] font-bold text-gray-400 mb-0.5">CONFIDENCIAL</p>
-          <p className="text-sm font-bold text-green-600">SÍ</p>
-        </div>
-      </div>
-
-      <div className="flex-grow bg-gray-50 rounded border border-gray-100 flex items-end p-3 gap-1.5">
-        {[40, 60, 75, 90, 70, 50].map((h, i) => (
-          <div
-            key={i}
-            className="w-full rounded-t-sm"
-            style={{
-              height:          `${h}%`,
-              backgroundColor: i === 3 ? '#1B3A6B' : i === 4 ? '#F5A623' : 'rgba(27,58,107,0.4)',
-            }}
-          />
-        ))}
-      </div>
-
-      <div className="mt-4 pt-3 border-t-2 border-stitch-primary-container flex justify-between items-center">
-        <p className="text-[7px] font-bold text-stitch-primary-container">CONFIDENCIAL</p>
-        <p className="text-[7px] text-gray-400">Vista previa</p>
-      </div>
-    </div>
-  );
-}
+export default ExportPage;

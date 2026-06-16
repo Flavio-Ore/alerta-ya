@@ -1,17 +1,16 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-import { apiClient } from '../../../core/lib/axios';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AdminUserDTO,
-  ListAdminUsersResult,
   CreateAdminUserInput,
+  ListAdminUsersResult,
   UpdateAdminUserInput,
 } from '../../../core/api/types';
+import { apiClient } from '../../../core/lib/axios';
 
 export const adminKeys = {
-  all:     ['admin'] as const,
-  users:   () => [...adminKeys.all, 'users'] as const,
-  user:    (uid: string) => [...adminKeys.users(), uid] as const,
+  all: ['admin'] as const,
+  users: () => [...adminKeys.all, 'users'] as const,
+  user: (uid: string) => [...adminKeys.users(), uid] as const,
 };
 
 async function fetchUsers(query: {
@@ -50,7 +49,7 @@ export function useAdminUsersList(query: {
 } = {}) {
   return useQuery({
     queryKey: [...adminKeys.users(), query],
-    queryFn:  () => fetchUsers(query),
+    queryFn: () => fetchUsers(query),
     staleTime: 30_000,
   });
 }

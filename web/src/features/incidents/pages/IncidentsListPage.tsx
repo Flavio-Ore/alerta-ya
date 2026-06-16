@@ -1,29 +1,28 @@
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useNavigate, Link } from "@tanstack/react-router";
-
+import type {
+  IncidentStatus,
+  IncidentType,
+  Severity,
+} from "../../../core/api/types";
+import {
+  DATE_PRESETS,
+  daysAgoISO,
+  DISTRICT_OPTIONS,
+  FilterSelect,
+  SEVERITY_OPTIONS,
+  STATUS_OPTIONS,
+  todayISO,
+  TYPE_OPTIONS,
+} from "../../../core/components/ui/FilterSelect";
 import { useIncidentsList } from "../infrastructure/incidents.api";
 import { useIncidentLiveUpdates } from "../infrastructure/incidents.socket";
 import {
+  formatHHMM,
   incidentTypeLabel,
   severityLabel,
   statusLabel,
-  formatHHMM,
 } from "../presentation/utils/labels";
-import type {
-  Severity,
-  IncidentType,
-  IncidentStatus,
-} from "../../../core/api/types";
-import {
-  FilterSelect,
-  TYPE_OPTIONS,
-  SEVERITY_OPTIONS,
-  STATUS_OPTIONS,
-  DISTRICT_OPTIONS,
-  DATE_PRESETS,
-  todayISO,
-  daysAgoISO,
-} from "../../../core/components/ui/FilterSelect";
 
 // ── Estilos Stitch por severidad / status ─────────────────────────────────────
 const SEVERITY_BAR: Record<Severity, string> = {
@@ -43,14 +42,16 @@ const STATUS_PILL: Record<IncidentStatus, string> = {
     "bg-stitch-on-surface-variant/10 text-stitch-on-surface-variant border-stitch-on-surface-variant/30",
 };
 
-export default function IncidentsListPage() {
+const IncidentsListPage = () => {
   const navigate = useNavigate();
   useIncidentLiveUpdates();
 
   const [page, setPage] = useState(1);
   const [severityFilter, setSeverityFilter] = useState<Severity | "ALL">("ALL");
   const [typeFilter, setTypeFilter] = useState<IncidentType | "ALL">("ALL");
-  const [statusFilter, setStatusFilter] = useState<IncidentStatus | "ALL">("ALL");
+  const [statusFilter, setStatusFilter] = useState<IncidentStatus | "ALL">(
+    "ALL",
+  );
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [districtFilter, setDistrictFilter] = useState("ALL");
@@ -465,4 +466,5 @@ export default function IncidentsListPage() {
       </footer>
     </div>
   );
-}
+};
+export default IncidentsListPage;

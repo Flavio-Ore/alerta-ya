@@ -1,9 +1,8 @@
 import { create } from 'zustand';
-
-import { firebaseAuthRepository } from '../../infrastructure/firebase-auth.repository';
 import { loginUseCase } from '../../application/login.usecase';
 import { logoutUseCase } from '../../application/logout.usecase';
 import type { AuthUser } from '../../domain/entities/auth-user.entity';
+import { firebaseAuthRepository } from '../../infrastructure/firebase-auth.repository';
 
 interface AuthState {
   user: AuthUser | null;
@@ -17,10 +16,10 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user:             null,
-  isReady:          false,
+  user: null,
+  isReady: false,
   isAuthenticating: false,
-  error:            null,
+  error: null,
 
   signIn: async (email, password) => {
     set({ isAuthenticating: true, error: null });

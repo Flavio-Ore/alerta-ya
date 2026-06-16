@@ -1,4 +1,4 @@
-import type { StatsResponse } from '../../../core/api/types';
+import type { StatsResponse } from "../../../core/api/types";
 
 function KPICard({
   value,
@@ -24,7 +24,9 @@ function KPICard({
         {icon}
       </span>
       <div className="flex flex-col justify-center">
-        <span className={`text-3xl font-headline font-bold ${valueClass}`}>{value}</span>
+        <span className={`text-3xl font-headline font-bold ${valueClass}`}>
+          {value}
+        </span>
         <span className="text-[11px] text-stitch-on-surface-variant font-label uppercase tracking-wider">
           {label}
         </span>
@@ -32,14 +34,19 @@ function KPICard({
       {showTrend && (
         <span
           className={`ml-auto text-[12px] font-bold font-label flex items-center gap-0.5 ${
-            isPositive ? 'text-green-400' : 'text-stitch-error'
+            isPositive ? "text-green-400" : "text-stitch-error"
           }`}
         >
           <span className="material-symbols-outlined text-[14px]">
-            {isPositive ? 'trending_up' : 'trending_down'}
+            {isPositive ? "trending_up" : "trending_down"}
           </span>
-          {isPositive ? '+' : ''}{trend}%
-          {trendLabel && <span className="text-stitch-on-surface-variant font-normal ml-1">{trendLabel}</span>}
+          {isPositive ? "+" : ""}
+          {trend}%
+          {trendLabel && (
+            <span className="text-stitch-on-surface-variant font-normal ml-1">
+              {trendLabel}
+            </span>
+          )}
         </span>
       )}
     </div>
@@ -51,7 +58,10 @@ export function StatsKPIRow({ data }: { data: StatsResponse | undefined }) {
     return (
       <div className="grid grid-cols-5 gap-4">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="bg-[#141720] border border-[#2D3A4A] rounded-[12px] h-20 animate-pulse" />
+          <div
+            key={i}
+            className="bg-[#141720] border border-[#2D3A4A] rounded-[12px] h-20 animate-pulse"
+          />
         ))}
       </div>
     );
