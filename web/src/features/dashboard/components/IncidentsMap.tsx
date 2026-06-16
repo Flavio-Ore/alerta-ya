@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -22,18 +22,24 @@ interface Props {
 }
 
 export const IncidentsMap: FC<Props> = ({ incidents, panicSessions = [], onPinClick, showHeatmap = true }) => {
+  const [dark, setDark] = useState(false);
   return (
-    <MapContainer
-      center={LIMA_CENTER}
-      zoom={12}
-      scrollWheelZoom
-      className="h-full w-full"
-      style={{ background: '#0b0e14' }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-      />
+    <div className="relative h-full w-full">
+      <MapContainer
+        center={LIMA_CENTER}
+        zoom={12}
+        scrollWheelZoom
+        className="h-full w-full"
+        style={{ background: dark ? '#0b0e14' : '#f5f5f0' }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          url={
+            dark
+              ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+              : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+          }
+        />
       {showHeatmap && incidents.length > 1 && (
         <HeatmapLayer incidents={incidents} />
       )}
@@ -97,5 +103,14 @@ export const IncidentsMap: FC<Props> = ({ incidents, panicSessions = [], onPinCl
         </CircleMarker>,
       ])}
     </MapContainer>
+      <button
+        onClick={() => setDark(v => !v)}
+        className="absolute top-4 right-4 z-[1000] w-9 h-9 flex items-center justify-center rounded-full border bg-white text-gray-700 shadow-md transition-colors hover:bg-gray-100"
+        title={dark ? 'Mapa claro' : 'Mapa oscuro'}
+        aria-label="Alternar estilo de mapa"
+      >
+        {dark ? '☀️' : '🌙'}
+      </button>
+    </div>
   );
 };
