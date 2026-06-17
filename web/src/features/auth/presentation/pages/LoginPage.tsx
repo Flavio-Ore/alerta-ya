@@ -1,9 +1,19 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { Lock, Mail, Eye, EyeOff, ChevronRight, ShieldAlert, AlertTriangle } from 'lucide-react';
-
-import { useAuthStore } from '../stores/auth.store';
-import { firebaseAvailable, firebaseConfigMissing } from '../../../../core/firebase/client';
+import { useNavigate } from "@tanstack/react-router";
+import {
+  AlertTriangle,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  ShieldAlert,
+} from "lucide-react";
+import { useState, type FormEvent } from "react";
+import {
+  firebaseAvailable,
+  firebaseConfigMissing,
+} from "../../../../core/firebase/client";
+import { useAuthStore } from "../stores/auth.store";
 
 /**
  * Login del panel de autoridades.
@@ -17,15 +27,15 @@ import { firebaseAvailable, firebaseConfigMissing } from '../../../../core/fireb
  * Pendiente hasta que se confirme que el proyecto Firebase tiene Identity Platform.
  */
 
-export default function LoginPage() {
+const LoginPage = () => {
   const navigate = useNavigate();
   const signIn = useAuthStore((s) => s.signIn);
   const isAuthenticating = useAuthStore((s) => s.isAuthenticating);
   const error = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -33,7 +43,7 @@ export default function LoginPage() {
     clearError();
     try {
       await signIn(email, password);
-      await navigate({ to: '/dashboard' });
+      await navigate({ to: "/dashboard" });
     } catch {
       // El error ya quedó en el store
     }
@@ -81,15 +91,23 @@ export default function LoginPage() {
             <div className="flex items-start gap-3 text-xs text-ay-accent bg-ay-accent/10 border border-ay-accent/30 p-4">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
               <div className="space-y-2">
-                <p className="font-bold uppercase tracking-wide">Firebase no está configurado</p>
-                <p>Faltan variables de entorno en <code className="font-mono">web/.env</code>:</p>
+                <p className="font-bold uppercase tracking-wide">
+                  Firebase no está configurado
+                </p>
+                <p>
+                  Faltan variables de entorno en{" "}
+                  <code className="font-mono">web/.env</code>:
+                </p>
                 <ul className="font-mono text-[11px] space-y-0.5">
                   {firebaseConfigMissing.map((v) => (
                     <li key={v}>· {v}</li>
                   ))}
                 </ul>
                 <p className="pt-1">
-                  Copiá <code className="font-mono">web/.env.example</code> a <code className="font-mono">web/.env</code> y completá con las credenciales del proyecto Firebase, después reiniciá el dev server.
+                  Copiá <code className="font-mono">web/.env.example</code> a{" "}
+                  <code className="font-mono">web/.env</code> y completá con las
+                  credenciales del proyecto Firebase, después reiniciá el dev
+                  server.
                 </p>
               </div>
             </div>
@@ -97,7 +115,10 @@ export default function LoginPage() {
 
           <div className="space-y-5">
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-ay-text-secondary" size={18} />
+              <Mail
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-ay-text-secondary"
+                size={18}
+              />
               <input
                 type="email"
                 required
@@ -110,9 +131,12 @@ export default function LoginPage() {
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-ay-text-secondary" size={18} />
+              <Lock
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-ay-text-secondary"
+                size={18}
+              />
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 required
                 autoComplete="current-password"
                 placeholder="••••••••"
@@ -124,7 +148,9 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-ay-text-secondary hover:text-white"
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -142,14 +168,17 @@ export default function LoginPage() {
               disabled={isAuthenticating || !firebaseAvailable}
               className="w-full bg-ay-primary hover:bg-ay-primary/90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 flex items-center justify-center gap-2 transition-all group"
             >
-              {isAuthenticating ? 'Verificando…' : 'Acceder al panel'}
+              {isAuthenticating ? "Verificando…" : "Acceder al panel"}
               {!isAuthenticating && (
-                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                <ChevronRight
+                  size={18}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
               )}
             </button>
 
             <p className="text-center text-xs text-ay-text-secondary mt-6">
-              ¿Problemas de acceso?{' '}
+              ¿Problemas de acceso?{" "}
               <span className="text-ay-accent cursor-pointer hover:underline">
                 Contactá a soporte técnico
               </span>
@@ -164,4 +193,6 @@ export default function LoginPage() {
       </div>
     </div>
   );
-}
+};
+
+export default LoginPage;

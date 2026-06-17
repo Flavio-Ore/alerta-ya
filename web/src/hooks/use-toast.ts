@@ -1,6 +1,6 @@
 // Adapted from shadcn/ui — https://ui.shadcn.com/docs/components/toast
-import * as React from 'react';
 import type { ToastActionElement, ToastProps } from '@/components/ui/toast';
+import { useEffect, useState } from 'react';
 
 const TOAST_LIMIT = 1;
 const TOAST_REMOVE_DELAY = 1_000_000;
@@ -13,9 +13,9 @@ type ToasterToast = ToastProps & {
 };
 
 const actionTypes = {
-  ADD_TOAST:    'ADD_TOAST',
+  ADD_TOAST: 'ADD_TOAST',
   UPDATE_TOAST: 'UPDATE_TOAST',
-  DISMISS_TOAST:'DISMISS_TOAST',
+  DISMISS_TOAST: 'DISMISS_TOAST',
   REMOVE_TOAST: 'REMOVE_TOAST',
 } as const;
 
@@ -27,10 +27,10 @@ function genId() {
 
 type ActionType = typeof actionTypes;
 type Action =
-  | { type: ActionType['ADD_TOAST'];    toast: ToasterToast }
+  | { type: ActionType['ADD_TOAST']; toast: ToasterToast }
   | { type: ActionType['UPDATE_TOAST']; toast: Partial<ToasterToast> }
   | { type: ActionType['DISMISS_TOAST']; toastId?: ToasterToast['id'] }
-  | { type: ActionType['REMOVE_TOAST'];  toastId?: ToasterToast['id'] };
+  | { type: ActionType['REMOVE_TOAST']; toastId?: ToasterToast['id'] };
 
 interface State { toasts: ToasterToast[] }
 
@@ -81,8 +81,8 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
-  const [state, setState] = React.useState<State>(memoryState);
-  React.useEffect(() => {
+  const [state, setState] = useState<State>(memoryState);
+  useEffect(() => {
     listeners.push(setState);
     return () => {
       const idx = listeners.indexOf(setState);
@@ -92,4 +92,5 @@ function useToast() {
   return { ...state, toast, dismiss: (toastId?: string) => dispatch({ type: 'DISMISS_TOAST', toastId }) };
 }
 
-export { useToast, toast };
+export { toast, useToast };
+

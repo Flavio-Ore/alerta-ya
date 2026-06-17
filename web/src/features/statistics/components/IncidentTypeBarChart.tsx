@@ -1,18 +1,24 @@
-import type { IncidentType, StatsResponse } from '../../../core/api/types';
-import { incidentTypeLabel } from '../../../features/incidents/presentation/utils/labels';
+import type { IncidentType, StatsResponse } from "../../../core/api/types";
+import { incidentTypeLabel } from "../../../features/incidents/presentation/utils/labels";
 
 const TYPE_STYLE: Record<IncidentType, { bar: string; text: string }> = {
-  ROBBERY:    { bar: 'bg-[#EF4444]', text: 'text-[#EF4444]' },
-  ACCIDENT:   { bar: 'bg-[#F5A623]', text: 'text-[#F5A623]' },
-  SUSPICIOUS: { bar: 'bg-[#6B7A8D]', text: 'text-[#6B7A8D]' },
-  HARASSMENT: { bar: 'bg-[#FF9100]', text: 'text-[#FF9100]' },
-  EXTORTION:  { bar: 'bg-[#F5A623]/60', text: 'text-[#F5A623]/60' },
+  ROBBERY: { bar: "bg-[#EF4444]", text: "text-[#EF4444]" },
+  ACCIDENT: { bar: "bg-[#F5A623]", text: "text-[#F5A623]" },
+  SUSPICIOUS: { bar: "bg-[#6B7A8D]", text: "text-[#6B7A8D]" },
+  HARASSMENT: { bar: "bg-[#FF9100]", text: "text-[#FF9100]" },
+  EXTORTION: { bar: "bg-[#F5A623]/60", text: "text-[#F5A623]/60" },
 };
 
-const TYPE_ORDER: IncidentType[] = ['ROBBERY', 'ACCIDENT', 'SUSPICIOUS', 'HARASSMENT', 'EXTORTION'];
+const TYPE_ORDER: IncidentType[] = [
+  "ROBBERY",
+  "ACCIDENT",
+  "SUSPICIOUS",
+  "HARASSMENT",
+  "EXTORTION",
+];
 
 interface Props {
-  data: StatsResponse['byType'];
+  data: StatsResponse["byType"];
 }
 
 export function IncidentTypeBarChart({ data }: Props) {
@@ -26,7 +32,9 @@ export function IncidentTypeBarChart({ data }: Props) {
   if (sorted.length === 0) {
     return (
       <div className="bg-[#141720] border border-[#2D3A4A] rounded-[12px] p-5">
-        <h3 className="text-sm font-bold text-white mb-4">Reportes por tipo de incidente</h3>
+        <h3 className="text-sm font-bold text-white mb-4">
+          Reportes por tipo de incidente
+        </h3>
         <p className="text-xs text-stitch-on-surface-variant text-center py-8">
           Sin datos para el período seleccionado
         </p>
@@ -37,7 +45,9 @@ export function IncidentTypeBarChart({ data }: Props) {
   return (
     <div className="bg-[#141720] border border-[#2D3A4A] rounded-[12px] p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold text-white">Reportes por tipo de incidente</h3>
+        <h3 className="text-sm font-bold text-white">
+          Reportes por tipo de incidente
+        </h3>
         <span className="text-[10px] font-bold text-stitch-error uppercase tracking-wider font-label">
           [EN TIEMPO REAL]
         </span>
@@ -57,7 +67,9 @@ export function IncidentTypeBarChart({ data }: Props) {
                   style={{ width: `${Math.max(pct, 3)}%` }}
                 />
               </div>
-              <span className={`w-16 text-right text-xs font-bold ${style.text} shrink-0`}>
+              <span
+                className={`w-16 text-right text-xs font-bold ${style.text} shrink-0`}
+              >
                 {count} reportes
               </span>
             </div>

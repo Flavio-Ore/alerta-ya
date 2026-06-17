@@ -1,12 +1,11 @@
-import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import type { Socket } from 'socket.io-client';
-
+import type { PublicIncidentDTO } from '../../../core/api/types';
 import { getSocket } from '../../../core/lib/socket';
 import { useToast } from '../../../hooks/use-toast';
-import { incidentsKeys } from './incidents.api';
 import { incidentTypeLabel } from '../presentation/utils/labels';
-import type { PublicIncidentDTO } from '../../../core/api/types';
+import { incidentsKeys } from './incidents.api';
 
 /**
  * Hook que escucha eventos en vivo del backend (incident:new, incident:updated)
@@ -35,9 +34,9 @@ export function useIncidentLiveUpdates(): void {
           // HU008 H8-8: toast SOLO para incidentes críticos
           if (incident.severity === 'CRITICAL') {
             toast({
-              title:       `🚨 ${incidentTypeLabel[incident.type]}`,
+              title: `🚨 ${incidentTypeLabel[incident.type]}`,
               description: `${incident.district} · ${incident.reportCount} reportes`,
-              variant:     'destructive',
+              variant: 'destructive',
             });
           }
         };

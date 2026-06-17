@@ -1,10 +1,14 @@
-import { FC } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-
 import { useAuthStore } from "../../../features/auth/presentation/stores/auth.store";
 
 interface NavItem {
-  to: "/dashboard" | "/incidents" | "/predictions" | "/statistics" | "/export" | "/admin/users";
+  to:
+    | "/dashboard"
+    | "/incidents"
+    | "/predictions"
+    | "/statistics"
+    | "/export"
+    | "/admin/users";
   label: string;
   icon: string;
 }
@@ -17,7 +21,11 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/export", label: "Exportar", icon: "ios_share" },
 ];
 
-const ADMIN_NAV_ITEM: NavItem = { to: "/admin/users", label: "Administrar Autoridades", icon: "badge" };
+const ADMIN_NAV_ITEM: NavItem = {
+  to: "/admin/users",
+  label: "Administrar Autoridades",
+  icon: "badge",
+};
 
 function getInitials(email: string, displayName: string | null): string {
   if (displayName) {
@@ -31,7 +39,7 @@ function getInitials(email: string, displayName: string | null): string {
   return email.slice(0, 2).toUpperCase();
 }
 
-export const Sidebar: FC = () => {
+export const Sidebar = () => {
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
@@ -76,7 +84,7 @@ export const Sidebar: FC = () => {
       </nav>
 
       {/* Admin section — solo visible para ADMIN */}
-      {user?.role === 'ADMIN' && (
+      {user?.role === "ADMIN" && (
         <div className="px-3 mb-2">
           <div className="h-px bg-stitch-surface-container-high mb-2" />
           <Link
@@ -87,7 +95,9 @@ export const Sidebar: FC = () => {
                 "flex items-center gap-3 px-3 py-3 rounded-lg text-stitch-primary font-bold border-r-2 border-stitch-primary bg-stitch-surface-container/40 transition-colors",
             }}
           >
-            <span className="material-symbols-outlined">{ADMIN_NAV_ITEM.icon}</span>
+            <span className="material-symbols-outlined">
+              {ADMIN_NAV_ITEM.icon}
+            </span>
             <span className="font-label text-sm">{ADMIN_NAV_ITEM.label}</span>
           </Link>
         </div>
