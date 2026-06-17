@@ -222,7 +222,7 @@ export function FormInsightsPanel({ data }: Props) {
               </span>
             </div>
           </div>
-          <div className="text-right mt-2">
+          {/* <div className="text-right mt-2">
             <a
               href="#"
               onClick={(e) => e.preventDefault()}
@@ -233,7 +233,7 @@ export function FormInsightsPanel({ data }: Props) {
                 arrow_forward
               </span>
             </a>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
