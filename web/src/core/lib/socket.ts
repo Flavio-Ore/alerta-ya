@@ -1,7 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
-
-import { API_BASE_URL } from '../constants/api';
 import { firebaseAuthRepository } from '../../features/auth/infrastructure/firebase-auth.repository';
+import { API_BASE_URL } from '../constants/api';
 
 let socket: Socket | null = null;
 
@@ -23,11 +22,11 @@ export async function getSocket(): Promise<Socket> {
 
   if (!socket) {
     socket = io(API_BASE_URL, {
-      autoConnect:    false,
+      autoConnect: false,
       withCredentials: true,
-      auth:           { token },
-      reconnection:   true,
-      reconnectionDelay:    1000,
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000,
       reconnectionAttempts: 5,
     });
 

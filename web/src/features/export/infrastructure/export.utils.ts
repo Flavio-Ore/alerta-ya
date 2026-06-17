@@ -1,7 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-
 import type { PublicIncidentDTO } from '../../../core/api/types';
 import {
   incidentTypeLabel,
@@ -10,7 +9,7 @@ import {
 } from '../../incidents/presentation/utils/labels';
 
 export type ReportFormat = 'pdf' | 'xlsx';
-export type ReportType   = 'executive' | 'detail' | 'form_responses';
+export type ReportType = 'executive' | 'detail' | 'form_responses';
 
 // ── Carga el logo SVG y lo convierte a PNG dataURL para embedearlo en jspdf ──
 // Variante "light" (azules originales) para fondo blanco del PDF.
@@ -35,12 +34,12 @@ async function loadLogoForPdf(): Promise<typeof cachedLogo> {
     });
 
     // Render a canvas a alta resolución para que se vea nítido en PDF
-    const targetWidth  = 600;
+    const targetWidth = 600;
     const ratio = img.height / img.width;
     const targetHeight = Math.round(targetWidth * ratio);
 
     const canvas = document.createElement('canvas');
-    canvas.width  = targetWidth;
+    canvas.width = targetWidth;
     canvas.height = targetHeight;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
@@ -52,8 +51,8 @@ async function loadLogoForPdf(): Promise<typeof cachedLogo> {
 
     cachedLogo = {
       dataUrl: canvas.toDataURL('image/png'),
-      width:   targetWidth,
-      height:  targetHeight,
+      width: targetWidth,
+      height: targetHeight,
     };
     return cachedLogo;
   } catch {
@@ -63,20 +62,20 @@ async function loadLogoForPdf(): Promise<typeof cachedLogo> {
 
 export interface RecentExport {
   filename: string;
-  format:   ReportFormat;
-  type:     ReportType;
-  sizeKb:   number;
-  ts:       string;
+  format: ReportFormat;
+  type: ReportType;
+  sizeKb: number;
+  ts: string;
 }
 
 const RECENT_KEY = 'alertaya:recent-exports';
 
 // ── Filtros aplicables a los datos antes de exportar ──────────────────────────
 export interface ExportFilters {
-  from:               Date;
-  to:                 Date;
-  districts:          string[];           // vacío = todos
-  onlyWithFeedback:   boolean;
+  from: Date;
+  to: Date;
+  districts: string[];           // vacío = todos
+  onlyWithFeedback: boolean;
 }
 
 export function filterForExport(
@@ -103,7 +102,7 @@ async function buildExecutivePdf(
   const logo = await loadLogoForPdf();
   if (logo) {
     const logoHeight = 28;
-    const logoWidth  = (logo.width / logo.height) * logoHeight;
+    const logoWidth = (logo.width / logo.height) * logoHeight;
     doc.addImage(logo.dataUrl, 'PNG', 40, 38, logoWidth, logoHeight);
   } else {
     doc.setFillColor(27, 58, 107);
@@ -156,15 +155,15 @@ async function buildExecutivePdf(
   doc.text(filterStr, 300, 178);
 
   // Stats
-  const total    = incidents.length;
+  const total = incidents.length;
   const critical = incidents.filter((i) => i.severity === 'CRITICAL').length;
-  const closed   = incidents.filter((i) => i.status === 'CLOSED').length;
+  const closed = incidents.filter((i) => i.status === 'CLOSED').length;
   const resolution = total > 0 ? Math.round((closed / total) * 100) : 0;
 
   const cards: Array<[string, string, [number, number, number]]> = [
-    ['INCIDENTES',    String(total),         [27, 58, 107]],
-    ['CRÍTICOS',      String(critical),      [239, 68, 68]],
-    ['RESOLUCIÓN',    `${resolution}%`,      [34, 197, 94]],
+    ['INCIDENTES', String(total), [27, 58, 107]],
+    ['CRÍTICOS', String(critical), [239, 68, 68]],
+    ['RESOLUCIÓN', `${resolution}%`, [34, 197, 94]],
   ];
   cards.forEach((card, idx) => {
     const x = 40 + idx * 175;
@@ -193,13 +192,13 @@ async function buildExecutivePdf(
 
   autoTable(doc, {
     startY: 320,
-    head:   [['Tipo', 'Total', '% del período']],
-    body:   Object.entries(byType).map(([type, count]) => [
+    head: [['Tipo', 'Total', '% del período']],
+    body: Object.entries(byType).map(([type, count]) => [
       type,
       count,
       `${total > 0 ? Math.round((count / total) * 100) : 0}%`,
     ]),
-    styles:    { fontSize: 9 },
+    styles: { fontSize: 9 },
     headStyles: { fillColor: [27, 58, 107], textColor: 255 },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     margin: { left: 40, right: 40 },
@@ -234,7 +233,7 @@ async function buildDetailPdf(
   let titleStartX = 40;
   if (logo) {
     const logoHeight = 24;
-    const logoWidth  = (logo.width / logo.height) * logoHeight;
+    const logoWidth = (logo.width / logo.height) * logoHeight;
     doc.addImage(logo.dataUrl, 'PNG', 40, 32, logoWidth, logoHeight);
     titleStartX = 40 + logoWidth + 16;
   }
@@ -255,8 +254,8 @@ async function buildDetailPdf(
 
   autoTable(doc, {
     startY: 90,
-    head:   [['Fecha', 'Tipo', 'Severidad', 'Estado', 'Distrito', 'Reportes', 'Confirman', 'Feedback']],
-    body:   incidents.map((i) => [
+    head: [['Fecha', 'Tipo', 'Severidad', 'Estado', 'Distrito', 'Reportes', 'Confirman', 'Feedback']],
+    body: incidents.map((i) => [
       new Date(i.createdAt).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }),
       incidentTypeLabel[i.type],
       severityLabel[i.severity],
@@ -266,7 +265,7 @@ async function buildDetailPdf(
       i.confirmCount,
       i.feedback ?? '—',
     ]),
-    styles:    { fontSize: 8, cellPadding: 4 },
+    styles: { fontSize: 8, cellPadding: 4 },
     headStyles: { fillColor: [27, 58, 107], textColor: 255 },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     margin: { left: 40, right: 40 },
@@ -280,18 +279,18 @@ function buildXlsx(incidents: PublicIncidentDTO[], reportType: ReportType): XLSX
   const wb = XLSX.utils.book_new();
 
   const rows = incidents.map((i) => ({
-    Fecha:         new Date(i.createdAt).toLocaleString('es-PE'),
-    Tipo:          incidentTypeLabel[i.type],
-    Severidad:     severityLabel[i.severity],
-    Estado:        statusLabel[i.status],
-    Distrito:      i.district,
-    Latitud:       i.lat,
-    Longitud:      i.lng,
-    Reportes:      i.reportCount,
-    Confirman:     i.confirmCount,
-    Desestiman:    i.denyCount,
+    Fecha: new Date(i.createdAt).toLocaleString('es-PE'),
+    Tipo: incidentTypeLabel[i.type],
+    Severidad: severityLabel[i.severity],
+    Estado: statusLabel[i.status],
+    Distrito: i.district,
+    Latitud: i.lat,
+    Longitud: i.lng,
+    Reportes: i.reportCount,
+    Confirman: i.confirmCount,
+    Desestiman: i.denyCount,
     'Unidad asignada': i.unitAssigned ?? '',
-    Feedback:      i.feedback ?? '',
+    Feedback: i.feedback ?? '',
   }));
 
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -301,12 +300,12 @@ function buildXlsx(incidents: PublicIncidentDTO[], reportType: ReportType): XLSX
   if (reportType === 'executive') {
     const summary = [
       { Métrica: 'Total de incidentes', Valor: incidents.length },
-      { Métrica: 'Críticos',            Valor: incidents.filter((i) => i.severity === 'CRITICAL').length },
-      { Métrica: 'Moderados',           Valor: incidents.filter((i) => i.severity === 'MODERATE').length },
-      { Métrica: 'Bajos',               Valor: incidents.filter((i) => i.severity === 'LOW').length },
-      { Métrica: 'Activos',             Valor: incidents.filter((i) => i.status === 'ACTIVE').length },
-      { Métrica: 'En atención',         Valor: incidents.filter((i) => i.status === 'IN_ATTENTION').length },
-      { Métrica: 'Cerrados',            Valor: incidents.filter((i) => i.status === 'CLOSED').length },
+      { Métrica: 'Críticos', Valor: incidents.filter((i) => i.severity === 'CRITICAL').length },
+      { Métrica: 'Moderados', Valor: incidents.filter((i) => i.severity === 'MODERATE').length },
+      { Métrica: 'Bajos', Valor: incidents.filter((i) => i.severity === 'LOW').length },
+      { Métrica: 'Activos', Valor: incidents.filter((i) => i.status === 'ACTIVE').length },
+      { Métrica: 'En atención', Valor: incidents.filter((i) => i.status === 'IN_ATTENTION').length },
+      { Métrica: 'Cerrados', Valor: incidents.filter((i) => i.status === 'CLOSED').length },
       { Métrica: 'Distritos afectados', Valor: new Set(incidents.map((i) => i.district)).size },
     ];
     const wsSummary = XLSX.utils.json_to_sheet(summary);
@@ -319,9 +318,9 @@ function buildXlsx(incidents: PublicIncidentDTO[], reportType: ReportType): XLSX
 // ── API pública ───────────────────────────────────────────────────────────────
 export async function generateExport(
   incidents: PublicIncidentDTO[],
-  filters:   ExportFilters,
-  format:    ReportFormat,
-  type:      ReportType,
+  filters: ExportFilters,
+  format: ReportFormat,
+  type: ReportType,
 ): Promise<{ filename: string; sizeKb: number }> {
   const ts = new Date().toISOString().slice(0, 10);
   const typeLabel = type === 'executive' ? 'Resumen' : type === 'detail' ? 'Detalle' : 'Formularios';

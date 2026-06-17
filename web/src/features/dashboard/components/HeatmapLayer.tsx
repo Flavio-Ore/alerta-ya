@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
-import { useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet.heat';
-
-import type { PublicIncidentDTO, Severity } from '../../../core/api/types';
+import L from "leaflet";
+import "leaflet.heat";
+import { useEffect } from "react";
+import { useMap } from "react-leaflet";
+import type { PublicIncidentDTO, Severity } from "../../../core/api/types";
 
 const HEAT_WEIGHT: Record<Severity, number> = {
   CRITICAL: 1.0,
@@ -12,12 +11,12 @@ const HEAT_WEIGHT: Record<Severity, number> = {
 };
 
 const GRADIENT: Record<number, string> = {
-  0.0: '#22c55e',
-  0.3: '#8bc34a',
-  0.5: '#F5A623',
-  0.7: '#ff8a65',
-  0.9: '#ef4444',
-  1.0: '#dc2626',
+  0.0: "#22c55e",
+  0.3: "#8bc34a",
+  0.5: "#F5A623",
+  0.7: "#ff8a65",
+  0.9: "#ef4444",
+  1.0: "#dc2626",
 };
 
 interface Props {

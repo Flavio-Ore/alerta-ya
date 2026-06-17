@@ -1,18 +1,17 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-import { apiClient } from '../../../core/lib/axios';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
-  ListIncidentsResult,
   ListIncidentsQuery,
+  ListIncidentsResult,
   PublicIncidentDetailDTO,
   PublicIncidentDTO,
   UpdateStatusInput,
 } from '../../../core/api/types';
+import { apiClient } from '../../../core/lib/axios';
 
 export const incidentsKeys = {
-  all:    ['incidents'] as const,
-  lists:  () => [...incidentsKeys.all, 'list'] as const,
-  list:   (q: ListIncidentsQuery) => [...incidentsKeys.lists(), q] as const,
+  all: ['incidents'] as const,
+  lists: () => [...incidentsKeys.all, 'list'] as const,
+  list: (q: ListIncidentsQuery) => [...incidentsKeys.lists(), q] as const,
   detail: (id: string) => [...incidentsKeys.all, 'detail', id] as const,
 };
 
@@ -34,7 +33,7 @@ async function patchIncidentStatus(id: string, input: UpdateStatusInput): Promis
 export function useIncidentsList(query: ListIncidentsQuery = {}) {
   return useQuery({
     queryKey: incidentsKeys.list(query),
-    queryFn:  () => fetchIncidents(query),
+    queryFn: () => fetchIncidents(query),
     staleTime: 15_000,
   });
 }
@@ -42,8 +41,8 @@ export function useIncidentsList(query: ListIncidentsQuery = {}) {
 export function useIncidentDetail(id: string | undefined) {
   return useQuery({
     queryKey: incidentsKeys.detail(id ?? ''),
-    queryFn:  () => fetchIncidentById(id!),
-    enabled:  Boolean(id),
+    queryFn: () => fetchIncidentById(id!),
+    enabled: Boolean(id),
   });
 }
 

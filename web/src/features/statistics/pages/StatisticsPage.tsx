@@ -1,34 +1,33 @@
-import { useState } from 'react';
-
-import { useStats } from '../infrastructure/stats.api';
-import { StatsKPIRow } from '../components/StatsKPIRow';
-import { IncidentTypeBarChart } from '../components/IncidentTypeBarChart';
-import { DayHourHeatmap } from '../components/DayHourHeatmap';
-import { FormInsightsPanel } from '../components/FormInsightsPanel';
+import { useState } from "react";
+import type { IncidentType, StatsPeriod } from "../../../core/api/types";
 import {
-  FilterSelect,
   DISTRICT_OPTIONS,
+  FilterSelect,
   TYPE_OPTIONS,
-} from '../../../core/components/ui/FilterSelect';
-import { incidentTypeLabel } from '../../../features/incidents/presentation/utils/labels';
-import type { StatsPeriod, IncidentType } from '../../../core/api/types';
+} from "../../../core/components/ui/FilterSelect";
+import { incidentTypeLabel } from "../../../features/incidents/presentation/utils/labels";
+import { DayHourHeatmap } from "../components/DayHourHeatmap";
+import { FormInsightsPanel } from "../components/FormInsightsPanel";
+import { IncidentTypeBarChart } from "../components/IncidentTypeBarChart";
+import { StatsKPIRow } from "../components/StatsKPIRow";
+import { useStats } from "../infrastructure/stats.api";
 
 const PERIOD_PILLS: { label: string; value: StatsPeriod }[] = [
-  { label: 'Esta semana', value: '7d' },
-  { label: 'Este mes', value: '30d' },
-  { label: 'Últimos 3 meses', value: '12m' },
-  { label: 'Personalizado', value: 'all' },
+  { label: "Esta semana", value: "7d" },
+  { label: "Este mes", value: "30d" },
+  { label: "Últimos 3 meses", value: "12m" },
+  { label: "Personalizado", value: "all" },
 ];
 
-export default function StatisticsPage() {
-  const [period, setPeriod] = useState<StatsPeriod>('30d');
-  const [district, setDistrict] = useState('ALL');
-  const [type, setType] = useState<IncidentType | 'ALL'>('ALL');
+const StatisticsPage = () => {
+  const [period, setPeriod] = useState<StatsPeriod>("30d");
+  const [district, setDistrict] = useState("ALL");
+  const [type, setType] = useState<IncidentType | "ALL">("ALL");
 
   const query = {
     period,
-    ...(district !== 'ALL' && { district }),
-    ...(type !== 'ALL' && { type }),
+    ...(district !== "ALL" && { district }),
+    ...(type !== "ALL" && { type }),
   };
 
   const { data, isLoading, isError } = useStats(query);
@@ -38,7 +37,9 @@ export default function StatisticsPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-headline font-bold text-white">Estadísticas</h1>
+          <h1 className="text-2xl font-headline font-bold text-white">
+            Estadísticas
+          </h1>
           <p className="text-xs text-stitch-on-surface-variant mt-1 font-label">
             Panel de análisis táctico y operacional
           </p>
@@ -54,8 +55,8 @@ export default function StatisticsPage() {
               onClick={() => setPeriod(pill.value)}
               className={`px-4 py-2 rounded-lg text-xs font-bold font-label uppercase tracking-wider transition-all ${
                 period === pill.value
-                  ? 'bg-stitch-primary text-[#0D1B2A]'
-                  : 'text-stitch-on-surface-variant hover:text-white'
+                  ? "bg-stitch-primary text-[#0D1B2A]"
+                  : "text-stitch-on-surface-variant hover:text-white"
               }`}
             >
               {pill.label}
@@ -64,7 +65,9 @@ export default function StatisticsPage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 text-xs text-stitch-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px]">location_on</span>
+            <span className="material-symbols-outlined text-[16px]">
+              location_on
+            </span>
             <span className="font-bold">Lima · </span>
           </div>
           <FilterSelect
@@ -72,15 +75,16 @@ export default function StatisticsPage() {
             onChange={setDistrict}
             options={DISTRICT_OPTIONS.map((opt) => ({
               value: opt,
-              label: opt === 'ALL' ? 'Todos' : opt,
+              label: opt === "ALL" ? "Todos" : opt,
             }))}
           />
           <FilterSelect
             value={type}
-            onChange={(v) => setType(v as IncidentType | 'ALL')}
+            onChange={(v) => setType(v as IncidentType | "ALL")}
             options={TYPE_OPTIONS.map((opt) => ({
               value: opt,
-              label: opt === 'ALL' ? 'Tipo' : incidentTypeLabel[opt as IncidentType],
+              label:
+                opt === "ALL" ? "Tipo" : incidentTypeLabel[opt as IncidentType],
             }))}
             icon="category"
           />
@@ -101,7 +105,8 @@ export default function StatisticsPage() {
               Error al cargar estadísticas
             </p>
             <p className="text-xs text-stitch-on-surface-variant">
-              Verifica que el backend esté disponible y tengas permisos de autoridad
+              Verifica que el backend esté disponible y tengas permisos de
+              autoridad
             </p>
           </div>
         </div>
@@ -134,4 +139,5 @@ export default function StatisticsPage() {
       )}
     </div>
   );
-}
+};
+export default StatisticsPage;
