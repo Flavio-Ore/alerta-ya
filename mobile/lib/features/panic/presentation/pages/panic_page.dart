@@ -13,9 +13,11 @@ import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_constants.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
+import 'package:alertaya/core/storage/secure_storage_service.dart';
 import 'package:alertaya/core/widgets/alertaya_button.dart';
 import 'package:alertaya/core/widgets/alertaya_card.dart';
 import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart';
+import 'package:alertaya/features/panic/data/services/video_recording_service.dart';
 import 'package:alertaya/features/panic/presentation/bloc/panic_bloc.dart';
 import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 
@@ -157,13 +159,35 @@ class _PanicPageState extends State<PanicPage> {
       return;
     }
 
-    // Solicitar permiso de SMS para notificar al contacto de confianza.
-    // No bloqueamos la activación si se deniega — el pánico funciona igual,
-    // solo no se enviará el SMS automático.
+    // Permiso de SMS — no bloqueante, el pánico funciona sin él.
     await Permission.sms.request();
 
+    // Leer preferencia de video (Modo Combinado) desde SecureStorage.
+    final rawVideo =
+        await getIt<SecureStorageService>().read('panic_record_video');
+    bool recordVideo = rawVideo == 'true';
+
+    // Permiso de cámara solo si el usuario eligió Modo Combinado.
+    if (recordVideo) {
+      final camStatus = await Permission.camera.request();
+      if (!camStatus.isGranted) {
+        recordVideo = false;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Permiso de cámara denegado - activando sin grabación de video.',
+              ),
+              backgroundColor: AppColors.secondary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+
     if (!mounted) return;
-    // Leer prefs actuales del ProfileBloc — defaults true si aún no cargó (seguridad primero)
+    // Leer prefs actuales del ProfileBloc — defaults por seguridad si aún no cargó.
     final profileState = context.read<ProfileBloc>().state;
     final prefs = profileState is ProfileData ? profileState.preferences : null;
     context.read<PanicBloc>().add(
@@ -173,6 +197,7 @@ class _PanicPageState extends State<PanicPage> {
             pin: pin,
             recordAudio: prefs?.panicRecordAudio ?? true,
             alarmSound: prefs?.panicAlarmSound ?? true,
+            recordVideo: recordVideo,
           ),
         );
   }
@@ -322,7 +347,10 @@ class _IdleView extends StatelessWidget {
                     const SizedBox(height: 32),
                     _PanicHeroButton(onTap: onPanicTap),
                     const SizedBox(height: 32),
-                    const _ComingSoonHint(text: 'o usa el volumen físico 3 veces'),
+                    const _ComingSoonHint(
+                      text: 'o presiona el volumen 3 veces',
+                      isComingSoon: false,
+                    ),
                     const SizedBox(height: 6),
                     const _ComingSoonHint(text: 'o di tu palabra clave'),
                     const SizedBox(height: 24),
@@ -506,44 +534,51 @@ class _PanicStatusPillsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // GPS no es configurable — siempre activo.
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
         final prefs = state is ProfileData ? state.preferences : null;
-        final recordOn = prefs?.panicRecordAudio ?? true;
         final alarmOn = prefs?.panicAlarmSound ?? true;
-        return Row(
-          children: [
-            Expanded(
-              child: _PanicStatusPill(
-                icon: Icons.mic,
-                label: recordOn ? 'Grabar audio' : 'Sin grabar',
-                iconColor: AppColors.severityCritical,
-                enabled: recordOn,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _PanicStatusPill(
-                icon: alarmOn
-                    ? Icons.notifications_active_outlined
-                    : Icons.notifications_off_outlined,
-                label: alarmOn ? 'Alarma sonora' : 'Alarma muda',
-                iconColor: AppColors.secondary,
-                enabled: alarmOn,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: _PanicStatusPill(
-                icon: Icons.location_on,
-                label: 'GPS en vivo',
-                iconColor: AppColors.primary,
-                enabled: true,
-                locked: true,
-              ),
-            ),
-          ],
+        return FutureBuilder<String?>(
+          future: getIt<SecureStorageService>().read('panic_record_video'),
+          builder: (context, snap) {
+            final recordVideo = snap.data == 'true';
+            final recordAudio = (prefs?.panicRecordAudio ?? true) && !recordVideo;
+            return Row(
+              children: [
+                Expanded(
+                  child: _PanicStatusPill(
+                    icon: recordVideo ? Icons.videocam : Icons.mic,
+                    label: recordVideo
+                        ? 'Grabar video'
+                        : (recordAudio ? 'Grabar audio' : 'Sin grabar'),
+                    iconColor: AppColors.severityCritical,
+                    enabled: recordVideo || recordAudio,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _PanicStatusPill(
+                    icon: alarmOn
+                        ? Icons.notifications_active_outlined
+                        : Icons.notifications_off_outlined,
+                    label: alarmOn ? 'Alarma sonora' : 'Alarma muda',
+                    iconColor: AppColors.secondary,
+                    enabled: alarmOn,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: _PanicStatusPill(
+                    icon: Icons.location_on,
+                    label: 'GPS en vivo',
+                    iconColor: AppColors.primary,
+                    enabled: true,
+                    locked: true,
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -617,8 +652,9 @@ class _PanicStatusPill extends StatelessWidget {
 }
 
 class _ComingSoonHint extends StatelessWidget {
-  const _ComingSoonHint({required this.text});
+  const _ComingSoonHint({required this.text, this.isComingSoon = true});
   final String text;
+  final bool isComingSoon;
 
   @override
   Widget build(BuildContext context) {
@@ -634,23 +670,25 @@ class _ComingSoonHint extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: AppColors.secondary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            'PRÓXIMAMENTE',
-            style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.secondary,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
+        if (isComingSoon) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.secondary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              'PRÓXIMAMENTE',
+              style: AppTextStyles.labelSm.copyWith(
+                color: AppColors.secondary,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -748,7 +786,7 @@ class _TrustedContactStatusCard extends StatelessWidget {
                     const SizedBox(width: 12),
                     const Expanded(
                       child: Text(
-                        'Configurá un contacto de confianza',
+                        'Configura un contacto de confianza',
                         style: AppTextStyles.titleSm,
                       ),
                     ),
@@ -889,6 +927,14 @@ class _ActiveView extends StatelessWidget {
             Expanded(
               child: Stack(
                 children: [
+                  // Preview de cámara 1×1 (invisible) para anclar la textura
+                  // de CameraController mientras grabamos en Modo Combinado.
+                  if (state.recordVideo)
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      child: _CameraPreviewAnchor(),
+                    ),
                   // Overlay rojo sutil arriba.
                   Positioned.fill(
                     child: IgnorePointer(
@@ -921,7 +967,10 @@ class _ActiveView extends StatelessWidget {
                           ),
                           child: Column(
                             children: [
-                              if (state.recordAudio) ...[
+                              if (state.recordVideo) ...[
+                                const _VideoRecordingLabel(),
+                                const SizedBox(height: 16),
+                              ] else if (state.recordAudio) ...[
                                 const _AmplitudeVisualizer(),
                                 const SizedBox(height: 16),
                                 const _RecordingLabel(),
@@ -959,6 +1008,13 @@ class _ActiveView extends StatelessWidget {
                                 label: 'Bloque $block/$maxBlocks · 10 min',
                               ),
                               const _StatusChip(label: 'AES-256'),
+                            ],
+                            if (state.recordVideo) ...[
+                              _StatusChip(
+                                label:
+                                    'Clip ${state.currentVideoClip}/${AppConstants.panicMaxVideoClips} · 2 min',
+                              ),
+                              const _StatusChip(label: 'Video AES-256'),
                             ],
                             const _StatusChip(label: 'GPS en vivo'),
                             if (!state.alarmSound)
@@ -1050,6 +1106,78 @@ class _ActivePanicBannerState extends State<_ActivePanicBanner>
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Ancla la textura de la cámara en el árbol de widgets (1×1 px invisible).
+/// Necesario para que Android no destruya la Surface durante el pánico activo.
+class _CameraPreviewAnchor extends StatelessWidget {
+  const _CameraPreviewAnchor();
+
+  @override
+  Widget build(BuildContext context) =>
+      getIt<VideoRecordingService>().buildPreview();
+}
+
+class _VideoRecordingLabel extends StatefulWidget {
+  const _VideoRecordingLabel();
+
+  @override
+  State<_VideoRecordingLabel> createState() => _VideoRecordingLabelState();
+}
+
+class _VideoRecordingLabelState extends State<_VideoRecordingLabel>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        FadeTransition(
+          opacity: Tween<double>(begin: 0.3, end: 1.0).animate(_ctrl),
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: AppColors.severityCritical,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Icon(
+          Icons.videocam,
+          color: AppColors.severityCritical,
+          size: 18,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          'GRABANDO VIDEO',
+          style: AppTextStyles.labelMd.copyWith(
+            color: AppColors.severityCritical,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 3,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1177,7 +1305,7 @@ class _ActiveTrustedContactCard extends StatelessWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'Configurá uno desde Configuración Personal.',
+                        'Configura uno desde Configuración Personal.',
                         style: AppTextStyles.bodySm,
                       ),
                     ],
@@ -1342,7 +1470,7 @@ class _PinLockedCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Excediste los intentos de PIN. Llamá al 105 para que la policía te ayude.',
+            'Excediste los intentos de PIN. Llama al 105 para que la policía te ayude.',
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMd,
           ),

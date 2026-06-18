@@ -28,5 +28,5 @@ export async function stopPanic(
   }
 
   const updated = await deps.panicRepo.deactivate(input.sessionId, 'pin');
-  return toPanicDTO(updated, []);
+  return toPanicDTO(updated);
 }

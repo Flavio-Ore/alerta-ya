@@ -69,7 +69,10 @@ GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
 
       // Shell principal — bottom nav con 4 branches (mapa, alertas, riesgo, perfil)
       StatefulShellRoute.indexedStack(
-        builder: (context, state, shell) => AppShell(navigationShell: shell),
+        builder: (context, state, shell) => AppShell(
+          navigationShell: shell,
+          location: state.uri.path,
+        ),
         branches: [
           // Branch 0: Mapa
           StatefulShellBranch(

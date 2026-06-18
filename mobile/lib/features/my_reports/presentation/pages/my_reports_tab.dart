@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -586,30 +587,49 @@ class _EvidenceImage extends StatelessWidget {
   const _EvidenceImage({required this.url});
   final String url;
 
+  static const _size = 160.0;
+
+  static final _placeholder = Container(
+    width: _size,
+    height: _size,
+    color: AppColors.surfaceContainerHigh,
+    child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+  );
+
+  static final _errorWidget = Container(
+    width: _size,
+    height: _size,
+    color: AppColors.surfaceContainerHigh,
+    child: const Icon(
+      Icons.broken_image_outlined,
+      color: AppColors.outline,
+      size: 36,
+    ),
+  );
+
+  Future<String> _resolveUrl() async {
+    if (!url.startsWith('gs://')) return url;
+    return FirebaseStorage.instance.refFromURL(url).getDownloadURL();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
-      child: CachedNetworkImage(
-        imageUrl: url,
-        width: 160,
-        height: 160,
-        fit: BoxFit.cover,
-        placeholder: (_, __) => Container(
-          width: 160,
-          height: 160,
-          color: AppColors.surfaceContainerHigh,
-          child: const Center(
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-        errorWidget: (_, __, ___) => Container(
-          width: 160,
-          height: 160,
-          color: AppColors.surfaceContainerHigh,
-          child: const Icon(Icons.broken_image_outlined,
-              color: AppColors.outline, size: 36),
-        ),
+      child: FutureBuilder<String>(
+        future: _resolveUrl(),
+        builder: (_, snapshot) {
+          if (snapshot.hasError) return _errorWidget;
+          if (!snapshot.hasData) return _placeholder;
+          return CachedNetworkImage(
+            imageUrl: snapshot.data!,
+            width: _size,
+            height: _size,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => _placeholder,
+            errorWidget: (_, __, ___) => _errorWidget,
+          );
+        },
       ),
     );
   }

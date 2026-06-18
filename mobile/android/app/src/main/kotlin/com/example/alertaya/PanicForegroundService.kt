@@ -28,6 +28,7 @@ class PanicForegroundService : Service() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var elapsedSeconds = 0L
+    private var alarmSoundActive = true
     private var mediaPlayer: MediaPlayer? = null
 
     private val tickRunnable = object : Runnable {
@@ -52,11 +53,11 @@ class PanicForegroundService : Service() {
             ACTION_START -> {
                 try {
                     elapsedSeconds = intent.getLongExtra(EXTRA_ELAPSED, 0L)
-                    val alarmSound = intent.getBooleanExtra(EXTRA_ALARM_SOUND, true)
+                    alarmSoundActive = intent.getBooleanExtra(EXTRA_ALARM_SOUND, true)
                     handler.removeCallbacks(tickRunnable)
                     startForeground(NOTIFICATION_ID, buildNotification(elapsedSeconds))
                     handler.postDelayed(tickRunnable, 1000)
-                    if (alarmSound) startAlarmSound()
+                    if (alarmSoundActive) startAlarmSound()
                 } catch (e: SecurityException) {
                     // Permiso de micrófono no concedido — continuar sin FGS
                     stopSelf()
@@ -129,9 +130,14 @@ class PanicForegroundService : Service() {
         val ss = elapsedSeconds % 60
         val timeStr = "%02d:%02d:%02d".format(hh, mm, ss)
 
+        val (title, text) = when {
+            alarmSoundActive -> "🚨 ALARMA ACTIVA" to "Alertando · $timeStr · Toca para desactivar"
+            else             -> "🔴 EMERGENCIA SILENCIOSA" to "Grabando en segundo plano · $timeStr · Toca para desactivar"
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("🚨 MODO PÁNICO ACTIVO")
-            .setContentText("Grabando · $timeStr · Toca para desactivar")
+            .setContentTitle(title)
+            .setContentText(text)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

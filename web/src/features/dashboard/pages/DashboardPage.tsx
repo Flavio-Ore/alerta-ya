@@ -12,7 +12,11 @@ import {
 } from "../../incidents/presentation/utils/labels";
 import { IncidentsMap } from "../components/IncidentsMap";
 import { AiConfidenceBadge } from "../../../core/components/AiConfidenceBadge";
-import type { PublicIncidentDTO, Severity, IncidentType } from "../../../core/api/types";
+import type {
+  PublicIncidentDTO,
+  Severity,
+  IncidentType,
+} from "../../../core/api/types";
 import {
   FilterSelect,
   TYPE_OPTIONS,
@@ -20,11 +24,13 @@ import {
   DISTRICT_OPTIONS,
 } from "../../../core/components/ui/FilterSelect";
 
-function filterTypeLabel(value: typeof TYPE_OPTIONS[number]): string {
-  return value === 'ALL' ? 'Todos los tipos' : incidentTypeLabel[value as IncidentType];
+function filterTypeLabel(value: (typeof TYPE_OPTIONS)[number]): string {
+  return value === "ALL"
+    ? "Todos los tipos"
+    : incidentTypeLabel[value as IncidentType];
 }
-function filterSeverityLabel(value: typeof SEVERITY_OPTIONS[number]): string {
-  return value === 'ALL' ? 'Severidad' : severityLabel[value as Severity];
+function filterSeverityLabel(value: (typeof SEVERITY_OPTIONS)[number]): string {
+  return value === "ALL" ? "Severidad" : severityLabel[value as Severity];
 }
 
 const SEVERITY_BAR: Record<Severity, string> = {
@@ -175,22 +181,22 @@ export default function DashboardPage() {
   const [sortMode, setSortMode] = useState<SortMode>("triage");
 
   // ── Filter state ──────────────────────────────────────────────
-  const [typeFilter, setTypeFilter] = useState<IncidentType | 'ALL'>('ALL');
-  const [severityFilter, setSeverityFilter] = useState<Severity | 'ALL'>('ALL');
-  const [districtFilter, setDistrictFilter] = useState('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<IncidentType | "ALL">("ALL");
+  const [severityFilter, setSeverityFilter] = useState<Severity | "ALL">("ALL");
+  const [districtFilter, setDistrictFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const hasActiveFilters =
-    typeFilter !== 'ALL' ||
-    severityFilter !== 'ALL' ||
-    districtFilter !== 'ALL' ||
-    searchQuery !== '';
+    typeFilter !== "ALL" ||
+    severityFilter !== "ALL" ||
+    districtFilter !== "ALL" ||
+    searchQuery !== "";
 
   function clearFilters() {
-    setTypeFilter('ALL');
-    setSeverityFilter('ALL');
-    setDistrictFilter('ALL');
-    setSearchQuery('');
+    setTypeFilter("ALL");
+    setSeverityFilter("ALL");
+    setDistrictFilter("ALL");
+    setSearchQuery("");
   }
 
   // Métricas live-scoped: cuentan lo que necesita acción AHORA, no el histórico.
@@ -213,9 +219,11 @@ export default function DashboardPage() {
       isEffectivelyActive(i, now),
     );
     const filtered = items.filter((i) => {
-      if (typeFilter !== 'ALL' && i.type !== typeFilter) return false;
-      if (severityFilter !== 'ALL' && i.severity !== severityFilter) return false;
-      if (districtFilter !== 'ALL' && i.district !== districtFilter) return false;
+      if (typeFilter !== "ALL" && i.type !== typeFilter) return false;
+      if (severityFilter !== "ALL" && i.severity !== severityFilter)
+        return false;
+      if (districtFilter !== "ALL" && i.district !== districtFilter)
+        return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         const matches =
@@ -244,7 +252,6 @@ export default function DashboardPage() {
     <div className="flex-1 p-4 sm:p-6 overflow-y-auto lg:overflow-hidden flex flex-col gap-4 sm:gap-6">
       {/* Stat Cards Row — 2 columnas en móvil, 4 en desktop */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-
         <StatCard
           label="Activos ahora"
           value={isLoading ? "—" : stats.activeNow}
@@ -392,7 +399,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Filter bar with styled inputs */}
-          <div className="bg-stitch-surface-container-low rounded-[10px] border border-stitch-outline/20 p-4 flex flex-col gap-3">
+          {/* <div className="bg-stitch-surface-container-low rounded-[10px] border border-stitch-outline/20 p-4 flex flex-col gap-3">
             <div className="relative">
               <input
                 type="text"
@@ -447,7 +454,7 @@ export default function DashboardPage() {
               {filteredIncidents.length === 1 ? 'activo' : 'activos'}
               {hasActiveFilters && ' filtrados'}
             </div>
-          </div>
+          </div> */}
 
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             {isLoading && (
@@ -459,8 +466,8 @@ export default function DashboardPage() {
             {!isLoading && filteredIncidents.length === 0 && (
               <div className="text-center text-stitch-on-surface-variant py-8 text-xs">
                 {hasActiveFilters
-                  ? 'No hay incidentes activos con los filtros seleccionados.'
-                  : 'No hay incidentes activos en este momento.'}
+                  ? "No hay incidentes activos con los filtros seleccionados."
+                  : "No hay incidentes activos en este momento."}
               </div>
             )}
 

@@ -22,7 +22,6 @@ import { notificationsRouter } from "./features/notifications/presentation/notif
 import { adminRouter } from "./features/admin/presentation/admin.router";
 import { meRouter } from "./features/me/presentation/me.router";
 import { aiRouter } from "./features/ai/presentation/ai.router";
-import { statisticsRouter } from "./features/statistics/presentation/statistics.router";
 
 import { registerIncidentSocket } from "./sockets/incident.socket";
 import { registerSocketAuth } from "./sockets/auth.socket";
@@ -102,7 +101,6 @@ app.use("/me", meRouter);
 app.use("/ai", aiRouter);
 app.use("/internal/jobs", jobsRouter);
 app.use("/admin/users", adminRouter);
-app.use("/stats", statisticsRouter);
 
 // Error handler — siempre al final
 app.use(errorHandlerMiddleware);

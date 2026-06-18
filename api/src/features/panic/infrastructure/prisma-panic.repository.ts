@@ -63,4 +63,10 @@ export class PrismaPanicRepository implements PanicSessionRepository {
       data: { recordingUrls: { push: url } },
     });
   }
+
+  async addLocationPoint(sessionId: string, lat: number, lng: number): Promise<void> {
+    await this.prisma.panicLocationPoint.create({
+      data: { sessionId, lat, lng },
+    });
+  }
 }

@@ -89,6 +89,7 @@ class _RouteComparatorPageState extends State<RouteComparatorPage> {
           if (state is RouteLoaded) _centerOnRoutes(state);
         },
         builder: (context, state) => Scaffold(
+          resizeToAvoidBottomInset: false,
           backgroundColor: AppColors.surface,
           appBar: AppBar(
             backgroundColor: AppColors.surface,
@@ -103,27 +104,31 @@ class _RouteComparatorPageState extends State<RouteComparatorPage> {
               onPressed: () => context.pop(),
             ),
           ),
-          body: Column(
-            children: [
-              Expanded(
-                child: Stack(
-                  children: [
-                    _MapSection(
-                      mapController: _mapController,
-                      origin: widget.origin,
-                      state: state,
-                    ),
-                    _InputCard(
-                      isLoading: state is RouteLoading,
-                      onDestinationSelected: _onDestinationSelected,
-                      userLat: widget.origin.latitude,
-                      userLng: widget.origin.longitude,
-                    ),
-                  ],
+          body: MediaQuery.removeViewInsets(
+            context: context,
+            removeBottom: true,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _MapSection(
+                  mapController: _mapController,
+                  origin: widget.origin,
+                  state: state,
                 ),
-              ),
-              _BottomPanel(state: state),
-            ],
+                _InputCard(
+                  isLoading: state is RouteLoading,
+                  onDestinationSelected: _onDestinationSelected,
+                  userLat: widget.origin.latitude,
+                  userLng: widget.origin.longitude,
+                ),
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: _BottomPanel(state: state),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -145,7 +150,7 @@ class _MapSection extends StatelessWidget {
   final RouteState state;
 
   Color _polylineColor(RouteOptionEntity route) => switch (route.riskScore) {
-        <= 30 => AppColors.severityLow,
+        <= 30 => AppColors.success,
         <= 60 => AppColors.severityModerate,
         _ => AppColors.severityCritical,
       };
@@ -162,7 +167,7 @@ class _MapSection extends StatelessWidget {
         height: 44,
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: AppColors.primaryContainer,
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 2),
           ),
@@ -321,8 +326,10 @@ class _InputCardState extends State<_InputCard> {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.circle, color: AppColors.primary, size: 10),
-                      Container(width: 1, height: 20, color: AppColors.outline),
+                      const Icon(Icons.circle,
+                          color: AppColors.primaryContainer, size: 10),
+                      Container(
+                          width: 1, height: 20, color: AppColors.outlineVariant),
                       const Icon(Icons.location_on,
                           color: AppColors.severityCritical, size: 16),
                     ],
@@ -336,7 +343,7 @@ class _InputCardState extends State<_InputCard> {
                         const Text('Tu ubicación actual',
                             style: AppTextStyles.bodyMd),
                         const SizedBox(height: 4),
-                        const Divider(height: 1, color: AppColors.outline),
+                        const Divider(height: 1, color: AppColors.outlineVariant),
                         const SizedBox(height: 6),
                         Row(
                           children: [
@@ -349,7 +356,8 @@ class _InputCardState extends State<_InputCard> {
                                   hintStyle: AppTextStyles.bodyMd,
                                   border: InputBorder.none,
                                   isDense: true,
-                                  contentPadding: EdgeInsets.zero,
+                                  contentPadding:
+                                      EdgeInsets.symmetric(vertical: 4),
                                 ),
                                 style: AppTextStyles.bodyLg,
                                 textInputAction: TextInputAction.search,
@@ -383,8 +391,8 @@ class _InputCardState extends State<_InputCard> {
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 itemCount: _suggestions.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(height: 1, indent: 16, color: AppColors.outline),
+                separatorBuilder: (_, __) => const Divider(
+                    height: 1, indent: 16, color: AppColors.outlineVariant),
                 itemBuilder: (context, i) {
                   final s = _suggestions[i];
                   return ListTile(
@@ -420,6 +428,7 @@ class _BottomPanel extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
+        maintainBottomViewPadding: true,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           child: Column(
@@ -539,13 +548,15 @@ class _PanelContent extends StatelessWidget {
           child: FilledButton(
             onPressed: () {},
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.severityLow,
+              backgroundColor: AppColors.secondary,
+              foregroundColor: AppColors.onSecondary,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(28)),
             ),
             child: Text(
               'Iniciar Ruta ${loaded.selectedOption.label} — La más segura',
-              style: AppTextStyles.labelLg,
+              style: AppTextStyles.labelLg
+                  .copyWith(color: AppColors.onSecondary),
             ),
           ),
         ),
@@ -569,8 +580,9 @@ class _RouteCard extends StatelessWidget {
   final bool isSafest;
   final VoidCallback onTap;
 
+  // Colores para el panel oscuro — distintos a los del mapa.
   Color get _riskColor => switch (route.riskScore) {
-        <= 30 => AppColors.severityLow,
+        <= 30 => AppColors.success,
         <= 60 => AppColors.severityModerate,
         _ => AppColors.severityCritical,
       };
@@ -592,7 +604,7 @@ class _RouteCard extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(12),
               color: isSelected
-                  ? _riskColor.withValues(alpha: 0.06)
+                  ? _riskColor.withValues(alpha: 0.12)
                   : Colors.transparent,
             ),
             child: Column(
@@ -651,13 +663,13 @@ class _RouteCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.severityLow,
+                  color: AppColors.success,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   'MÁS SEGURA',
                   style: AppTextStyles.labelMd.copyWith(
-                    color: Colors.white,
+                    color: AppColors.surface,
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
                   ),

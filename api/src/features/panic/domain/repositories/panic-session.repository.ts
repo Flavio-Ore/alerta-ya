@@ -13,4 +13,5 @@ export interface PanicSessionRepository {
   deactivate(id: string, method: 'pin' | 'timeout'): Promise<PanicSession>;
   appendRecordingUrl(id: string, url: string): Promise<void>;
   findById(id: string): Promise<PanicSession | null>;
+  addLocationPoint(sessionId: string, lat: number, lng: number): Promise<void>;
 }

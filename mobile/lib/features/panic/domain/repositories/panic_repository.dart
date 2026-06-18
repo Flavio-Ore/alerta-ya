@@ -10,4 +10,10 @@ abstract class PanicRepository {
   });
 
   Future<Either<Failure, Unit>> stopSession(String sessionId);
+
+  Future<void> updateLocation({
+    required String sessionId,
+    required double lat,
+    required double lng,
+  });
 }
