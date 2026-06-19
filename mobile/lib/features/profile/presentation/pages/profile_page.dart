@@ -2,6 +2,7 @@ import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:alertaya/app/di/injection.dart';
@@ -11,6 +12,7 @@ import 'package:alertaya/core/services/fcm_service.dart';
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:alertaya/features/profile/domain/entities/user_profile_entity.dart';
 import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:alertaya/features/tutorial/presentation/service/tutorial_service.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -103,6 +105,21 @@ class _ProfileView extends StatelessWidget {
                   onTap: () {},
                 ),
               ],
+
+              const SizedBox(height: 8),
+
+              // ── Tutorial
+              const _SectionHeader(label: 'Tutorial'),
+              _SettingTile(
+                icon: Icons.help_outline_rounded,
+                label: 'Ver tutorial de nuevo',
+                onTap: () async {
+                  // Resetea el flag y navega al mapa; AppShell.didUpdateWidget
+                  // detectará el cambio de branch y disparará maybeStart.
+                  await getIt<TutorialService>().prepareManualRestart();
+                  if (context.mounted) context.go('/map');
+                },
+              ),
 
               const SizedBox(height: 8),
 

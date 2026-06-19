@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/widgets/alertaya_bottom_nav.dart';
+import 'package:alertaya/features/tutorial/presentation/keys/tutorial_keys.dart';
+import 'package:alertaya/features/tutorial/presentation/service/tutorial_service.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({
@@ -19,6 +22,33 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   DateTime? _lastBackPress;
+
+  @override
+  void initState() {
+    super.initState();
+    // Disparar el tutorial guiado tras el primer frame, solo si es branch 0 (mapa).
+    // TutorialService internamente espera 800ms adicionales para que MapPage
+    // y sus GlobalKeys estén completamente montados.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.navigationShell.currentIndex == 0) {
+        getIt<TutorialService>().maybeStart(context);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant AppShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Si volvemos al mapa desde otra pestaña (ej: después de "ver tutorial de nuevo"
+    // desde Perfil), verificar si el tutorial debe mostrarse de nuevo.
+    final arrivedAtMap = widget.navigationShell.currentIndex == 0 &&
+        oldWidget.navigationShell.currentIndex != 0;
+    if (arrivedAtMap) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) getIt<TutorialService>().maybeStart(context);
+      });
+    }
+  }
 
   // Mapeo shell index → bottom nav index (el 2 es pánico, no es branch)
   // Shell: 0=Mapa  1=Alertas  2=Riesgo  3=Perfil
@@ -96,6 +126,9 @@ class _AppShellState extends State<AppShell> {
           currentIndex: _toNavIndex(widget.navigationShell.currentIndex),
           onTap: (index) => _onNavTap(context, index),
           onPanicPressed: () => context.push('/panic'),
+          tutorialAlertsKey: getIt<TutorialKeys>().alerts,
+          tutorialPanicKey: getIt<TutorialKeys>().panic,
+          tutorialRiskKey: getIt<TutorialKeys>().risk,
         ),
       ),
     );
