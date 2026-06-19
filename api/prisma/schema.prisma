@@ -97,8 +97,24 @@ model Incident {
   aiVerified    Boolean?       // true si el reporte pasó el verificador ML
   reports       Report[]
   notifications Notification[]
+  statusHistory IncidentStatusHistory[]
 
   @@map("incidents")
+}
+
+// Historial de cambios de estado — auditoría inmutable
+model IncidentStatusHistory {
+  id         String         @id @default(uuid())
+  incidentId String
+  status     IncidentStatus
+  feedback   String?        // Mensaje adjunto al cambio
+  actorUid   String         // Firebase UID de quien actuó
+  actorRole  String         // 'AUTHORITY' | 'ADMIN'
+  changedAt  DateTime       @default(now())
+  incident   Incident       @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, changedAt])
+  @@map("incident_status_history")
 }
 
 // Reportes individuales — identidad nunca sale de aquí

@@ -37,12 +37,22 @@ export interface ReportEvidenceDTO {
   mediaUrls: string[];
 }
 
+export interface StatusHistoryEntryDTO {
+  id: string;
+  status: IncidentStatus;
+  feedback: string | null;
+  actorRole: string;
+  changedAt: string; // ISO
+}
+
 export interface PublicIncidentDetailDTO extends PublicIncidentDTO {
   weaponReports: number;
   injuredReports: number;
   stillHereReports: number;
   /** Evidencia agregada por reporte — nunca expone userId ni firebaseUid */
   evidence: ReportEvidenceDTO[];
+  /** Historial de cambios de estado — auditoría visible para autoridades */
+  statusHistory: StatusHistoryEntryDTO[];
 }
 
 export function toPublicDTO(incident: Incident): PublicIncidentDTO {

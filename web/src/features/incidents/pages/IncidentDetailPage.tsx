@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { Siren, History, CheckCircle2, Clock, ArrowLeft, AlertCircle, FileText, Image as ImageIcon, Music, ExternalLink } from 'lucide-react';
 
@@ -77,11 +77,15 @@ export default function IncidentDetailPage() {
   const updateStatus = useUpdateIncidentStatus();
 
   const [feedback, setFeedback] = useState('');
+  const prefillDoneRef = useRef<string | null>(null);
 
-  // Pre-cargar el feedback existente cuando el incidente carga o cambia.
-  // Así el autoridad puede editar el mensaje actual en vez de tipear todo de nuevo.
+  // Pre-cargar el feedback SOLO la primera vez que carga un incidente (por id).
+  // No volver a correr en refetches: onSuccess del mutate limpia el input.
   useEffect(() => {
-    setFeedback(incident?.feedback ?? '');
+    if (incident?.id && prefillDoneRef.current !== incident.id) {
+      prefillDoneRef.current = incident.id;
+      setFeedback(incident.feedback ?? '');
+    }
   }, [incident?.id, incident?.feedback]);
 
   if (isLoading) {
@@ -121,7 +125,7 @@ export default function IncidentDetailPage() {
     : 0;
 
   return (
-    <div className="flex-1 overflow-auto p-8 space-y-6 bg-stitch-surface">
+    <div className="flex-1 overflow-auto p-4 md:p-8 space-y-6 bg-stitch-surface">
       <button
         onClick={() => navigate({ to: '/incidents' })}
         className="flex items-center gap-2 text-xs text-ay-text-secondary hover:text-white transition-colors"
@@ -129,7 +133,7 @@ export default function IncidentDetailPage() {
         <ArrowLeft size={14} /> Volver a la lista
       </button>
 
-      <div className={`flex justify-between items-start p-6 border ${sev.bg} ${sev.border}`}>
+      <div className={`flex flex-col sm:flex-row justify-between items-start gap-3 p-4 md:p-6 border ${sev.bg} ${sev.border}`}>
         <div>
           <div className="flex items-center gap-3 mb-2">
             <span className={`text-xs font-black px-3 py-1 uppercase ${sev.text} ${sev.bg} border ${sev.border}`}>
@@ -173,7 +177,7 @@ export default function IncidentDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-ay-bg-dark2 p-6 border border-ay-border space-y-4">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-ay-text-secondary">
                 Inteligencia Ciudadana
@@ -233,7 +237,7 @@ export default function IncidentDetailPage() {
                       </p>
 
                       {chips.length > 0 && (
-                        <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+                        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                           {chips.map((f) => (
                             <div key={f.key} className="flex flex-col gap-1.5">
                               <dt className="text-[10px] uppercase tracking-wider text-ay-text-secondary">
@@ -304,29 +308,38 @@ export default function IncidentDetailPage() {
                 </p>
               </div>
 
-              {/* Evento 2 — si cambió de status (IN_ATTENTION o CLOSED) */}
-              {incident.status !== 'ACTIVE' && incident.updatedAt !== incident.createdAt && (
-                <div className="relative pl-8">
+              {/* Historial de cambios de estado — uno por entrada */}
+              {incident.statusHistory.map((entry) => (
+                <div key={entry.id} className="relative pl-8">
                   <div
                     className={`absolute left-0 top-1 h-4 w-4 rounded-full ${
-                      incident.status === 'IN_ATTENTION' ? 'bg-ay-accent' : 'bg-ay-low'
+                      entry.status === 'IN_ATTENTION'
+                        ? 'bg-ay-accent'
+                        : entry.status === 'CLOSED'
+                          ? 'bg-ay-low'
+                          : 'bg-ay-primary'
                     }`}
                   />
                   <p className="text-[11px] text-ay-text-secondary font-mono">
-                    {formatRelativeTime(incident.updatedAt)} · {formatHHMM(incident.updatedAt)}
+                    {formatRelativeTime(entry.changedAt)} · {formatHHMM(entry.changedAt)}
                   </p>
                   <p className="text-xs font-bold text-white uppercase">
-                    {incident.status === 'IN_ATTENTION'
+                    {entry.status === 'IN_ATTENTION'
                       ? '🚓 Marcado en atención'
-                      : '✓ Incidente cerrado'}
+                      : entry.status === 'CLOSED'
+                        ? '✓ Incidente cerrado'
+                        : '🔄 Reactivado'}
                   </p>
-                  {incident.feedback ? (
+                  <p className="text-[10px] text-ay-text-secondary mt-0.5">
+                    Por: {entry.actorRole === 'ADMIN' ? 'Administrador' : 'Autoridad'}
+                  </p>
+                  {entry.feedback ? (
                     <div className="mt-2 p-3 bg-ay-bg-dark border-l-2 border-ay-accent">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-ay-text-secondary mb-1">
                         Mensaje al ciudadano
                       </p>
                       <p className="text-xs text-white italic leading-relaxed">
-                        "{incident.feedback}"
+                        "{entry.feedback}"
                       </p>
                     </div>
                   ) : (
@@ -335,15 +348,7 @@ export default function IncidentDetailPage() {
                     </p>
                   )}
                 </div>
-              )}
-
-              {/* Nota — limitación conocida: backend no guarda historial */}
-              {incident.status !== 'ACTIVE' && (
-                <p className="text-[10px] text-ay-text-secondary italic pl-8 pt-2 border-t border-ay-border/30">
-                  Solo se muestra el último cambio. El historial completo de cambios queda
-                  registrado en auditoría interna.
-                </p>
-              )}
+              ))}
             </div>
           </div>
 
@@ -357,16 +362,14 @@ export default function IncidentDetailPage() {
             <textarea
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Mensaje opcional que se envía al reportante (máx. 200 caracteres)"
+              placeholder="Mensaje opcional para el historial (máx. 200 caracteres)"
               maxLength={200}
               rows={3}
               disabled={isClosed}
               className="w-full bg-ay-bg-dark border border-ay-border p-3 text-xs text-white outline-none focus:border-ay-primary disabled:opacity-50"
             />
             <p className="text-[10px] text-ay-text-secondary">
-              {incident.feedback
-                ? 'Editando el mensaje actual. Al guardar (Marcar en atención / Cerrar) se reemplaza el anterior.'
-                : 'Este mensaje se adjunta al cambio de estado y se envía como notificación al reportante.'}
+              Mensaje opcional al ciudadano. Se guarda en el historial junto con el cambio de estado.
             </p>
           </div>
 

@@ -6,7 +6,7 @@ import {
   redirect,
   RouterProvider,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Sidebar } from "./core/components/layout/Sidebar";
 import TopBar from "./core/components/layout/TopBar";
 import AdminUsersPage from "./features/admin/pages/AdminUsersPage";
@@ -25,11 +25,20 @@ function isAuthorized() {
 }
 
 function AuthLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen bg-stitch-surface overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <TopBar />
+      {/* Backdrop — solo mobile, cierra sidebar al tocar fuera */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+        <TopBar onMenuClick={() => setSidebarOpen((v) => !v)} />
         <main className="flex-1 overflow-hidden flex flex-col">
           <Outlet />
         </main>

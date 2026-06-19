@@ -36,6 +36,7 @@ const envSchema = z.object({
   GLM_API_KEY: z.string().optional(),
   GLM_API_URL: z.string().url().default('https://open.bigmodel.cn/api/paas/v4/chat/completions'),
   GLM_MODEL: z.string().default('glm-4-flash'),
+  GLM_TIMEOUT_MS: z.coerce.number().int().min(1000).default(60000),
 });
 
 const parsed = envSchema.safeParse(process.env);

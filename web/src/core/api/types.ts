@@ -42,11 +42,20 @@ export interface ReportEvidenceDTO {
   mediaUrls: string[];
 }
 
+export interface StatusHistoryEntryDTO {
+  id: string;
+  status: string;
+  feedback: string | null;
+  actorRole: string;
+  changedAt: string;
+}
+
 export interface PublicIncidentDetailDTO extends PublicIncidentDTO {
   weaponReports: number;
   injuredReports: number;
   stillHereReports: number;
   evidence: ReportEvidenceDTO[];
+  statusHistory: StatusHistoryEntryDTO[];
 }
 
 export interface ListIncidentsResult {

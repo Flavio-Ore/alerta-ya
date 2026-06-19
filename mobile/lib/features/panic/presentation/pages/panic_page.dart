@@ -1447,11 +1447,40 @@ class _DeactivateCard extends StatelessWidget {
   }
 }
 
-class _PinLockedCard extends StatelessWidget {
+class _PinLockedCard extends StatefulWidget {
   const _PinLockedCard();
 
   @override
+  State<_PinLockedCard> createState() => _PinLockedCardState();
+}
+
+class _PinLockedCardState extends State<_PinLockedCard> {
+  // ponytail: cooldown en UI. El bloqueo real persiste en storage (_kFailedAttempts),
+  // así que cerrar la app no lo saltea — solo reinicia esta espera. Subir a cooldown
+  // en el BLoC si se necesita que la cuenta atrás sobreviva al cierre.
+  Timer? _timer;
+  late int _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _remaining = AppConstants.panicPinRetryCooldownSeconds;
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _remaining = (_remaining - 1).clamp(0, _remaining));
+      if (_remaining == 0) _timer?.cancel();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final canRetry = _remaining == 0;
     return AlertaYaCard(
       color: AppColors.surfaceContainerLow,
       padding: const EdgeInsets.all(20),
@@ -1469,17 +1498,32 @@ class _PinLockedCard extends StatelessWidget {
             style: AppTextStyles.titleMd,
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Excediste los intentos de PIN. Llama al 105 para que la policía te ayude.',
+          Text(
+            canRetry
+                ? 'Podés reintentar tu PIN, o llama al 105 si estás en peligro.'
+                : 'Demasiados intentos. Esperá ${_remaining}s para reintentar tu PIN.',
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMd,
           ),
           const SizedBox(height: 20),
           AlertaYaButton(
-            label: 'Llamar al 105',
-            icon: Icons.local_police_outlined,
+            label: canRetry ? 'Reintentar PIN' : 'Reintentar en ${_remaining}s',
+            icon: Icons.lock_open_outlined,
             variant: AlertaYaButtonVariant.amberGlow,
+            onPressed: canRetry
+                ? () => context
+                    .read<PanicBloc>()
+                    .add(const PanicPinRetryRequested())
+                : null,
+          ),
+          const SizedBox(height: 10),
+          TextButton.icon(
             onPressed: () => _dial(context, '105'),
+            icon: const Icon(Icons.local_police_outlined, size: 18),
+            label: const Text('Llamar al 105'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.onSurfaceVariant,
+            ),
           ),
         ],
       ),

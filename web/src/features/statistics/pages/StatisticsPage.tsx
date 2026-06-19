@@ -92,7 +92,7 @@ export default function StatisticsPage() {
   return (
     <div className="flex-1 overflow-y-auto bg-stitch-surface text-stitch-on-surface p-6 flex flex-col gap-6">
       {/* Header honesto */}
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">
             Mapa de Riesgo — Histórico
@@ -115,7 +115,7 @@ export default function StatisticsPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Denuncias"
           value={totalCasos.toLocaleString("es-PE")}
@@ -135,9 +135,9 @@ export default function StatisticsPage() {
       </div>
 
       {/* Mapa + Ranking */}
-      <div className="grid grid-cols-3 gap-6 h-fit">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-fit">
         {/* Mapa de calor — tiles claros (intencional, contraste con panel oscuro) */}
-        <section className="col-span-2 bg-stitch-surface-container rounded-xl border border-stitch-outline-variant overflow-hidden relative">
+        <section className="xl:col-span-2 bg-stitch-surface-container rounded-xl border border-stitch-outline-variant overflow-hidden relative min-h-[400px]">
           <div className="absolute inset-0">
             <RiskHeatMap zones={zones} />
           </div>
@@ -201,7 +201,7 @@ export default function StatisticsPage() {
         <h2 className="text-xs font-bold text-stitch-on-surface-variant uppercase tracking-widest mb-4">
           Tipos de delito
         </h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           {types.map((t) => (
             <div key={t.type}>
               <div className="flex justify-between items-baseline mb-1">

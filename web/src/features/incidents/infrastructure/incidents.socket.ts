@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import type { Socket } from 'socket.io-client';
 import type { PublicIncidentDTO } from '../../../core/api/types';
+import { signalRefresh } from '../../../core/lib/refresh-signal';
 import { getSocket } from '../../../core/lib/socket';
 import { useToast } from '../../../hooks/use-toast';
 import { incidentTypeLabel } from '../presentation/utils/labels';
@@ -29,6 +30,7 @@ export function useIncidentLiveUpdates(): void {
         if (!mounted) return;
 
         const onNew = (incident: PublicIncidentDTO) => {
+          signalRefresh();
           qc.invalidateQueries({ queryKey: incidentsKeys.lists() });
 
           // HU008 H8-8: toast SOLO para incidentes críticos
@@ -42,6 +44,7 @@ export function useIncidentLiveUpdates(): void {
         };
 
         const onUpdated = (incident: PublicIncidentDTO) => {
+          signalRefresh();
           qc.invalidateQueries({ queryKey: incidentsKeys.lists() });
           qc.invalidateQueries({ queryKey: incidentsKeys.detail(incident.id) });
         };

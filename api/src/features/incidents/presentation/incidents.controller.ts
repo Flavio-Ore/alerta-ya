@@ -141,7 +141,13 @@ export async function patchIncidentStatus(
     const { status, feedback } = req.body as { status: IncidentStatus; feedback?: string };
 
     const dto = await updateIncidentStatus(
-      { incidentId: req.params['id']!, status, feedback },
+      {
+        incidentId: req.params['id']!,
+        status,
+        feedback,
+        actorUid: req.user!.uid,
+        actorRole: req.user!.role ?? 'AUTHORITY',
+      },
       { incidentRepo, reportRepo, notificationRepo },
     );
 

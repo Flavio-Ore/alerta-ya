@@ -51,11 +51,9 @@ export function useUpdateIncidentStatus() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateStatusInput }) =>
       patchIncidentStatus(id, input),
-    onSuccess: (data) => {
+    onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: incidentsKeys.lists() });
-      qc.setQueryData(incidentsKeys.detail(data.id), (prev: PublicIncidentDetailDTO | undefined) =>
-        prev ? { ...prev, ...data } : prev,
-      );
+      qc.invalidateQueries({ queryKey: incidentsKeys.detail(id) });
     },
   });
 }
