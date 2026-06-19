@@ -58,15 +58,15 @@ export interface ListIncidentsResult {
 export interface ListIncidentsQuery {
   severity?: Severity;
   district?: string;
-  since?:    string;
+  since?: string;
   /**
    * Filtro de status:
    *   - undefined → solo ACTIVE no expirados (default app móvil)
    *   - IncidentStatus → solo ese status
    *   - 'ALL' → todos los status (panel autoridad necesita esto para ver histórico)
    */
-  status?:   IncidentStatus | 'ALL';
-  page?:     number;
+  status?: IncidentStatus | 'ALL';
+  page?: number;
   pageSize?: number;
 }
 

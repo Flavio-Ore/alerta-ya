@@ -1,38 +1,35 @@
-import { FC } from 'react';
+import { type FC, useState } from 'react';
 import L from 'leaflet';
+import { Moon, Sun } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import type { PublicIncidentDTO, PanicSessionDTO, Severity } from '../../../core/api/types';
+import { colors } from '../../../core/constants/colors';
 import { incidentTypeLabel } from '../../incidents/presentation/utils/labels';
 import { HeatmapLayer } from './HeatmapLayer';
 
 const LIMA_CENTER: [number, number] = [-12.046374, -77.042793];
 
-// Colores vibrantes y saturados — resaltan tanto sobre tiles claros como oscuros.
 const SEVERITY_HEX: Record<Severity, string> = {
-  CRITICAL: '#ef4444',
-  MODERATE: '#f59e0b',
-  LOW:      '#22c55e',
+  CRITICAL: colors.severityCritical,
+  MODERATE: colors.severityModerate,
+  LOW: colors.severityLow,
 };
 
-// Velocidad del pulso por severidad: crítico late rápido, leve lento.
-const SEVERITY_SPEED: Record<Severity, string> = {
-  CRITICAL: 'ay-pin--fast',
-  MODERATE: '',
-  LOW:      'ay-pin--slow',
-};
-
-/** Marcador HTML con anillo pulsante. divIcon permite animar con CSS (CircleMarker no). */
+/** Marcador HTML: solo CRITICAL pulsa; el destacado aumenta de tamaño. */
 function pulseIcon(severity: Severity, highlighted: boolean): L.DivIcon {
   const color = SEVERITY_HEX[severity];
-  const classes = ['ay-pin', SEVERITY_SPEED[severity], highlighted ? 'ay-pin--hl' : '']
+  const classes = ['ay-pin', severity === 'CRITICAL' ? 'ay-pin--fast' : '', highlighted ? 'ay-pin--hl' : '']
     .filter(Boolean)
     .join(' ');
+  const criticalPulse = severity === 'CRITICAL'
+    ? '<span class="ay-pin__ping"></span>'
+    : '';
   return L.divIcon({
     className: 'ay-pin-wrap',
     html: `<span class="${classes}" style="--ay-pin-c:${color}">
-             <span class="ay-pin__ping"></span>
+             ${criticalPulse}
              <span class="ay-pin__dot"></span>
            </span>`,
     iconSize:   [44, 44],
@@ -57,8 +54,14 @@ interface Props {
 }
 
 const TILE_THEME = {
-  dark:  { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',  bg: '#0b0e14' },
-  light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', bg: '#e2e8f0' },
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    bg: colors.bgDark2,
+  },
+  light: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    bg: colors.bgGray,
+  },
 } as const;
 
 export const IncidentsMap: FC<Props> = ({
@@ -71,19 +74,22 @@ export const IncidentsMap: FC<Props> = ({
   highlightId,
   showHeatmap = true,
 }) => {
-  const tile = TILE_THEME[theme];
+  const [activeTheme, setActiveTheme] = useState<'dark' | 'light'>(theme);
+  const tile = TILE_THEME[activeTheme];
+
   return (
-    <MapContainer
-      center={center ?? LIMA_CENTER}
-      zoom={zoom ?? 12}
-      scrollWheelZoom
-      className="h-full w-full"
-      style={{ background: tile.bg }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-        url={tile.url}
-      />
+    <div className="relative h-full w-full">
+      <MapContainer
+        center={center ?? LIMA_CENTER}
+        zoom={zoom ?? 12}
+        scrollWheelZoom
+        className="h-full w-full"
+        style={{ background: tile.bg }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          url={tile.url}
+        />
       {showHeatmap && incidents.length > 1 && (
         <HeatmapLayer incidents={incidents} />
       )}
@@ -121,9 +127,9 @@ export const IncidentsMap: FC<Props> = ({
           center={[session.lat, session.lng]}
           radius={18}
           pathOptions={{
-            color:       '#ff1744',
+            color:       colors.severityCritical,
             weight:      2,
-            fillColor:   '#ff1744',
+            fillColor:   colors.severityCritical,
             fillOpacity: 0.20,
           }}
         />,
@@ -133,17 +139,28 @@ export const IncidentsMap: FC<Props> = ({
           center={[session.lat, session.lng]}
           radius={9}
           pathOptions={{
-            color:       '#ffffff',
+            color:       colors.textWhite,
             weight:      2,
-            fillColor:   '#ff1744',
+            fillColor:   colors.severityCritical,
             fillOpacity: 0.95,
           }}
         >
           <Tooltip direction="top" offset={[0, -12]} opacity={1} permanent>
-            <span style={{ fontWeight: 700, fontSize: 11, color: '#cc0000' }}>🚨 PÁNICO</span>
+            <span style={{ fontWeight: 700, fontSize: 11, color: colors.severityCritical }}>PÁNICO</span>
           </Tooltip>
         </CircleMarker>,
       ])}
-    </MapContainer>
+      </MapContainer>
+
+      <button
+        type="button"
+        onClick={() => setActiveTheme((current) => current === 'dark' ? 'light' : 'dark')}
+        className="absolute right-4 top-4 z-[1000] flex h-11 w-11 items-center justify-center rounded-full border border-stitch-outline-variant bg-stitch-surface-container text-stitch-on-surface transition-colors hover:bg-stitch-surface-container-high"
+        title={activeTheme === 'dark' ? 'Usar mapa claro' : 'Usar mapa oscuro'}
+        aria-label={activeTheme === 'dark' ? 'Usar mapa claro' : 'Usar mapa oscuro'}
+      >
+        {activeTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
+    </div>
   );
 };

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -7,42 +7,42 @@
 @layer base {
   /* ── AlertaYa dark dashboard theme → shadcn/ui CSS variables ──────── */
   :root {
-    --background:         222 16% 12%;   /* #1A1D23 ay-bg-dark        */
-    --foreground:         220 33% 96%;   /* #F4F6F9 ay-bg-gray        */
+    --background: 222 16% 12%; /* #1A1D23 ay-bg-dark        */
+    --foreground: 220 33% 96%; /* #F4F6F9 ay-bg-gray        */
 
-    --card:               226 18%  9%;   /* #141720 ay-bg-dark2       */
-    --card-foreground:    220 33% 96%;
+    --card: 226 18% 9%; /* #141720 ay-bg-dark2       */
+    --card-foreground: 220 33% 96%;
 
-    --popover:            226 18%  9%;
+    --popover: 226 18% 9%;
     --popover-foreground: 220 33% 96%;
 
-    --primary:            216 58% 26%;   /* #1B3A6B ay-primary        */
-    --primary-foreground:   0  0% 100%;
+    --primary: 216 58% 26%; /* #1B3A6B ay-primary        */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary:          210 25% 24%;   /* #2D3A4A ay-border         */
+    --secondary: 210 25% 24%; /* #2D3A4A ay-border         */
     --secondary-foreground: 220 33% 96%;
 
-    --muted:              210 25% 24%;
-    --muted-foreground:   210 14% 49%;   /* #6B7A8D ay-text-sec       */
+    --muted: 210 25% 24%;
+    --muted-foreground: 210 14% 49%; /* #6B7A8D ay-text-sec       */
 
-    --accent:              37 91% 54%;   /* #F5A623 ay-accent         */
-    --accent-foreground:  214 53% 11%;   /* #0D1B2A ay-dark           */
+    --accent: 37 91% 54%; /* #F5A623 ay-accent         */
+    --accent-foreground: 214 53% 11%; /* #0D1B2A ay-dark           */
 
-    --destructive:          0 84% 60%;   /* #EF4444 ay-critical       */
+    --destructive: 0 84% 60%; /* #EF4444 ay-critical       */
     --destructive-foreground: 0 0% 100%;
 
-    --border:             210 25% 24%;   /* #2D3A4A                   */
-    --input:              210 25% 24%;
-    --ring:               216 58% 26%;   /* #1B3A6B ay-primary        */
+    --border: 210 25% 24%; /* #2D3A4A                   */
+    --input: 210 25% 24%;
+    --ring: 216 58% 26%; /* #1B3A6B ay-primary        */
 
-    --radius: 0.875rem;                  /* 14px — card radius        */
+    --radius: 0.875rem; /* 14px — card radius        */
 
     /* Chart palette (recharts via shadcn) */
-    --chart-1: 37  91% 54%;   /* amber  — MODERADO           */
-    --chart-2: 142 71% 45%;   /* green  — LEVE               */
-    --chart-3:   0 84% 60%;   /* red    — CRÍTICO             */
-    --chart-4: 216 58% 45%;   /* blue   — primary light      */
-    --chart-5: 210 14% 49%;   /* slate  — muted series       */
+    --chart-1: 37 91% 54%; /* amber  — MODERADO           */
+    --chart-2: 142 71% 45%; /* green  — LEVE               */
+    --chart-3: 0 84% 60%; /* red    — CRÍTICO             */
+    --chart-4: 216 58% 45%; /* blue   — primary light      */
+    --chart-5: 210 14% 49%; /* slate  — muted series       */
   }
 
   * {
@@ -52,23 +52,27 @@
 
   body {
     @apply bg-stitch-surface text-stitch-on-surface;
-    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+    font-family: "Inter", "DM Sans", system-ui, sans-serif;
     font-weight: 400;
     margin: 0;
     padding: 0;
   }
 
   .font-headline {
-    font-family: 'Manrope', sans-serif;
+    font-family: "Manrope", sans-serif;
     letter-spacing: -0.02em;
   }
 
   .font-label {
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
   }
 
   .material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    font-variation-settings:
+      "FILL" 0,
+      "wght" 400,
+      "GRAD" 0,
+      "opsz" 24;
   }
 
   /* Pulse del Live Dashboard (Stitch) */
@@ -76,8 +80,12 @@
     animation: pulse-live-anim 2s infinite;
   }
   @keyframes pulse-live-anim {
-    0%   { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0.7); }
-    100% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+    0% {
+      box-shadow: 0 0 0 0px rgba(34, 197, 94, 0.7);
+    }
+    100% {
+      box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+    }
   }
 
   /* Pin animado del mapa de incidentes — anillo pulsante por severidad.
@@ -107,8 +115,17 @@
   }
 
   /* Scrollbar custom — incidentes activos */
-  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-  .custom-scrollbar::-webkit-scrollbar-thumb { background: #2D3A4A; border-radius: 10px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3c4a5c; }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #2d3a4a;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #3c4a5c;
+  }
 }

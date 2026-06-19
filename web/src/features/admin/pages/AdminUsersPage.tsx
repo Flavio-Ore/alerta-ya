@@ -1,25 +1,31 @@
-import { useMemo, useState, useCallback } from "react";
 import { Plus, RotateCcw } from "lucide-react";
-
-import {
-  useAdminUsersList,
-  useCreateAdminUser,
-  useUpdateAdminUser,
-  useDisableAdminUser,
-  useEnableAdminUser,
-} from "../infrastructure/admin.api";
-import { UserFormDialog } from "../components/UserFormDialog";
-import { UserDeleteDialog } from "../components/UserDeleteDialog";
+import { useCallback, useMemo, useState } from "react";
 import type {
-  AdminUserDTO,
   AdminRole,
+  AdminUserDTO,
   CreateAdminUserInput,
   UpdateAdminUserInput,
 } from "../../../core/api/types";
+import { UserDeleteDialog } from "../components/UserDeleteDialog";
+import { UserFormDialog } from "../components/UserFormDialog";
+import {
+  useAdminUsersList,
+  useCreateAdminUser,
+  useDisableAdminUser,
+  useEnableAdminUser,
+  useUpdateAdminUser,
+} from "../infrastructure/admin.api";
 
 const PAGE_SIZE = 20;
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("es-PE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 
-export default function AdminUsersPage() {
+const AdminUsersPage = () => {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<AdminRole | "ALL">("ALL");
   const [page, setPage] = useState(1);
@@ -361,12 +367,6 @@ export default function AdminUsersPage() {
       )}
     </div>
   );
-}
+};
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-PE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
+export default AdminUsersPage;

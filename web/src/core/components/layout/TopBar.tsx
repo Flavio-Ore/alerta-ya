@@ -1,5 +1,5 @@
-import { FC, useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
 const ROUTE_LABELS: Record<string, string> = {
   "/dashboard": "Mapa en Vivo",
@@ -15,7 +15,7 @@ function getCurrentLabel(pathname: string): string {
   return ROUTE_LABELS[pathname] ?? "Panel";
 }
 
-export const TopBar: FC = () => {
+const TopBar = () => {
   const routerState = useRouterState();
   const [secondsAgo, setSecondsAgo] = useState(0);
 
@@ -60,3 +60,5 @@ export const TopBar: FC = () => {
     </header>
   );
 };
+
+export default TopBar;

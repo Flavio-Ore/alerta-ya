@@ -1,6 +1,6 @@
-import { ComingSoon } from '../../../core/components/ComingSoon';
+import ComingSoon from "../../../core/components/ComingSoon";
 
-export default function PredictionsPage() {
+const PredictionsPage = () => {
   return (
     <ComingSoon
       title="Predicciones IA"
@@ -9,4 +9,6 @@ export default function PredictionsPage() {
       dependsOn="Microservicio ML (Random Forest + Prophet) — pendiente integración en api/."
     />
   );
-}
+};
+
+export default PredictionsPage;

@@ -1,10 +1,9 @@
 import {
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
+  signOut as firebaseSignOut,
+  signInWithEmailAndPassword,
   type User as FirebaseUser,
 } from 'firebase/auth';
-
 import { firebaseAuth, firebaseAvailable } from '../../../core/firebase/client';
 import type { AuthUser, AuthorityRole } from '../domain/entities/auth-user.entity';
 import type { AuthRepository } from '../domain/repositories/auth.repository';
@@ -29,8 +28,8 @@ async function mapFirebaseUser(user: FirebaseUser, forceRefresh = false): Promis
     : null;
 
   return {
-    uid:         user.uid,
-    email:       user.email ?? '',
+    uid: user.uid,
+    email: user.email ?? '',
     displayName: user.displayName,
     role,
   };
@@ -61,7 +60,7 @@ export class FirebaseAuthRepository implements AuthRepository {
     if (!firebaseAuth) {
       // Sin Firebase configurado, reportamos "sin usuario" para que isReady=true y la UI renderice
       callback(null);
-      return () => {};
+      return () => { };
     }
     return firebaseOnAuthStateChanged(firebaseAuth, async (firebaseUser) => {
       if (!firebaseUser) {
