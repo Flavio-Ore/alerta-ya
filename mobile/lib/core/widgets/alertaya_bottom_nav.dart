@@ -14,12 +14,18 @@ import 'package:alertaya/core/constants/app_text_styles.dart';
 ///   - Activo: `secondary` (ámbar). Inactivo: `outline`.
 ///   - Pánico: círculo elevado `tertiaryContainer` con borde de separación
 ///     en `surface` para destacarlo del glass.
+///
+/// [tutorialAlertsKey], [tutorialPanicKey] y [tutorialRiskKey] son opcionales:
+/// se usan para anclar el tutorial guiado a los ítems correspondientes.
 class AlertaYaBottomNav extends StatelessWidget {
   const AlertaYaBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,
     required this.onPanicPressed,
+    this.tutorialAlertsKey,
+    this.tutorialPanicKey,
+    this.tutorialRiskKey,
   });
 
   final int currentIndex;
@@ -27,6 +33,11 @@ class AlertaYaBottomNav extends StatelessWidget {
   /// 0=Mapa, 1=Alertas, 2=Pánico, 3=Riesgo, 4=Perfil
   final ValueChanged<int> onTap;
   final VoidCallback onPanicPressed;
+
+  /// Claves para anclar el tutorial guiado — opcionales.
+  final GlobalKey? tutorialAlertsKey;
+  final GlobalKey? tutorialPanicKey;
+  final GlobalKey? tutorialRiskKey;
 
   @override
   Widget build(BuildContext context) {
@@ -47,18 +58,27 @@ class AlertaYaBottomNav extends StatelessWidget {
                 isActive: currentIndex == 0,
                 onTap: () => onTap(0),
               ),
-              _NavItem(
-                icon: Icons.notifications_outlined,
-                label: 'Alertas',
-                isActive: currentIndex == 1,
-                onTap: () => onTap(1),
+              KeyedSubtree(
+                key: tutorialAlertsKey,
+                child: _NavItem(
+                  icon: Icons.notifications_outlined,
+                  label: 'Alertas',
+                  isActive: currentIndex == 1,
+                  onTap: () => onTap(1),
+                ),
               ),
-              _PanicButton(onPressed: onPanicPressed),
-              _NavItem(
-                icon: Icons.shield_outlined,
-                label: 'Riesgo',
-                isActive: currentIndex == 3,
-                onTap: () => onTap(3),
+              KeyedSubtree(
+                key: tutorialPanicKey,
+                child: _PanicButton(onPressed: onPanicPressed),
+              ),
+              KeyedSubtree(
+                key: tutorialRiskKey,
+                child: _NavItem(
+                  icon: Icons.shield_outlined,
+                  label: 'Riesgo',
+                  isActive: currentIndex == 3,
+                  onTap: () => onTap(3),
+                ),
               ),
               _NavItem(
                 icon: Icons.person_outline,

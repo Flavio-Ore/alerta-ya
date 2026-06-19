@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
+import 'package:alertaya/features/tutorial/presentation/keys/tutorial_keys.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/services/fcm_service.dart';
 import 'package:alertaya/core/services/photon_service.dart';
@@ -478,6 +479,7 @@ class _MapPageState extends State<MapPage> {
 
               // Overlay: búsqueda + riesgo de zona
               _SearchOverlay(
+                key: getIt<TutorialKeys>().search,
                 incidents: incidents,
                 userLat: _userLat,
                 userLng: _userLng,
@@ -514,6 +516,7 @@ class _MapPageState extends State<MapPage> {
               ),
               if (_showRecenterButton) const SizedBox(height: 12),
               _AnimatedReportFab(
+                key: getIt<TutorialKeys>().reportFab,
                 onPressed: () => context.push('/report/type'),
               ),
             ],
@@ -528,6 +531,7 @@ class _MapPageState extends State<MapPage> {
 
 class _SearchOverlay extends StatefulWidget {
   const _SearchOverlay({
+    super.key,
     required this.incidents,
     required this.userLat,
     required this.userLng,
@@ -1333,7 +1337,7 @@ class _SheetActionButton extends StatelessWidget {
 // ─── Animated report FAB ───────────────────────────────────────────────────────
 
 class _AnimatedReportFab extends StatefulWidget {
-  const _AnimatedReportFab({required this.onPressed});
+  const _AnimatedReportFab({super.key, required this.onPressed});
 
   final VoidCallback onPressed;
 
