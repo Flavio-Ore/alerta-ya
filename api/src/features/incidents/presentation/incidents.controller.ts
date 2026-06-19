@@ -15,12 +15,73 @@ import { PrismaNotificationRepository } from '../../notifications/infrastructure
 import { verifyReport } from '../infrastructure/ml.client';
 import { AppError } from '../../../core/errors/AppError';
 import { IncidentType, IncidentStatus } from '@prisma/client';
+import { getMessaging } from 'firebase-admin/messaging';
 const ZONE_CONFIRM_COOLDOWN = 30 * 60; // 30 minutos entre respuestas por zona
 
 const incidentRepo = new PrismaIncidentRepository(prisma);
 const reportRepo = new PrismaReportRepository(prisma);
 const notificationRepo = new PrismaNotificationRepository(prisma);
 const userLookup = new UserLookupService(prisma);
+
+/**
+ * Incrementa reputationScore del usuario usando Prisma atomic increment.
+ * Aplica floor en 0: si el score resultaría negativo, lo clampea a 0.
+ * Retorna el nuevo score.
+ */
+async function updateReputation(userId: string, delta: number): Promise<number> {
+  // Prisma no expone Math.max nativo — hacemos read-then-write sólo cuando delta es negativo
+  // para evitar que el score quede por debajo de 0. Para deltas positivos, increment directo.
+  if (delta >= 0) {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { reputationScore: { increment: delta } },
+      select: { reputationScore: true },
+    });
+    return updated.reputationScore;
+  }
+
+  // Para deltas negativos: necesitamos leer el score actual y clampear
+  const current = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { reputationScore: true },
+  });
+  const currentScore = current?.reputationScore ?? 0;
+  const newScore = Math.max(0, currentScore + delta);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { reputationScore: newScore },
+  });
+  return newScore;
+}
+
+/**
+ * Envía notificación push al usuario sobre su reputación.
+ * Fail-open: si no hay tokens o el envío falla, se logea y se continúa.
+ */
+async function sendFcmToUser(userId: string, title: string, body: string): Promise<void> {
+  const tokens = await prisma.deviceToken.findMany({
+    where: { userId },
+    select: { token: true },
+  });
+
+  if (tokens.length === 0) return;
+
+  const messaging = getMessaging();
+  await Promise.all(
+    tokens.map((t) =>
+      messaging
+        .send({
+          token: t.token,
+          notification: { title, body },
+          data: { type: 'reputation-update' },
+        })
+        .catch((err: unknown) =>
+          console.error(`[FCM] send failed for token ${t.token.slice(0, 8)}...:`, err),
+        ),
+    ),
+  );
+}
 
 export async function listIncidents(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -95,7 +156,7 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
         photoTakenAt: body.photoTakenAt ? new Date(body.photoTakenAt) : undefined,
         photoSource: body.photoSource,
       },
-      { incidentRepo, reportRepo, redis, verifyReport },
+      { incidentRepo, reportRepo, redis, verifyReport, updateReputation, sendFcmToUser },
     );
 
     console.log(

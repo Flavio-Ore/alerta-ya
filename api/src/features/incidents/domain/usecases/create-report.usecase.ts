@@ -6,6 +6,7 @@ import { ReportRepository } from '../repositories/report.repository';
 import { ReportFormData } from '../entities/report.entity';
 import { PublicIncidentDTO, toPublicDTO } from '../entities/incident.entity';
 import { evaluateThreshold } from '../../application/threshold.engine';
+import { computeReputationDelta } from '../../application/reputation';
 import { eventBus, IncidentEvents, ConfirmRequestPayload } from '../../../../core/events/event-bus';
 import { AppError } from '../../../../core/errors/AppError';
 import { isWithinLima, getDistrict, bucketCoord } from '../../../../core/utils/geo.utils';
@@ -45,6 +46,17 @@ export interface CreateReportDeps {
   redis: Redis;
   /** Opcional: si no se inyecta, el flujo sigue sin verificación (fail-open). */
   verifyReport?: VerifyReportPort;
+  /**
+   * Actualiza el reputationScore del usuario sumando `delta`.
+   * Fire-and-forget — errores se logean y no bloquean la respuesta.
+   * Retorna el nuevo score (útil para tests).
+   */
+  updateReputation?: (userId: string, delta: number) => Promise<number>;
+  /**
+   * Envía una notificación push al usuario por reputación.
+   * Fire-and-forget — errores se logean y no bloquean la respuesta.
+   */
+  sendFcmToUser?: (userId: string, title: string, body: string) => Promise<void>;
 }
 
 const WINDOW_20_MIN_SECONDS = 20 * 60;
@@ -169,6 +181,32 @@ export async function createReport(
   await Promise.all(orphaned.map((r) => deps.incidentRepo.linkReport(r.id, incident.id)));
 
   const dto = toPublicDTO(incident);
+
+  // Calcular y aplicar delta de reputación cuando ML emitió veredicto
+  if (ml !== null) {
+    const delta = computeReputationDelta(ml.verified, hasEvidence);
+    dto.reputationDelta = delta;
+
+    const fcmTitle = ml.verified
+      ? 'Reporte verificado ✓'
+      : 'Reporte marcado como sospechoso';
+    const fcmBody = ml.verified
+      ? `+${delta} puntos de reputación`
+      : `${delta} puntos de reputación`;
+
+    // Fire-and-forget — nunca bloquear la respuesta por estas operaciones secundarias
+    if (deps.updateReputation) {
+      deps.updateReputation(input.userId, delta).catch((err: unknown) =>
+        console.error('[REPUTATION] updateReputation failed:', err),
+      );
+    }
+    if (deps.sendFcmToUser) {
+      deps.sendFcmToUser(input.userId, fcmTitle, fcmBody).catch((err: unknown) =>
+        console.error('[REPUTATION] sendFcmToUser failed:', err),
+      );
+    }
+  }
+
   eventBus.emit(IncidentEvents.NEW, {
     incident: dto,
     reporterUserId: input.userId,
