@@ -1559,7 +1559,13 @@ class _PinDotsState extends State<_PinDots> {
     super.initState();
     widget.controller.addListener(_onChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _focusNode.requestFocus();
+      if (!mounted) return;
+      // Solo pedir foco si esta ruta es la activa; si PanicPage está detrás de
+      // Settings cuando el pánico se activa por volumen, el teclado no debe abrirse.
+      // El foco se pedirá cuando Settings haga pop y PanicPage sea la ruta actual.
+      if (ModalRoute.of(context)?.isCurrent == true) {
+        _focusNode.requestFocus();
+      }
     });
   }
 

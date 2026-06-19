@@ -268,7 +268,13 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<PanicBloc, PanicState>(
+      // Escuchar PanicActivating (no PanicActive) para redirigir antes de que
+      // _PinDots se monte, garantizando que PanicPage sea la ruta activa cuando
+      // llegue el estado PanicActive y se solicite el foco del PIN.
+      listenWhen: (_, curr) => curr is PanicActivating,
+      listener: (context, _) => context.go('/panic'),
+      child: Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -468,6 +474,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
             ],
           ),
         ],
+      ),
       ),
     );
   }
