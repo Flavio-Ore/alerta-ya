@@ -46,6 +46,8 @@ class VerifierPredictor:
         hour: int,
         day_of_week: int,
         report_count: int,
+        has_evidence: bool = False,
+        photo_age_minutes: Optional[float] = None,
     ) -> np.ndarray:
         b = self._bundle
         assert b is not None
@@ -67,6 +69,12 @@ class VerifierPredictor:
         for col, val in zip([f"type_{t}" for t in b["incident_types"]], type_arr[0]):
             row[col] = val
 
+        # Señales de evidencia — agregadas DESPUÉS de las features existentes para no romper v1
+        # has_evidence: 1.0 si el reporte incluye media, 0.0 si no
+        row["has_evidence"] = 1.0 if has_evidence else 0.0
+        # photo_age_minutes: clip [0, 999]; 999 = ausente (peor caso: sin foto o foto muy antigua)
+        row["photo_age_minutes"] = float(np.clip(photo_age_minutes, 0, 999)) if photo_age_minutes is not None else 999.0
+
         return pd.DataFrame([row])[b["feature_columns"]].values
 
     def verify(
@@ -80,6 +88,8 @@ class VerifierPredictor:
         hour: int,
         day_of_week: int,
         report_count: int = 1,
+        has_evidence: bool = False,
+        photo_age_minutes: Optional[float] = None,
     ) -> dict[str, Any]:
         """Devuelve {is_coherent, confidence, degraded}. Sin modelo → coherente neutro."""
         if not self.ready:
@@ -87,7 +97,10 @@ class VerifierPredictor:
 
         b = self._bundle
         assert b is not None
-        x = self._build_features(lat, lng, incident_type, weapon, injured, hour, day_of_week, report_count)
+        x = self._build_features(
+            lat, lng, incident_type, weapon, injured, hour, day_of_week, report_count,
+            has_evidence=has_evidence, photo_age_minutes=photo_age_minutes,
+        )
 
         ecod_anomaly = bool(b["ecod"].predict(x)[0] == 1)        # PyOD: 1 = outlier
         if_anomaly = bool(b["iforest"].predict(x)[0] == -1)      # sklearn: -1 = outlier

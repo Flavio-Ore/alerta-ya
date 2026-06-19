@@ -7,6 +7,8 @@ export interface MlVerifyInput {
   type: string;
   formData: Record<string, unknown>;
   userReputation: number;
+  hasEvidence: boolean;
+  photoAgeMinutes: number | null;
 }
 
 export interface MlVerifyResult {
@@ -32,6 +34,8 @@ export async function verifyReport(input: MlVerifyInput): Promise<MlVerifyResult
         type: input.type,
         form_data: input.formData,
         user_reputation: input.userReputation,
+        has_evidence: input.hasEvidence,
+        photo_age_minutes: input.photoAgeMinutes,
       }),
       signal: controller.signal,
     });

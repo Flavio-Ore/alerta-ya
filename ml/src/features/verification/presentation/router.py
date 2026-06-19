@@ -26,12 +26,14 @@ _predictor.load()
 
 
 class VerifyRequest(BaseModel):
-    report_id:       str
-    lat:             float
-    lng:             float
-    type:            str
-    form_data:       dict[str, Any] = Field(default_factory=dict)
-    user_reputation: float = 0.5
+    report_id:         str
+    lat:               float
+    lng:               float
+    type:              str
+    form_data:         dict[str, Any] = Field(default_factory=dict)
+    user_reputation:   float = 0.5
+    has_evidence:      bool = False
+    photo_age_minutes: float | None = None
 
 
 class VerifyResponse(BaseModel):
@@ -52,5 +54,7 @@ async def verify(req: VerifyRequest) -> VerifyResponse:
         hour=now.hour,
         day_of_week=now.weekday(),
         report_count=int(req.form_data.get("report_count", 1)),
+        has_evidence=req.has_evidence,
+        photo_age_minutes=req.photo_age_minutes,
     )
     return VerifyResponse(score=float(result["confidence"]), verified=bool(result["is_coherent"]))

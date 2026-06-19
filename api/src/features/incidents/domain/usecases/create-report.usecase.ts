@@ -34,6 +34,8 @@ export interface VerifyReportPort {
     type: IncidentType;
     formData: Record<string, unknown>;
     userReputation: number;
+    hasEvidence: boolean;
+    photoAgeMinutes: number | null;
   }): Promise<{ score: number; verified: boolean } | null>;
 }
 
@@ -123,6 +125,12 @@ export async function createReport(
     return dto;
   }
 
+  // Señales de evidencia derivadas en servidor (no provienen del cliente)
+  const hasEvidence = input.mediaUrls.length > 0;
+  const photoAgeMinutes = input.photoTakenAt
+    ? (Date.now() - input.photoTakenAt.getTime()) / 60_000
+    : null;
+
   // Verificación ML del reporte que dispara la publicación (fail-open: null si la IA falla/tarda)
   const ml = deps.verifyReport
     ? await deps.verifyReport({
@@ -132,6 +140,8 @@ export async function createReport(
         type: input.type,
         formData: input.formData as Record<string, unknown>,
         userReputation: 0.5,
+        hasEvidence,
+        photoAgeMinutes,
       })
     : null;
 
