@@ -28,6 +28,12 @@ export interface PublicIncidentDTO {
   aiScore?: number | null;
   /** true si el reporte pasó el verificador ML */
   aiVerified?: boolean | null;
+  /** Timestamp de la foto adjunta — null si no hay evidencia */
+  photoTakenAt?: string | null;
+  /** 'exif' | 'device_clock' — fuente del timestamp */
+  photoSource?: string | null;
+  /** Delta de reputación aplicado tras verificación — null hasta que B1 lo calcule */
+  reputationDelta?: number | null;
 }
 
 export interface ReportEvidenceDTO {
@@ -74,5 +80,8 @@ export function toPublicDTO(incident: Incident): PublicIncidentDTO {
     feedback: incident.feedback,
     aiScore: incident.aiScore,
     aiVerified: incident.aiVerified,
+    photoTakenAt: incident.photoTakenAt?.toISOString() ?? null,
+    photoSource: incident.photoSource ?? null,
+    reputationDelta: null,
   };
 }

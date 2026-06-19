@@ -75,6 +75,8 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
       type: IncidentType;
       formData: Record<string, unknown>;
       mediaUrls: string[];
+      photoTakenAt?: string;
+      photoSource?: 'exif' | 'device_clock';
     };
 
     console.log(
@@ -90,6 +92,8 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
         type: body.type,
         formData: body.formData,
         mediaUrls: body.mediaUrls ?? [],
+        photoTakenAt: body.photoTakenAt ? new Date(body.photoTakenAt) : undefined,
+        photoSource: body.photoSource,
       },
       { incidentRepo, reportRepo, redis, verifyReport },
     );

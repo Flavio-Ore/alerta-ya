@@ -10,6 +10,9 @@ export const createReportSchema = z.object({
   // El cliente sube primero, luego manda las URLs aquí
   // Acepta https:// (Cloudinary legacy) y gs:// (Firebase Storage)
   mediaUrls: z.array(z.string().min(1)).max(5).default([]),
+  // Evidencia fotográfica — opcional, nunca obligatoria
+  photoTakenAt: z.string().datetime({ offset: true }).optional(),
+  photoSource: z.enum(['exif', 'device_clock']).optional(),
 });
 
 export const listIncidentsQuerySchema = z.object({

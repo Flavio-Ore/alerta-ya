@@ -17,6 +17,8 @@ export interface CreateIncidentData {
   expiresAt: Date;
   aiScore?: number | null;
   aiVerified?: boolean | null;
+  photoTakenAt?: Date | null;
+  photoSource?: string | null;
 }
 
 export interface IncidentFilters {

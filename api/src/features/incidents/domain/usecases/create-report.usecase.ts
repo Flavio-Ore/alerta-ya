@@ -18,6 +18,8 @@ export interface CreateReportInput {
   type: IncidentType;
   formData: ReportFormData;
   mediaUrls: string[];
+  photoTakenAt?: Date;
+  photoSource?: string;
 }
 
 /**
@@ -143,6 +145,8 @@ export async function createReport(
     expiresAt,
     aiScore: ml?.score ?? null,
     aiVerified: ml?.verified ?? null,
+    photoTakenAt: input.photoTakenAt ?? null,
+    photoSource: input.photoSource ?? null,
   });
 
   const orphaned = await deps.reportRepo.findOrphanedNearby(
