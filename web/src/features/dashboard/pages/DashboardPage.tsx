@@ -1,44 +1,56 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-
-import { useIncidentsList } from '../../incidents/infrastructure/incidents.api';
-import { useIncidentLiveUpdates } from '../../incidents/infrastructure/incidents.socket';
-import { useActivePanicSessions } from '../../panic/infrastructure/panic.api';
-import { usePanicLiveUpdates } from '../../panic/infrastructure/panic.socket';
+import { useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import type {
+  IncidentType,
+  PublicIncidentDTO,
+  Severity,
+} from "../../../core/api/types";
 import {
+  DISTRICT_OPTIONS,
+  FilterSelect,
+  SEVERITY_OPTIONS,
+  TYPE_OPTIONS,
+} from "../../../core/components/ui/FilterSelect";
+import { useIncidentsList } from "../../incidents/infrastructure/incidents.api";
+import { useIncidentLiveUpdates } from "../../incidents/infrastructure/incidents.socket";
+import {
+  formatRelativeTime,
   incidentTypeLabel,
   severityLabel,
-  formatRelativeTime,
-} from '../../incidents/presentation/utils/labels';
-import { IncidentsMap } from '../components/IncidentsMap';
-import type { PublicIncidentDTO, Severity, IncidentType } from '../../../core/api/types';
-import {
-  FilterSelect,
-  TYPE_OPTIONS,
-  SEVERITY_OPTIONS,
-  DISTRICT_OPTIONS,
-} from '../../../core/components/ui/FilterSelect';
+} from "../../incidents/presentation/utils/labels";
+import { useActivePanicSessions } from "../../panic/infrastructure/panic.api";
+import { usePanicLiveUpdates } from "../../panic/infrastructure/panic.socket";
+import IncidentsMap from "../components/IncidentsMap";
 
-function filterTypeLabel(value: typeof TYPE_OPTIONS[number]): string {
-  return value === 'ALL' ? 'Todos los tipos' : incidentTypeLabel[value as IncidentType];
+function filterTypeLabel(value: (typeof TYPE_OPTIONS)[number]): string {
+  return value === "ALL"
+    ? "Todos los tipos"
+    : incidentTypeLabel[value as IncidentType];
 }
-function filterSeverityLabel(value: typeof SEVERITY_OPTIONS[number]): string {
-  return value === 'ALL' ? 'Severidad' : severityLabel[value as Severity];
+function filterSeverityLabel(value: (typeof SEVERITY_OPTIONS)[number]): string {
+  return value === "ALL" ? "Severidad" : severityLabel[value as Severity];
 }
 
 const SEVERITY_BAR: Record<Severity, string> = {
-  CRITICAL: 'border-stitch-error',
-  MODERATE: 'border-stitch-tertiary',
-  LOW:      'border-green-500',
+  CRITICAL: "border-stitch-error",
+  MODERATE: "border-stitch-tertiary",
+  LOW: "border-green-500",
 };
 
 const SEVERITY_BADGE: Record<Severity, string> = {
-  CRITICAL: 'bg-stitch-error/10 text-stitch-error border-stitch-error/20',
-  MODERATE: 'bg-stitch-tertiary/10 text-stitch-tertiary border-stitch-tertiary/20',
-  LOW:      'bg-green-500/10 text-green-400 border-green-500/20',
+  CRITICAL: "bg-stitch-error/10 text-stitch-error border-stitch-error/20",
+  MODERATE:
+    "bg-stitch-tertiary/10 text-stitch-tertiary border-stitch-tertiary/20",
+  LOW: "bg-green-500/10 text-green-400 border-green-500/20",
 };
 
-function IncidentCard({ incident, onClick }: { incident: PublicIncidentDTO; onClick: () => void }) {
+function IncidentCard({
+  incident,
+  onClick,
+}: {
+  incident: PublicIncidentDTO;
+  onClick: () => void;
+}) {
   return (
     <article
       className={`bg-stitch-surface-container-low rounded-xl overflow-hidden border-l-4 ${SEVERITY_BAR[incident.severity]} flex flex-col p-4 gap-3`}
@@ -60,7 +72,9 @@ function IncidentCard({ incident, onClick }: { incident: PublicIncidentDTO; onCl
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-stitch-on-surface-variant">
-        <span>{incident.reportCount} reportes · {incident.confirmCount} confirman</span>
+        <span>
+          {incident.reportCount} reportes · {incident.confirmCount} confirman
+        </span>
       </div>
 
       <button
@@ -80,11 +94,11 @@ function StatCard({
   valueClass,
   badge,
 }: {
-  label:      string;
-  value:      string | number;
-  unit:       string;
+  label: string;
+  value: string | number;
+  unit: string;
   valueClass: string;
-  badge?:     string;
+  badge?: string;
 }) {
   return (
     <div className="bg-stitch-surface-container-low p-5 rounded-xl relative">
@@ -92,7 +106,9 @@ function StatCard({
         {label}
       </p>
       <div className="flex items-baseline gap-2">
-        <span className={`text-3xl font-headline font-bold ${valueClass}`}>{value}</span>
+        <span className={`text-3xl font-headline font-bold ${valueClass}`}>
+          {value}
+        </span>
         <span className="text-xs text-stitch-on-surface-variant">{unit}</span>
       </div>
       {badge && (
@@ -104,67 +120,80 @@ function StatCard({
   );
 }
 
-export default function DashboardPage() {
+const DashboardPage = () => {
   const navigate = useNavigate();
   useIncidentLiveUpdates();
   usePanicLiveUpdates();
   const { data: panicData } = useActivePanicSessions();
   const panicSessions = panicData ?? [];
-  const { data, isLoading } = useIncidentsList({ pageSize: 100, status: 'ALL' });
+  const { data, isLoading } = useIncidentsList({
+    pageSize: 100,
+    status: "ALL",
+  });
 
   // ── Filter state ──────────────────────────────────────────────
-  const [typeFilter, setTypeFilter] = useState<IncidentType | 'ALL'>('ALL');
-  const [severityFilter, setSeverityFilter] = useState<Severity | 'ALL'>('ALL');
-  const [districtFilter, setDistrictFilter] = useState('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<IncidentType | "ALL">("ALL");
+  const [severityFilter, setSeverityFilter] = useState<Severity | "ALL">("ALL");
+  const [districtFilter, setDistrictFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const hasActiveFilters =
-    typeFilter !== 'ALL' ||
-    severityFilter !== 'ALL' ||
-    districtFilter !== 'ALL' ||
-    searchQuery !== '';
+    typeFilter !== "ALL" ||
+    severityFilter !== "ALL" ||
+    districtFilter !== "ALL" ||
+    searchQuery !== "";
 
   function clearFilters() {
-    setTypeFilter('ALL');
-    setSeverityFilter('ALL');
-    setDistrictFilter('ALL');
-    setSearchQuery('');
+    setTypeFilter("ALL");
+    setSeverityFilter("ALL");
+    setDistrictFilter("ALL");
+    setSearchQuery("");
   }
 
   // KPIs calculados del total (sin filtros)
   const stats = useMemo(() => {
     const items = data?.items ?? [];
-    const total      = data?.total ?? 0;
-    const critical   = items.filter((i) => i.severity === 'CRITICAL').length;
-    const activeNow  = items.filter((i) => i.status === 'ACTIVE').length;
+    const total = data?.total ?? 0;
+    const critical = items.filter((i) => i.severity === "CRITICAL").length;
+    const activeNow = items.filter((i) => i.status === "ACTIVE").length;
     const activeZones = new Set(
-      items.filter((i) => i.status === 'ACTIVE').map((i) => i.district),
+      items.filter((i) => i.status === "ACTIVE").map((i) => i.district),
     ).size;
     return { total, critical, activeNow, activeZones };
   }, [data]);
 
   // Incidentes activos filtrados (para mapa + lista lateral)
   const filteredIncidents = useMemo(() => {
-    const items = (data?.items ?? []).filter((i) => i.status === 'ACTIVE');
-    return items.filter((i) => {
-      if (typeFilter !== 'ALL' && i.type !== typeFilter) return false;
-      if (severityFilter !== 'ALL' && i.severity !== severityFilter) return false;
-      if (districtFilter !== 'ALL' && i.district !== districtFilter) return false;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const matches =
-          i.district.toLowerCase().includes(q) ||
-          incidentTypeLabel[i.type].toLowerCase().includes(q) ||
-          severityLabel[i.severity].toLowerCase().includes(q);
-        if (!matches) return false;
-      }
-      return true;
-    }).sort((a, b) => {
-      const sevOrder: Record<Severity, number> = { CRITICAL: 0, MODERATE: 1, LOW: 2 };
-      const bySev = sevOrder[a.severity] - sevOrder[b.severity];
-      if (bySev !== 0) return bySev;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+    const items = (data?.items ?? []).filter((i) => i.status === "ACTIVE");
+    return items
+      .filter((i) => {
+        if (typeFilter !== "ALL" && i.type !== typeFilter) return false;
+        if (severityFilter !== "ALL" && i.severity !== severityFilter)
+          return false;
+        if (districtFilter !== "ALL" && i.district !== districtFilter)
+          return false;
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const matches =
+            i.district.toLowerCase().includes(q) ||
+            incidentTypeLabel[i.type].toLowerCase().includes(q) ||
+            severityLabel[i.severity].toLowerCase().includes(q);
+          if (!matches) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const sevOrder: Record<Severity, number> = {
+          CRITICAL: 0,
+          MODERATE: 1,
+          LOW: 2,
+        };
+        const bySev = sevOrder[a.severity] - sevOrder[b.severity];
+        if (bySev !== 0) return bySev;
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
   }, [data, typeFilter, severityFilter, districtFilter, searchQuery]);
 
   return (
@@ -173,19 +202,19 @@ export default function DashboardPage() {
       <div className="grid grid-cols-4 gap-4">
         <StatCard
           label="Total"
-          value={isLoading ? '—' : stats.total}
+          value={isLoading ? "—" : stats.total}
           unit="incidentes"
           valueClass="text-white"
         />
         <StatCard
           label="Críticos"
-          value={isLoading ? '—' : stats.critical}
+          value={isLoading ? "—" : stats.critical}
           unit="emergencias"
           valueClass="text-stitch-error"
         />
         <StatCard
           label="Zonas activas"
-          value={isLoading ? '—' : stats.activeZones}
+          value={isLoading ? "—" : stats.activeZones}
           unit="distritos"
           valueClass="text-stitch-tertiary"
         />
@@ -193,8 +222,10 @@ export default function DashboardPage() {
           label="Pánico activo"
           value={panicSessions.length}
           unit="sesiones"
-          valueClass={panicSessions.length > 0 ? 'text-red-400' : 'text-green-500'}
-          badge={panicSessions.length > 0 ? 'URGENTE' : undefined}
+          valueClass={
+            panicSessions.length > 0 ? "text-red-400" : "text-green-500"
+          }
+          badge={panicSessions.length > 0 ? "URGENTE" : undefined}
         />
       </div>
 
@@ -207,7 +238,10 @@ export default function DashboardPage() {
               incidents={filteredIncidents}
               panicSessions={panicSessions}
               onPinClick={(id) =>
-                navigate({ to: '/incidents/$incidentId', params: { incidentId: id } })
+                navigate({
+                  to: "/incidents/$incidentId",
+                  params: { incidentId: id },
+                })
               }
             />
           </div>
@@ -248,7 +282,6 @@ export default function DashboardPage() {
 
         {/* Incident + Panic List */}
         <section className="w-[35%] flex flex-col gap-4 min-h-0">
-
           {/* Panic session alerts — always at top when active */}
           {panicSessions.length > 0 && (
             <div className="space-y-2">
@@ -266,12 +299,14 @@ export default function DashboardPage() {
                 >
                   <span className="text-2xl">🚨</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-red-400">MODO PÁNICO</p>
+                    <p className="text-sm font-bold text-red-400">
+                      MODO PÁNICO
+                    </p>
                     <p className="text-[10px] font-bold text-red-500/70 font-label uppercase">
                       Lat {s.lat.toFixed(4)} · Lng {s.lng.toFixed(4)}
                     </p>
                     <p className="text-[10px] text-red-500/60 font-label">
-                      Desde {new Date(s.startedAt).toLocaleTimeString('es-PE')}
+                      Desde {new Date(s.startedAt).toLocaleTimeString("es-PE")}
                     </p>
                   </div>
                 </div>
@@ -304,15 +339,21 @@ export default function DashboardPage() {
                 <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
                   <FilterSelect
                     value={typeFilter}
-                    onChange={(v) => setTypeFilter(v as IncidentType | 'ALL')}
-                    options={TYPE_OPTIONS.map((opt) => ({ value: opt, label: filterTypeLabel(opt) }))}
+                    onChange={(v) => setTypeFilter(v as IncidentType | "ALL")}
+                    options={TYPE_OPTIONS.map((opt) => ({
+                      value: opt,
+                      label: filterTypeLabel(opt),
+                    }))}
                   />
                 </div>
                 <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
                   <FilterSelect
                     value={severityFilter}
-                    onChange={(v) => setSeverityFilter(v as Severity | 'ALL')}
-                    options={SEVERITY_OPTIONS.map((opt) => ({ value: opt, label: filterSeverityLabel(opt) }))}
+                    onChange={(v) => setSeverityFilter(v as Severity | "ALL")}
+                    options={SEVERITY_OPTIONS.map((opt) => ({
+                      value: opt,
+                      label: filterSeverityLabel(opt),
+                    }))}
                   />
                 </div>
                 <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
@@ -321,7 +362,7 @@ export default function DashboardPage() {
                     onChange={(v) => setDistrictFilter(v)}
                     options={DISTRICT_OPTIONS.map((opt) => ({
                       value: opt,
-                      label: opt === 'ALL' ? 'Distrito' : opt,
+                      label: opt === "ALL" ? "Distrito" : opt,
                     }))}
                     icon="location_on"
                   />
@@ -340,9 +381,9 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-[10px] text-stitch-on-surface-variant font-medium">
-              {filteredIncidents.length}{' '}
-              {filteredIncidents.length === 1 ? 'activo' : 'activos'}
-              {hasActiveFilters && ' filtrados'}
+              {filteredIncidents.length}{" "}
+              {filteredIncidents.length === 1 ? "activo" : "activos"}
+              {hasActiveFilters && " filtrados"}
             </div>
           </div>
 
@@ -356,8 +397,8 @@ export default function DashboardPage() {
             {!isLoading && filteredIncidents.length === 0 && (
               <div className="text-center text-stitch-on-surface-variant py-8 text-xs">
                 {hasActiveFilters
-                  ? 'No hay incidentes activos con los filtros seleccionados.'
-                  : 'No hay incidentes activos en este momento.'}
+                  ? "No hay incidentes activos con los filtros seleccionados."
+                  : "No hay incidentes activos en este momento."}
               </div>
             )}
 
@@ -366,7 +407,10 @@ export default function DashboardPage() {
                 key={inc.id}
                 incident={inc}
                 onClick={() =>
-                  navigate({ to: '/incidents/$incidentId', params: { incidentId: inc.id } })
+                  navigate({
+                    to: "/incidents/$incidentId",
+                    params: { incidentId: inc.id },
+                  })
                 }
               />
             ))}
@@ -384,4 +428,5 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-}
+};
+export default DashboardPage;

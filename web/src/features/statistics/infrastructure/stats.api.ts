@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-
-import { apiClient } from '../../../core/lib/axios';
 import type { StatsQuery, StatsResponse } from '../../../core/api/types';
+import { apiClient } from '../../../core/lib/axios';
 
 export const statsKeys = {
   all: ['stats'] as const,

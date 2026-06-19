@@ -1,28 +1,27 @@
-import { FC, useEffect } from 'react';
 import {
-  createRouter,
-  createRoute,
   createRootRoute,
-  RouterProvider,
-  redirect,
+  createRoute,
+  createRouter,
   Outlet,
-} from '@tanstack/react-router';
-
-import { Sidebar } from './core/components/layout/Sidebar';
-import { TopBar } from './core/components/layout/TopBar';
-import LoginPage from './features/auth/presentation/pages/LoginPage';
-import { useAuthStore } from './features/auth/presentation/stores/auth.store';
-import DashboardPage from './features/dashboard/pages/DashboardPage';
-import IncidentsListPage from './features/incidents/pages/IncidentsListPage';
-import IncidentDetailPage from './features/incidents/pages/IncidentDetailPage';
-import PredictionsPage from './features/predictions/pages/PredictionsPage';
-import StatisticsPage from './features/statistics/pages/StatisticsPage';
-import ExportPage from './features/export/pages/ExportPage';
-import AdminUsersPage from './features/admin/pages/AdminUsersPage';
+  redirect,
+  RouterProvider,
+} from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Sidebar } from "./core/components/layout/Sidebar";
+import TopBar from "./core/components/layout/TopBar";
+import AdminUsersPage from "./features/admin/pages/AdminUsersPage";
+import LoginPage from "./features/auth/presentation/pages/LoginPage";
+import { useAuthStore } from "./features/auth/presentation/stores/auth.store";
+import DashboardPage from "./features/dashboard/pages/DashboardPage";
+import ExportPage from "./features/export/pages/ExportPage";
+import IncidentDetailPage from "./features/incidents/pages/IncidentDetailPage";
+import IncidentsListPage from "./features/incidents/pages/IncidentsListPage";
+import PredictionsPage from "./features/predictions/pages/PredictionsPage";
+import StatisticsPage from "./features/statistics/pages/StatisticsPage";
 
 function isAuthorized() {
   const user = useAuthStore.getState().user;
-  return user !== null && (user.role === 'AUTHORITY' || user.role === 'ADMIN');
+  return user !== null && (user.role === "AUTHORITY" || user.role === "ADMIN");
 }
 
 function AuthLayout() {
@@ -53,34 +52,34 @@ const rootRoute = createRootRoute({
       });
     }
 
-    if (location.pathname === '/' && !isAuthorized()) {
-      throw redirect({ to: '/auth/login' });
+    if (location.pathname === "/" && !isAuthorized()) {
+      throw redirect({ to: "/auth/login" });
     }
-    if (location.pathname === '/' && isAuthorized()) {
-      throw redirect({ to: '/dashboard' });
+    if (location.pathname === "/" && isAuthorized()) {
+      throw redirect({ to: "/dashboard" });
     }
   },
 });
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/auth/login',
+  path: "/auth/login",
   component: LoginPage,
   beforeLoad: () => {
     if (isAuthorized()) {
-      throw redirect({ to: '/dashboard' });
+      throw redirect({ to: "/dashboard" });
     }
   },
 });
 
 const authLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
-  id: 'auth',
+  id: "auth",
   component: AuthLayout,
   beforeLoad: ({ location }) => {
     if (!isAuthorized()) {
       throw redirect({
-        to: '/auth/login',
+        to: "/auth/login",
         search: { redirect: location.href },
       });
     }
@@ -89,48 +88,48 @@ const authLayoutRoute = createRoute({
 
 const dashboardRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
-  path: '/dashboard',
+  path: "/dashboard",
   component: DashboardPage,
 });
 
 const incidentsRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
-  path: '/incidents',
+  path: "/incidents",
   component: IncidentsListPage,
 });
 
 const incidentDetailRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
-  path: '/incidents/$incidentId',
+  path: "/incidents/$incidentId",
   component: IncidentDetailPage,
 });
 
 const predictionsRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
-  path: '/predictions',
+  path: "/predictions",
   component: PredictionsPage,
 });
 
 const statisticsRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
-  path: '/statistics',
+  path: "/statistics",
   component: StatisticsPage,
 });
 
 const exportRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
-  path: '/export',
+  path: "/export",
   component: ExportPage,
 });
 
 const adminUsersRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
-  path: '/admin/users',
+  path: "/admin/users",
   component: AdminUsersPage,
   beforeLoad: () => {
     const user = useAuthStore.getState().user;
-    if (user?.role !== 'ADMIN') {
-      throw redirect({ to: '/dashboard' });
+    if (user?.role !== "ADMIN") {
+      throw redirect({ to: "/dashboard" });
     }
   },
 });
@@ -150,16 +149,16 @@ const routeTree = rootRoute.addChildren([
 
 const router = createRouter({
   routeTree,
-  defaultPreload: 'intent',
+  defaultPreload: "intent",
 });
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
   }
 }
 
-const App: FC = () => {
+const App = () => {
   const bootstrap = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
