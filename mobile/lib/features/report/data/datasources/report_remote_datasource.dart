@@ -13,6 +13,8 @@ abstract class ReportRemoteDataSource {
     required IncidentType type,
     required Map<String, dynamic> formData,
     required List<String> mediaUrls,
+    DateTime? photoTakenAt,
+    String? photoSource,
   });
 }
 
@@ -28,26 +30,33 @@ class ReportRemoteDataSourceImpl implements ReportRemoteDataSource {
     required IncidentType type,
     required Map<String, dynamic> formData,
     required List<String> mediaUrls,
+    DateTime? photoTakenAt,
+    String? photoSource,
   }) async {
     try {
+      final body = <String, dynamic>{
+        'lat': lat,
+        'lng': lng,
+        'type': type.value,
+        'formData': formData,
+        'mediaUrls': mediaUrls,
+        if (photoTakenAt != null)
+          'photoTakenAt': photoTakenAt.toUtc().toIso8601String(),
+        if (photoSource != null) 'photoSource': photoSource,
+      };
+
       final response = await _dio.post<Map<String, dynamic>>(
         '/incidents/reports',
-        data: <String, dynamic>{
-          'lat': lat,
-          'lng': lng,
-          'type': type.value,
-          'formData': formData,
-          'mediaUrls': mediaUrls,
-        },
+        data: body,
       );
 
       final statusCode = response.statusCode ?? 0;
-      final body = response.data ?? <String, dynamic>{};
+      final responseBody = response.data ?? <String, dynamic>{};
 
       if (statusCode == 200 || statusCode == 201) {
         return ReportSubmitResultModel.fromResponse(
           statusCode: statusCode,
-          body: body,
+          body: responseBody,
         );
       }
 

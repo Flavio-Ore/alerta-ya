@@ -18,6 +18,7 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$ReportSubmitResult {
   bool get isPublished => throw _privateConstructorUsedError;
   IncidentEntity? get incident => throw _privateConstructorUsedError;
+  int? get reputationDelta => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $ReportSubmitResultCopyWith<ReportSubmitResult> get copyWith =>
@@ -30,7 +31,7 @@ abstract class $ReportSubmitResultCopyWith<$Res> {
           ReportSubmitResult value, $Res Function(ReportSubmitResult) then) =
       _$ReportSubmitResultCopyWithImpl<$Res, ReportSubmitResult>;
   @useResult
-  $Res call({bool isPublished, IncidentEntity? incident});
+  $Res call({bool isPublished, IncidentEntity? incident, int? reputationDelta});
 
   $IncidentEntityCopyWith<$Res>? get incident;
 }
@@ -50,6 +51,7 @@ class _$ReportSubmitResultCopyWithImpl<$Res, $Val extends ReportSubmitResult>
   $Res call({
     Object? isPublished = null,
     Object? incident = freezed,
+    Object? reputationDelta = freezed,
   }) {
     return _then(_value.copyWith(
       isPublished: null == isPublished
@@ -60,6 +62,10 @@ class _$ReportSubmitResultCopyWithImpl<$Res, $Val extends ReportSubmitResult>
           ? _value.incident
           : incident // ignore: cast_nullable_to_non_nullable
               as IncidentEntity?,
+      reputationDelta: freezed == reputationDelta
+          ? _value.reputationDelta
+          : reputationDelta // ignore: cast_nullable_to_non_nullable
+              as int?,
     ) as $Val);
   }
 
@@ -84,7 +90,7 @@ abstract class _$$ReportSubmitResultImplCopyWith<$Res>
       __$$ReportSubmitResultImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({bool isPublished, IncidentEntity? incident});
+  $Res call({bool isPublished, IncidentEntity? incident, int? reputationDelta});
 
   @override
   $IncidentEntityCopyWith<$Res>? get incident;
@@ -103,6 +109,7 @@ class __$$ReportSubmitResultImplCopyWithImpl<$Res>
   $Res call({
     Object? isPublished = null,
     Object? incident = freezed,
+    Object? reputationDelta = freezed,
   }) {
     return _then(_$ReportSubmitResultImpl(
       isPublished: null == isPublished
@@ -113,6 +120,10 @@ class __$$ReportSubmitResultImplCopyWithImpl<$Res>
           ? _value.incident
           : incident // ignore: cast_nullable_to_non_nullable
               as IncidentEntity?,
+      reputationDelta: freezed == reputationDelta
+          ? _value.reputationDelta
+          : reputationDelta // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
@@ -120,16 +131,22 @@ class __$$ReportSubmitResultImplCopyWithImpl<$Res>
 /// @nodoc
 
 class _$ReportSubmitResultImpl implements _ReportSubmitResult {
-  const _$ReportSubmitResultImpl({required this.isPublished, this.incident});
+  const _$ReportSubmitResultImpl({
+    required this.isPublished,
+    this.incident,
+    this.reputationDelta,
+  });
 
   @override
   final bool isPublished;
   @override
   final IncidentEntity? incident;
+  @override
+  final int? reputationDelta;
 
   @override
   String toString() {
-    return 'ReportSubmitResult(isPublished: $isPublished, incident: $incident)';
+    return 'ReportSubmitResult(isPublished: $isPublished, incident: $incident, reputationDelta: $reputationDelta)';
   }
 
   @override
@@ -140,11 +157,14 @@ class _$ReportSubmitResultImpl implements _ReportSubmitResult {
             (identical(other.isPublished, isPublished) ||
                 other.isPublished == isPublished) &&
             (identical(other.incident, incident) ||
-                other.incident == incident));
+                other.incident == incident) &&
+            (identical(other.reputationDelta, reputationDelta) ||
+                other.reputationDelta == reputationDelta));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, isPublished, incident);
+  int get hashCode =>
+      Object.hash(runtimeType, isPublished, incident, reputationDelta);
 
   @JsonKey(ignore: true)
   @override
@@ -155,14 +175,18 @@ class _$ReportSubmitResultImpl implements _ReportSubmitResult {
 }
 
 abstract class _ReportSubmitResult implements ReportSubmitResult {
-  const factory _ReportSubmitResult(
-      {required final bool isPublished,
-      final IncidentEntity? incident}) = _$ReportSubmitResultImpl;
+  const factory _ReportSubmitResult({
+    required final bool isPublished,
+    final IncidentEntity? incident,
+    final int? reputationDelta,
+  }) = _$ReportSubmitResultImpl;
 
   @override
   bool get isPublished;
   @override
   IncidentEntity? get incident;
+  @override
+  int? get reputationDelta;
   @override
   @JsonKey(ignore: true)
   _$$ReportSubmitResultImplCopyWith<_$ReportSubmitResultImpl> get copyWith =>

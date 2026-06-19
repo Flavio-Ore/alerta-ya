@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:exif/exif.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:injectable/injectable.dart';
@@ -40,9 +41,20 @@ class ReportRepositoryImpl implements ReportRepository {
         return const Left(Failure.unauthorized());
       }
 
-      // 1. Subir evidencia a Firebase Storage (si hay)
-      final mediaUrls = <String>[];
+      // 1. Extraer timestamp EXIF antes de subir (bytes aún frescos en disco)
       final paths = report.mediaPaths;
+      DateTime? photoTakenAt;
+      String? photoSource;
+
+      if (paths != null && paths.isNotEmpty) {
+        final firstFile = XFile(paths.first);
+        final exifResult = await _extractPhotoTimestamp(firstFile);
+        photoTakenAt = exifResult.photoTakenAt;
+        photoSource = exifResult.photoSource;
+      }
+
+      // 2. Subir evidencia a Firebase Storage (si hay)
+      final mediaUrls = <String>[];
       if (paths != null && paths.isNotEmpty) {
         final files = paths.map((p) => XFile(p)).toList();
         final uploaded = await _mediaUploadService.uploadReportMedia(
@@ -52,20 +64,22 @@ class ReportRepositoryImpl implements ReportRepository {
         mediaUrls.addAll(uploaded);
       }
 
-      // 2. Armar formData final con notas (si las hay)
+      // 3. Armar formData final con notas (si las hay)
       final formData = <String, dynamic>{...report.formData};
       final notes = report.notes;
       if (notes != null && notes.trim().isNotEmpty) {
         formData['notes'] = notes.trim();
       }
 
-      // 3. Enviar al backend
+      // 4. Enviar al backend
       final result = await _remoteDataSource.submitReport(
         lat: report.lat,
         lng: report.lng,
         type: report.type,
         formData: formData,
         mediaUrls: mediaUrls,
+        photoTakenAt: photoTakenAt,
+        photoSource: photoSource,
       );
 
       return Right(result);
@@ -95,5 +109,33 @@ class ReportRepositoryImpl implements ReportRepository {
     } catch (e) {
       return Left(Failure.unknown(message: e.toString()));
     }
+  }
+
+  /// Extrae el timestamp de captura desde los metadatos EXIF de una foto.
+  ///
+  /// Formato EXIF DateTimeOriginal: "YYYY:MM:DD HH:mm:ss"
+  /// - Si el tag está presente y es parseable → (photoTakenAt: DateTime UTC, photoSource: 'exif')
+  /// - Si falta o falla el parseo       → (photoTakenAt: DateTime.now(), photoSource: 'device_clock')
+  Future<({DateTime photoTakenAt, String photoSource})> _extractPhotoTimestamp(
+    XFile file,
+  ) async {
+    try {
+      final bytes = await file.readAsBytes();
+      final tags = await readExifFromBytes(bytes);
+      final raw = tags['EXIF DateTimeOriginal']?.printable;
+      if (raw != null && raw.length == 19) {
+        // "2024:06:19 14:30:05" → "2024-06-19 14:30:05"
+        final normalized = raw
+            .replaceFirst(':', '-', 4)
+            .replaceFirst(':', '-', 7);
+        final parsed = DateTime.tryParse(normalized);
+        if (parsed != null) {
+          return (photoTakenAt: parsed.toUtc(), photoSource: 'exif');
+        }
+      }
+    } catch (_) {
+      // Fallo silencioso — cae al fallback
+    }
+    return (photoTakenAt: DateTime.now().toUtc(), photoSource: 'device_clock');
   }
 }

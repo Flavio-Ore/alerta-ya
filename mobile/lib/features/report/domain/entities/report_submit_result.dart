@@ -15,5 +15,7 @@ class ReportSubmitResult with _$ReportSubmitResult {
   const factory ReportSubmitResult({
     required bool isPublished,
     IncidentEntity? incident,
+    /// Puntos de reputación ganados/perdidos por este reporte (null si ML no corrió).
+    int? reputationDelta,
   }) = _ReportSubmitResult;
 }
