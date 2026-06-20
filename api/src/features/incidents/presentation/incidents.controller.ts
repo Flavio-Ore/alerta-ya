@@ -13,6 +13,8 @@ import { updateIncidentStatus } from '../domain/usecases/update-incident-status.
 import { getMyReports } from '../domain/usecases/get-my-reports.usecase';
 import { PrismaNotificationRepository } from '../../notifications/infrastructure/prisma-notification.repository';
 import { verifyReport } from '../infrastructure/ml.client';
+import { getSignedUrl } from '../../../core/config/firebase';
+import { analyzeImage } from '../infrastructure/glm.client';
 import { AppError } from '../../../core/errors/AppError';
 import { IncidentType, IncidentStatus } from '@prisma/client';
 import { getMessaging } from 'firebase-admin/messaging';
@@ -156,7 +158,16 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
         photoTakenAt: body.photoTakenAt ? new Date(body.photoTakenAt) : undefined,
         photoSource: body.photoSource,
       },
-      { incidentRepo, reportRepo, redis, verifyReport, updateReputation, sendFcmToUser },
+      {
+        incidentRepo,
+        reportRepo,
+        redis,
+        verifyReport,
+        updateReputation,
+        sendFcmToUser,
+        resolveSignedUrl: getSignedUrl,
+        analyzeImageForIncident: (url, type) => analyzeImage(url, type),
+      },
     );
 
     console.log(

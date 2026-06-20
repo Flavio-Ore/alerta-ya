@@ -1,5 +1,8 @@
 import { env } from '../../../core/config/env';
 
+/** Umbral para derivar aiVerified desde el finalScore del pipeline ML + visión. */
+export const AI_VERIFIED_THRESHOLD = 0.5;
+
 export interface MlVerifyInput {
   reportId: string;
   lat: number;

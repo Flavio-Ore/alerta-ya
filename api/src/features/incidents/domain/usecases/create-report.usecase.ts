@@ -10,6 +10,8 @@ import { computeReputationDelta } from '../../application/reputation';
 import { eventBus, IncidentEvents, ConfirmRequestPayload } from '../../../../core/events/event-bus';
 import { AppError } from '../../../../core/errors/AppError';
 import { isWithinLima, getDistrict, bucketCoord } from '../../../../core/utils/geo.utils';
+import { env } from '../../../../core/config/env';
+import { AI_VERIFIED_THRESHOLD } from '../../infrastructure/ml.client';
 
 export interface CreateReportInput {
   uid: string;
@@ -57,6 +59,16 @@ export interface CreateReportDeps {
    * Fire-and-forget — errores se logean y no bloquean la respuesta.
    */
   sendFcmToUser?: (userId: string, title: string, body: string) => Promise<void>;
+  /**
+   * Resuelve un gs:// path a una URL HTTPS firmada para análisis visual.
+   * Fail-open: null si el bucket no está configurado o el path es inválido.
+   */
+  resolveSignedUrl?: (gsPath: string) => Promise<string | null>;
+  /**
+   * Analiza la primera imagen del reporte contra el tipo de incidente declarado.
+   * Retorna +1.0 (consistente), -1.0 (inconsistente), 0.0 (indeterminado) o null (fail-open).
+   */
+  analyzeImageForIncident?: (signedUrl: string, type: IncidentType) => Promise<number | null>;
 }
 
 const WINDOW_20_MIN_SECONDS = 20 * 60;
@@ -139,23 +151,49 @@ export async function createReport(
 
   // Señales de evidencia derivadas en servidor (no provienen del cliente)
   const hasEvidence = input.mediaUrls.length > 0;
+  const hasMedia = input.mediaUrls.length > 0;
   const photoAgeMinutes = input.photoTakenAt
     ? (Date.now() - input.photoTakenAt.getTime()) / 60_000
     : null;
 
-  // Verificación ML del reporte que dispara la publicación (fail-open: null si la IA falla/tarda)
-  const ml = deps.verifyReport
-    ? await deps.verifyReport({
-        reportId: report.id,
-        lat: input.lat,
-        lng: input.lng,
-        type: input.type,
-        formData: input.formData as Record<string, unknown>,
-        userReputation: 0.5,
-        hasEvidence,
-        photoAgeMinutes,
-      })
-    : null;
+  // Vision task: resolve signed URL then analyze — gates on media + injected ports
+  const visionTask = async (): Promise<number | null> => {
+    if (!hasMedia || !deps.resolveSignedUrl || !deps.analyzeImageForIncident) return null;
+    const signedUrl = await deps.resolveSignedUrl(input.mediaUrls[0]);
+    if (!signedUrl) return null;
+    return deps.analyzeImageForIncident(signedUrl, input.type);
+  };
+
+  // Verificación ML + visión en paralelo (fail-open independiente en cada rama)
+  const [mlSettled, visionSettled] = await Promise.allSettled([
+    deps.verifyReport
+      ? deps.verifyReport({
+          reportId: report.id,
+          lat: input.lat,
+          lng: input.lng,
+          type: input.type,
+          formData: input.formData as Record<string, unknown>,
+          userReputation: 0.5,
+          hasEvidence,
+          photoAgeMinutes,
+        })
+      : Promise.resolve(null),
+    visionTask(),
+  ]);
+
+  const mlRaw = mlSettled.status === 'fulfilled' ? mlSettled.value : null;
+  const visionMatch = visionSettled.status === 'fulfilled' ? visionSettled.value : null;
+
+  // Multiplicador de visión: finalScore = clamp(mlScore * (1 + k * visionMatch), 0, 1)
+  // visionMatch null → factor = 1.0 → score identity (sin regresión en fail-open)
+  const k = env.VISION_SCORE_K;
+  const finalScore =
+    mlRaw !== null
+      ? Math.min(1, Math.max(0, mlRaw.score * (1 + k * (visionMatch ?? 0))))
+      : null;
+
+  // aiVerified se re-deriva siempre desde finalScore (fuente única de verdad)
+  const aiVerified = finalScore !== null ? finalScore >= AI_VERIFIED_THRESHOLD : null;
 
   // Primer incidente para esta zona+tipo — crear y vincular reportes huérfanos
   incident = await deps.incidentRepo.create({
@@ -165,8 +203,8 @@ export async function createReport(
     lng: input.lng,
     district,
     expiresAt,
-    aiScore: ml?.score ?? null,
-    aiVerified: ml?.verified ?? null,
+    aiScore: finalScore,
+    aiVerified,
     photoTakenAt: input.photoTakenAt ?? null,
     photoSource: input.photoSource ?? null,
   });
@@ -182,15 +220,15 @@ export async function createReport(
 
   const dto = toPublicDTO(incident);
 
-  // Calcular y aplicar delta de reputación cuando ML emitió veredicto
-  if (ml !== null) {
-    const delta = computeReputationDelta(ml.verified, hasEvidence);
+  // Calcular y aplicar delta de reputación cuando el pipeline ML emitió veredicto
+  if (finalScore !== null) {
+    const delta = computeReputationDelta(aiVerified!, hasEvidence);
     dto.reputationDelta = delta;
 
-    const fcmTitle = ml.verified
+    const fcmTitle = aiVerified
       ? 'Reporte verificado ✓'
       : 'Reporte marcado como sospechoso';
-    const fcmBody = ml.verified
+    const fcmBody = aiVerified
       ? `+${delta} puntos de reputación`
       : `${delta} puntos de reputación`;
 

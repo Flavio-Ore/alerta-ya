@@ -177,6 +177,81 @@ export async function analyzeHistoricalData(
   }
 }
 
+// ─── Vision relevance checker ────────────────────────────────────────────────
+
+function buildVisionPrompt(incidentType: string): string {
+  return `You are a content-relevance checker for a citizen safety app in Lima, Peru.
+A user submitted a photo as evidence for an incident of type: "${incidentType}".
+Decide ONLY whether the photo's visible content is plausibly consistent with that incident type.
+Do NOT judge photo quality, identity, or legality — only topical relevance.
+Respond with EXACTLY ONE WORD, no punctuation, no explanation:
+- CONSISTENT     — the photo plausibly shows or relates to this incident type
+- INCONSISTENT   — the photo clearly contradicts or is unrelated to this incident type
+- INDETERMINATE  — you cannot tell (blurry, dark, ambiguous, generic scene)`;
+}
+
+function parseVisionVerdict(raw: string | undefined): number {
+  const t = (raw ?? '').toUpperCase();
+  // INCONSISTENT must be checked BEFORE CONSISTENT — "INCONSISTENT" contains the substring "CONSISTENT"
+  if (t.includes('INCONSISTENT')) return -1.0;
+  if (t.includes('CONSISTENT')) return 1.0;
+  return 0.0;
+}
+
+/**
+ * Analiza una imagen contra el tipo de incidente declarado.
+ * Retorna +1.0 (consistente), -1.0 (inconsistente), 0.0 (indeterminado) o null (fail-open).
+ * Fail-open: null si no hay key, la red falla, hay timeout, o la respuesta no es 2xx.
+ */
+export async function analyzeImage(
+  imageUrl: string,
+  incidentType: string,
+): Promise<number | null> {
+  if (!env.GLM_API_KEY) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), env.GLM_VISION_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(env.GLM_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.GLM_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: env.GLM_VISION_MODEL,
+        temperature: 0,
+        max_tokens: 10,
+        thinking: { type: 'disabled' },
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: imageUrl } },
+              { type: 'text', text: buildVisionPrompt(incidentType) },
+            ],
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    return parseVisionVerdict(data.choices?.[0]?.message?.content);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// ─── Historical data analysis (streaming) ────────────────────────────────────
+
 /**
  * Expone únicamente el contenido final del modelo; nunca transmite el razonamiento interno.
  * El stream de Z.AI usa SSE y termina con `data: [DONE]`.

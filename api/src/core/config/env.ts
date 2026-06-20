@@ -37,6 +37,19 @@ const envSchema = z.object({
   GLM_API_URL: z.string().url().default('https://open.bigmodel.cn/api/paas/v4/chat/completions'),
   GLM_MODEL: z.string().default('glm-4-flash'),
   GLM_TIMEOUT_MS: z.coerce.number().int().min(1000).default(60000),
+
+  // GLM Vision — verificación de relevancia visual de evidencia fotográfica.
+  // Opcional: sin configurar, el multiplicador de visión queda en 1.0 (sin efecto).
+  GLM_VISION_MODEL: z.string().default('glm-4v-flash'),
+  GLM_VISION_TIMEOUT_MS: z.coerce.number().int().min(1000).default(3000),
+
+  // Firebase Storage — bucket para acceso a imágenes firmadas (gs:// → HTTPS 5-min TTL).
+  // Opcional: sin configurar, la verificación visual se omite (fail-open).
+  FIREBASE_STORAGE_BUCKET: z.string().default(''),
+
+  // Multiplicador de visión — ajuste de peso del signal visual sobre el score ML.
+  // 0.0 = sin efecto (desactivado), 0.2 = efecto moderado (default).
+  VISION_SCORE_K: z.coerce.number().default(0.2),
 });
 
 const parsed = envSchema.safeParse(process.env);
