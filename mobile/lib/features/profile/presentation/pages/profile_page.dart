@@ -14,8 +14,39 @@ import 'package:alertaya/features/profile/domain/entities/user_profile_entity.da
 import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:alertaya/features/tutorial/presentation/service/tutorial_service.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Carga el perfil al abrir la página por primera vez.
+    _refreshProfile();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresca el perfil cuando la app vuelve al primer plano
+    // (p.ej. después de volver desde el flujo de reporte).
+    if (state == AppLifecycleState.resumed) _refreshProfile();
+  }
+
+  void _refreshProfile() {
+    if (!mounted) return;
+    context.read<ProfileBloc>().add(const ProfileLoaded());
+  }
 
   @override
   Widget build(BuildContext context) {

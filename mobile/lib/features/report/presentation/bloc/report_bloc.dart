@@ -43,6 +43,7 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
       (submitResult) => emit(ReportSuccess(
         isPublished: submitResult.isPublished,
         incident: submitResult.incident,
+        reputationDelta: submitResult.reputationDelta,
       )),
     );
   }

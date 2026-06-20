@@ -13,9 +13,15 @@ class ReportSubmitting extends ReportState {
 }
 
 class ReportSuccess extends ReportState {
-  const ReportSuccess({required this.isPublished, this.incident});
+  const ReportSuccess({
+    required this.isPublished,
+    this.incident,
+    this.reputationDelta,
+  });
   final bool isPublished;
   final IncidentEntity? incident;
+  /// Puntos de reputación ganados/perdidos. Null si ML no corrió o falló.
+  final int? reputationDelta;
 }
 
 class ReportFailure extends ReportState {

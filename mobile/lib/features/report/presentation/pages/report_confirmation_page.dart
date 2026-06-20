@@ -62,11 +62,21 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
             if (state is ReportFailure) {
               return _FailureBody(message: state.message);
             }
+            if (state is ReportSubmitting) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                ),
+              );
+            }
             final bool isPublished =
                 state is ReportSuccess ? state.isPublished : false;
+            final int? reputationDelta =
+                state is ReportSuccess ? state.reputationDelta : null;
             return _SuccessBody(
               spinAnimation: _spinAnimation,
               isPublished: isPublished,
+              reputationDelta: reputationDelta,
             );
           },
         ),
@@ -75,22 +85,42 @@ class _ReportConfirmationPageState extends State<ReportConfirmationPage>
   }
 }
 
-class _SuccessBody extends StatelessWidget {
+class _SuccessBody extends StatefulWidget {
   const _SuccessBody({
     required this.spinAnimation,
     required this.isPublished,
+    this.reputationDelta,
   });
 
   final Animation<double> spinAnimation;
   final bool isPublished;
+  final int? reputationDelta;
 
-  String get _title => isPublished ? 'Reporte Publicado' : 'Reporte Enviado';
+  @override
+  State<_SuccessBody> createState() => _SuccessBodyState();
+}
 
-  String get _statusLine => isPublished
+class _SuccessBodyState extends State<_SuccessBody> {
+  bool _showDelta = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.reputationDelta != null) {
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) setState(() => _showDelta = true);
+      });
+    }
+  }
+
+  String get _title =>
+      widget.isPublished ? 'Reporte Publicado' : 'Reporte Enviado';
+
+  String get _statusLine => widget.isPublished
       ? 'Ya aparece en el mapa de los ciudadanos cercanos.'
       : 'Aparecerá en el mapa cuando otro ciudadano lo confirme.';
 
-  String get _detailMessage => isPublished
+  String get _detailMessage => widget.isPublished
       ? 'Tu reporte se publicó. Ya aparece en el mapa de los ciudadanos cercanos.'
       : 'Tu reporte fue recibido. Aparecerá públicamente cuando otro ciudadano cercano confirme un incidente del mismo tipo.';
 
@@ -119,6 +149,16 @@ class _SuccessBody extends StatelessWidget {
             style: AppTextStyles.bodyMd,
             textAlign: TextAlign.center,
           ),
+          // B5.3 — Reputation delta chip: fade-in after 600ms delay.
+          // Only shown when ML returned a delta (non-null).
+          if (widget.reputationDelta != null) ...[
+            const SizedBox(height: 12),
+            AnimatedOpacity(
+              opacity: _showDelta ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 400),
+              child: _ReputationDeltaChip(delta: widget.reputationDelta!),
+            ),
+          ],
           const SizedBox(height: 20),
           Container(
             padding:
@@ -145,8 +185,8 @@ class _SuccessBody extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           _StatusTimeline(
-            spinAnimation: spinAnimation,
-            isPublished: isPublished,
+            spinAnimation: widget.spinAnimation,
+            isPublished: widget.isPublished,
           ),
           const SizedBox(height: 24),
           Container(
@@ -180,6 +220,56 @@ class _SuccessBody extends StatelessWidget {
             onPressed: () => context.go('/map'),
           ),
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+// B5.2 — Delta chip shown below the main success message.
+// Green for positive delta, orange/amber for negative, neutral for zero.
+class _ReputationDeltaChip extends StatelessWidget {
+  const _ReputationDeltaChip({required this.delta});
+  final int delta;
+
+  Color get _color {
+    if (delta > 0) return AppColors.success;
+    if (delta < 0) return AppColors.severityModerate;
+    return AppColors.onSurfaceVariant;
+  }
+
+  String get _label {
+    if (delta > 0) return '+$delta puntos de reputación';
+    if (delta < 0) return '$delta puntos de reputación';
+    return 'Sin cambio de reputación';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: _color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: _color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            delta >= 0 ? Icons.star_rounded : Icons.star_half_rounded,
+            size: 15,
+            color: _color,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            _label,
+            style: AppTextStyles.labelMd.copyWith(
+              color: _color,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
