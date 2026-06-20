@@ -284,13 +284,13 @@ class _DetailContent extends StatelessWidget {
               label: 'Desmentidos',
               count: detail.denyCount,
             ),
-            const SizedBox(width: 8),
-            _CounterTile(
-              icon: Icons.person_outline,
-              color: AppColors.mapOnSurfaceVariant,
-              label: 'Reportes',
-              count: detail.reportCount,
-            ),
+            // const SizedBox(width: 8),
+            // _CounterTile(
+            //   icon: Icons.person_outline,
+            //   color: AppColors.mapOnSurfaceVariant,
+            //   label: 'Reportes',
+            //   count: detail.reportCount,
+            // ),
           ],
         ),
 
@@ -371,62 +371,62 @@ class _DetailContent extends StatelessWidget {
         const SizedBox(height: 16),
 
         // ── CTA: confirmación ciudadana
-        Text(
-          '¿Sigue ocurriendo?',
-          style: AppTextStyles.titleLg.copyWith(color: AppColors.mapOnSurface),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Tu respuesta ayuda a la comunidad.',
-          style: AppTextStyles.bodyMd
-              .copyWith(color: AppColors.mapOnSurfaceVariant),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  context.read<IncidentsBloc>().add(IncidentConfirmSubmitted(
-                        id: detail.id,
-                        stillHere: false,
-                      ));
-                  context.pop();
-                },
-                icon: const Icon(Icons.check, size: 18),
-                label: const Text('Ya fue'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.mapOnSurface,
-                  side: const BorderSide(color: AppColors.mapOutlineVariant),
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: () {
-                  context.read<IncidentsBloc>().add(IncidentConfirmSubmitted(
-                        id: detail.id,
-                        stillHere: true,
-                      ));
-                  context.pop();
-                },
-                icon: const Icon(Icons.warning_amber, size: 18),
-                label: const Text('Sigue ahí'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.severityCritical,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999)),
-                ),
-              ),
-            ),
-          ],
-        ),
+        // Text(
+        //   '¿Sigue ocurriendo?',
+        //   style: AppTextStyles.titleLg.copyWith(color: AppColors.mapOnSurface),
+        // ),
+        // const SizedBox(height: 4),
+        // Text(
+        //   'Tu respuesta ayuda a la comunidad.',
+        //   style: AppTextStyles.bodyMd
+        //       .copyWith(color: AppColors.mapOnSurfaceVariant),
+        // ),
+        // const SizedBox(height: 14),
+        // Row(
+        //   children: [
+        //     Expanded(
+        //       child: OutlinedButton.icon(
+        //         onPressed: () {
+        //           context.read<IncidentsBloc>().add(IncidentConfirmSubmitted(
+        //                 id: detail.id,
+        //                 stillHere: false,
+        //               ));
+        //           context.pop();
+        //         },
+        //         icon: const Icon(Icons.check, size: 18),
+        //         label: const Text('Ya fue'),
+        //         style: OutlinedButton.styleFrom(
+        //           foregroundColor: AppColors.mapOnSurface,
+        //           side: const BorderSide(color: AppColors.mapOutlineVariant),
+        //           minimumSize: const Size.fromHeight(48),
+        //           shape: RoundedRectangleBorder(
+        //               borderRadius: BorderRadius.circular(999)),
+        //         ),
+        //       ),
+        //     ),
+        //     const SizedBox(width: 12),
+        //     Expanded(
+        //       child: FilledButton.icon(
+        //         onPressed: () {
+        //           context.read<IncidentsBloc>().add(IncidentConfirmSubmitted(
+        //                 id: detail.id,
+        //                 stillHere: true,
+        //               ));
+        //           context.pop();
+        //         },
+        //         icon: const Icon(Icons.warning_amber, size: 18),
+        //         label: const Text('Sigue ahí'),
+        //         style: FilledButton.styleFrom(
+        //           backgroundColor: AppColors.severityCritical,
+        //           foregroundColor: Colors.white,
+        //           minimumSize: const Size.fromHeight(48),
+        //           shape: RoundedRectangleBorder(
+        //               borderRadius: BorderRadius.circular(999)),
+        //         ),
+        //       ),
+        //     ),
+        //   ],
+        // ),
       ],
     );
   }
@@ -501,8 +501,7 @@ class _AlertBadge extends StatelessWidget {
           children: [
             Icon(icon, size: 13, color: color),
             const SizedBox(width: 5),
-            Text(label,
-                style: AppTextStyles.labelSm.copyWith(color: color)),
+            Text(label, style: AppTextStyles.labelSm.copyWith(color: color)),
           ],
         ),
       );
@@ -525,8 +524,7 @@ class _StatusBadge extends StatelessWidget {
         color: color.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label,
-          style: AppTextStyles.labelSm.copyWith(color: color)),
+      child: Text(label, style: AppTextStyles.labelSm.copyWith(color: color)),
     );
   }
 }
