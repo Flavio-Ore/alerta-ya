@@ -16,7 +16,7 @@ vi.mock('../../../../../core/config/env', () => ({
   },
 }));
 
-vi.mock('../../infrastructure/ml.client', () => ({
+vi.mock('../../../infrastructure/ml.client', () => ({
   AI_VERIFIED_THRESHOLD: 0.5,
 }));
 
@@ -26,7 +26,7 @@ vi.mock('../../../../../core/utils/geo.utils', () => ({
   bucketCoord: vi.fn((x: number) => Math.round(x * 100) / 100),
 }));
 
-vi.mock('../../application/threshold.engine', () => ({
+vi.mock('../../../application/threshold.engine', () => ({
   evaluateThreshold: vi.fn().mockResolvedValue({
     publish: true,
     severity: 'MODERATE',
@@ -34,7 +34,7 @@ vi.mock('../../application/threshold.engine', () => ({
   }),
 }));
 
-vi.mock('../../application/reputation', () => ({
+vi.mock('../../../application/reputation', () => ({
   computeReputationDelta: vi.fn().mockReturnValue(10),
 }));
 
@@ -130,8 +130,8 @@ function makeInput(overrides = {}) {
 }
 
 // ── Import under test (after mocks) ───────────────────────────────────────
-
-const { createReport } = await import('../create-report.usecase');
+// Static import — vi.mock() is hoisted before all imports by vitest, so mocks are applied
+import { createReport } from '../create-report.usecase';
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 
