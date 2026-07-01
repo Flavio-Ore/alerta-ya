@@ -181,25 +181,28 @@ class TestV3PhotoTrusted:
     def test_photo_trusted_is_informational_not_a_hard_gate(
         self, v3_predictor: VerifierPredictor
     ) -> None:
-        """GIVEN an otherwise-coherent report WHEN photo_source flips exif<->device_clock
-        THEN is_coherent is still a normal ensemble-AND outcome — untrusted provenance never
-        forces a hard reject/block by itself (discovery: photoSource is client-asserted,
-        must stay informational)."""
-        trusted = v3_predictor.verify(
+        """GIVEN a clearly-coherent report WHEN photo_source flips exif -> device_clock -> absent
+        THEN is_coherent stays the SAME (untrusted provenance never by itself flips a coherent
+        report to a hard reject). photo_trusted is one ensemble feature, not a gate — a
+        client-asserted photo_source must not deterministically block a report (discovery #884).
+
+        NOTE: deterministic assertion — v3 is a fixed committed bundle, so this exact input's
+        outcome is stable (not flaky). It proves the non-gate property: device_clock/absent
+        provenance does NOT force is_coherent=False on an otherwise-coherent report."""
+        common = dict(
             lat=-12.121, lng=-77.030, incident_type="ROBBERY", weapon="knife", injured="no",
             hour=22, day_of_week=4, report_count=2, has_evidence=True, photo_age_minutes=8.0,
-            photo_source="exif",
         )
-        untrusted = v3_predictor.verify(
-            lat=-12.121, lng=-77.030, incident_type="ROBBERY", weapon="knife", injured="no",
-            hour=22, day_of_week=4, report_count=2, has_evidence=True, photo_age_minutes=8.0,
-            photo_source="device_clock",
-        )
-        assert trusted["degraded"] is False
-        assert untrusted["degraded"] is False
-        assert isinstance(untrusted["is_coherent"], bool)
-        assert 0.0 <= trusted["confidence"] <= 1.0
-        assert 0.0 <= untrusted["confidence"] <= 1.0
+        trusted = v3_predictor.verify(**common, photo_source="exif")
+        untrusted = v3_predictor.verify(**common, photo_source="device_clock")
+        absent = v3_predictor.verify(**common)  # no photo_source
+
+        # Baseline: this report IS coherent — so it's a valid witness for the non-gate property.
+        assert trusted["is_coherent"] is True
+        # The core invariant: untrusted / absent provenance does NOT flip a coherent report to rejected.
+        assert untrusted["is_coherent"] == trusted["is_coherent"]
+        assert absent["is_coherent"] == trusted["is_coherent"]
+        assert untrusted["degraded"] is False and absent["degraded"] is False
 
 
 class TestV3UnknownIncidentType:
