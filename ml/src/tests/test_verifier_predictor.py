@@ -112,3 +112,118 @@ class TestUnknownIncidentTypeV2:
         assert result["degraded"] is False
         assert isinstance(result["is_coherent"], bool)
         assert 0.0 <= result["confidence"] <= 1.0
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# v3 — corrected enum + photo_trusted (informational, never a hard gate)
+# ──────────────────────────────────────────────────────────────────────────────
+
+REAL_INCIDENT_TYPES = ["ROBBERY", "ACCIDENT", "HARASSMENT", "EXTORTION", "SUSPICIOUS"]
+
+
+@pytest.fixture(scope="module")
+def v3_predictor() -> VerifierPredictor:
+    predictor = VerifierPredictor(V3_MODEL_PATH)
+    assert predictor.load() is True
+    return predictor
+
+
+class TestV3RealEnum:
+    @pytest.mark.parametrize("incident_type", REAL_INCIDENT_TYPES)
+    def test_real_enum_type_produces_nonzero_one_hot(
+        self, v3_predictor: VerifierPredictor, incident_type: str
+    ) -> None:
+        """GIVEN each real Prisma IncidentType WHEN features are built THEN its one-hot column fires.
+
+        This is the bug being fixed — under the old wrong enum, ACCIDENT/HARASSMENT/
+        EXTORTION always produced an all-zero one-hot vector (OHE handle_unknown='ignore').
+        """
+        x = v3_predictor._build_features(
+            lat=-12.1, lng=-77.0, incident_type=incident_type, weapon="none", injured="no",
+            hour=10, day_of_week=1, report_count=1,
+        )
+        feature_columns = v3_predictor._bundle["feature_columns"]  # type: ignore[index]
+        idx = feature_columns.index(f"type_{incident_type}")
+        assert x[0][idx] == 1.0
+
+
+class TestV3PhotoTrusted:
+    def test_photo_trusted_in_feature_columns(self, v3_predictor: VerifierPredictor) -> None:
+        assert "photo_trusted" in v3_predictor._bundle["feature_columns"]  # type: ignore[index]
+
+    def test_exif_source_sets_trusted_flag(self, v3_predictor: VerifierPredictor) -> None:
+        x = v3_predictor._build_features(
+            lat=-12.1, lng=-77.0, incident_type="ROBBERY", weapon="none", injured="no",
+            hour=10, day_of_week=1, report_count=1, photo_source="exif",
+        )
+        idx = v3_predictor._bundle["feature_columns"].index("photo_trusted")  # type: ignore[index]
+        assert x[0][idx] == 1.0
+
+    def test_device_clock_source_sets_untrusted_flag(self, v3_predictor: VerifierPredictor) -> None:
+        x = v3_predictor._build_features(
+            lat=-12.1, lng=-77.0, incident_type="ROBBERY", weapon="none", injured="no",
+            hour=10, day_of_week=1, report_count=1, photo_source="device_clock",
+        )
+        idx = v3_predictor._bundle["feature_columns"].index("photo_trusted")  # type: ignore[index]
+        assert x[0][idx] == 0.0
+
+    def test_missing_photo_source_defaults_to_untrusted_no_crash(
+        self, v3_predictor: VerifierPredictor
+    ) -> None:
+        """GIVEN no photo_source at all WHEN verified THEN it defaults safely, no crash."""
+        result = v3_predictor.verify(
+            lat=-12.1, lng=-77.0, incident_type="SUSPICIOUS", weapon="none", injured="no",
+            hour=10, day_of_week=1, report_count=1,
+        )
+        assert result["degraded"] is False
+        assert 0.0 <= result["confidence"] <= 1.0
+
+    def test_photo_trusted_is_informational_not_a_hard_gate(
+        self, v3_predictor: VerifierPredictor
+    ) -> None:
+        """GIVEN an otherwise-coherent report WHEN photo_source flips exif<->device_clock
+        THEN is_coherent is still a normal ensemble-AND outcome — untrusted provenance never
+        forces a hard reject/block by itself (discovery: photoSource is client-asserted,
+        must stay informational)."""
+        trusted = v3_predictor.verify(
+            lat=-12.121, lng=-77.030, incident_type="ROBBERY", weapon="knife", injured="no",
+            hour=22, day_of_week=4, report_count=2, has_evidence=True, photo_age_minutes=8.0,
+            photo_source="exif",
+        )
+        untrusted = v3_predictor.verify(
+            lat=-12.121, lng=-77.030, incident_type="ROBBERY", weapon="knife", injured="no",
+            hour=22, day_of_week=4, report_count=2, has_evidence=True, photo_age_minutes=8.0,
+            photo_source="device_clock",
+        )
+        assert trusted["degraded"] is False
+        assert untrusted["degraded"] is False
+        assert isinstance(untrusted["is_coherent"], bool)
+        assert 0.0 <= trusted["confidence"] <= 1.0
+        assert 0.0 <= untrusted["confidence"] <= 1.0
+
+
+class TestV3UnknownIncidentType:
+    def test_unknown_type_does_not_crash(self, v3_predictor: VerifierPredictor) -> None:
+        result = v3_predictor.verify(
+            lat=-12.1, lng=-77.0, incident_type="NOT_A_REAL_TYPE",
+            weapon="none", injured="no", hour=10, day_of_week=1, report_count=1,
+        )
+        assert result["degraded"] is False
+        assert isinstance(result["is_coherent"], bool)
+        assert 0.0 <= result["confidence"] <= 1.0
+
+
+class TestV2BackwardCompatibility:
+    def test_v2_still_loads_and_verifies_without_photo_source(
+        self, v2_predictor: VerifierPredictor
+    ) -> None:
+        """GIVEN the v2 bundle (no photo_trusted column) WHEN verify() runs without
+        photo_source THEN it still works — the new kwarg is additive/optional and
+        v2's feature_columns selection silently drops photo_trusted from the row dict."""
+        result = v2_predictor.verify(
+            lat=-12.121, lng=-77.030, incident_type="ROBBERY",
+            weapon="knife", injured="no", hour=22, day_of_week=4, report_count=2,
+            has_evidence=True, photo_age_minutes=8.0,
+        )
+        assert result["degraded"] is False
+        assert 0.0 <= result["confidence"] <= 1.0

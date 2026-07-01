@@ -34,6 +34,10 @@ class VerifyRequest(BaseModel):
     user_reputation:   float = 0.5
     has_evidence:      bool = False
     photo_age_minutes: float | None = None
+    # Asertado por el cliente (api forwards it, evidence-authenticity S3). Señal
+    # informativa únicamente — NUNCA gatea/rechaza un reporte (ver photo_trusted
+    # en verifier_predictor.py). Opcional para no romper llamadas existentes.
+    photo_source:      str | None = None
 
 
 class VerifyResponse(BaseModel):
@@ -56,5 +60,6 @@ async def verify(req: VerifyRequest) -> VerifyResponse:
         report_count=int(req.form_data.get("report_count", 1)),
         has_evidence=req.has_evidence,
         photo_age_minutes=req.photo_age_minutes,
+        photo_source=req.photo_source,
     )
     return VerifyResponse(score=float(result["confidence"]), verified=bool(result["is_coherent"]))

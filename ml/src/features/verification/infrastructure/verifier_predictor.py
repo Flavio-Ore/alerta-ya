@@ -48,6 +48,7 @@ class VerifierPredictor:
         report_count: int,
         has_evidence: bool = False,
         photo_age_minutes: Optional[float] = None,
+        photo_source: Optional[str] = None,
     ) -> np.ndarray:
         b = self._bundle
         assert b is not None
@@ -75,6 +76,13 @@ class VerifierPredictor:
         # photo_age_minutes: clip [0, 999]; 999 = ausente (peor caso: sin foto o foto muy antigua)
         row["photo_age_minutes"] = float(np.clip(photo_age_minutes, 0, 999)) if photo_age_minutes is not None else 999.0
 
+        # photo_trusted (v3, señal informativa) — photo_source es asertado por el cliente,
+        # NUNCA se usa como gate duro en ningún punto del pipeline; solo aporta una feature
+        # más al modelo (mismo criterio aditivo que has_evidence/photo_age_minutes). Bundles
+        # v2 no tienen "photo_trusted" en feature_columns, así que la selección final la
+        # descarta automáticamente sin romper compatibilidad hacia atrás.
+        row["photo_trusted"] = 1.0 if photo_source == "exif" else 0.0
+
         return pd.DataFrame([row])[b["feature_columns"]].values
 
     def verify(
@@ -90,6 +98,7 @@ class VerifierPredictor:
         report_count: int = 1,
         has_evidence: bool = False,
         photo_age_minutes: Optional[float] = None,
+        photo_source: Optional[str] = None,
     ) -> dict[str, Any]:
         """Devuelve {is_coherent, confidence, degraded}. Sin modelo → coherente neutro."""
         if not self.ready:
@@ -99,7 +108,7 @@ class VerifierPredictor:
         assert b is not None
         x = self._build_features(
             lat, lng, incident_type, weapon, injured, hour, day_of_week, report_count,
-            has_evidence=has_evidence, photo_age_minutes=photo_age_minutes,
+            has_evidence=has_evidence, photo_age_minutes=photo_age_minutes, photo_source=photo_source,
         )
 
         ecod_anomaly = bool(b["ecod"].predict(x)[0] == 1)        # PyOD: 1 = outlier
