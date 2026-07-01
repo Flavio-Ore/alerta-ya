@@ -130,6 +130,8 @@ model Report {
   lng        Float
   aiVerified Boolean?
   aiScore    Float?
+  photoTakenAt DateTime? // Timestamp EXIF de la foto adjunta (o device_clock si no hay EXIF) — por reporte
+  photoSource  String?   // 'exif' | 'device_clock'
   createdAt  DateTime  @default(now())
   user       User      @relation(fields: [userId], references: [id])
   incident   Incident? @relation(fields: [incidentId], references: [id])
