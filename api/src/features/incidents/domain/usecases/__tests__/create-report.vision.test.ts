@@ -351,3 +351,98 @@ describe('createReport — multi-image MIN aggregation (S1)', () => {
     expect(createdWith.aiScore).toBeCloseTo(0.77);
   });
 });
+
+describe('createReport — media provenance / photoSource trust gate (S3)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('S3a GIVEN photoSource=device_clock THEN verifyReport receives photoAgeMinutes=null (untrusted, never "fresh")', async () => {
+    const verifyReportSpy = vi.fn().mockResolvedValue({ score: 0.7, verified: true });
+    const deps = makeDeps({ verifyReport: verifyReportSpy });
+
+    await createReport(
+      makeInput({ photoTakenAt: new Date(), photoSource: 'device_clock' }),
+      deps,
+    );
+
+    expect(verifyReportSpy).toHaveBeenCalledTimes(1);
+    const calledWith = verifyReportSpy.mock.calls[0]?.[0] as { photoAgeMinutes: number | null };
+    expect(calledWith.photoAgeMinutes).toBeNull();
+  });
+
+  it('S3b GIVEN photoSource=exif THEN verifyReport receives photoAgeMinutes computed from photoTakenAt', async () => {
+    const verifyReportSpy = vi.fn().mockResolvedValue({ score: 0.7, verified: true });
+    const deps = makeDeps({ verifyReport: verifyReportSpy });
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+    await createReport(
+      makeInput({ photoTakenAt: tenMinutesAgo, photoSource: 'exif' }),
+      deps,
+    );
+
+    expect(verifyReportSpy).toHaveBeenCalledTimes(1);
+    const calledWith = verifyReportSpy.mock.calls[0]?.[0] as { photoAgeMinutes: number | null };
+    expect(calledWith.photoAgeMinutes).not.toBeNull();
+    expect(calledWith.photoAgeMinutes as number).toBeCloseTo(10, 0);
+  });
+
+  it('S3c GIVEN photoSource is absent/undefined THEN photoAgeMinutes=null (no trust claim possible)', async () => {
+    const verifyReportSpy = vi.fn().mockResolvedValue({ score: 0.7, verified: true });
+    const deps = makeDeps({ verifyReport: verifyReportSpy });
+
+    await createReport(
+      makeInput({ photoTakenAt: new Date(), photoSource: undefined }),
+      deps,
+    );
+
+    const calledWith = verifyReportSpy.mock.calls[0]?.[0] as { photoAgeMinutes: number | null };
+    expect(calledWith.photoAgeMinutes).toBeNull();
+  });
+
+  it('S3d GIVEN no media/photoTakenAt at all THEN unaffected — photoAgeMinutes=null, report still publishes (fail-open)', async () => {
+    const verifyReportSpy = vi.fn().mockResolvedValue({ score: 0.7, verified: true });
+    const deps = makeDeps({ verifyReport: verifyReportSpy });
+
+    const dto = await createReport(makeInput({ mediaUrls: [] }), deps);
+
+    const calledWith = verifyReportSpy.mock.calls[0]?.[0] as { photoAgeMinutes: number | null };
+    expect(calledWith.photoAgeMinutes).toBeNull();
+    expect(dto).not.toBeNull();
+  });
+
+  it('S3e GIVEN photoTakenAt/photoSource present THEN Report is persisted with those columns', async () => {
+    const deps = makeDeps({ verifyReport: vi.fn().mockResolvedValue({ score: 0.7, verified: true }) });
+    const takenAt = new Date('2026-06-30T10:00:00.000Z');
+
+    await createReport(makeInput({ photoTakenAt: takenAt, photoSource: 'exif' }), deps);
+
+    const reportCreateArgs = (deps.reportRepo.create as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as {
+      photoTakenAt: Date | null;
+      photoSource: string | null;
+    };
+    expect(reportCreateArgs.photoTakenAt).toEqual(takenAt);
+    expect(reportCreateArgs.photoSource).toBe('exif');
+  });
+
+  it('S3f GIVEN photoSource=device_clock THEN report creation still succeeds and publishes (informational only, never a gate)', async () => {
+    const deps = makeDeps({ verifyReport: vi.fn().mockResolvedValue({ score: 0.7, verified: true }) });
+
+    const dto = await createReport(
+      makeInput({ photoTakenAt: new Date(), photoSource: 'device_clock' }),
+      deps,
+    );
+
+    expect(dto).not.toBeNull();
+  });
+
+  it('S3g GIVEN photoSource=exif THEN ml.client MlVerifyInput/VerifyReportPort forwards photoSource', async () => {
+    const verifyReportSpy = vi.fn().mockResolvedValue({ score: 0.7, verified: true });
+    const deps = makeDeps({ verifyReport: verifyReportSpy });
+
+    await createReport(makeInput({ photoTakenAt: new Date(), photoSource: 'exif' }), deps);
+
+    const calledWith = verifyReportSpy.mock.calls[0]?.[0] as { photoSource?: string | null };
+    expect(calledWith.photoSource).toBe('exif');
+  });
+});
