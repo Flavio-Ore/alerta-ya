@@ -12,6 +12,7 @@ import { AppError } from '../../../../core/errors/AppError';
 import { isWithinLima, getDistrict, bucketCoord } from '../../../../core/utils/geo.utils';
 import { env } from '../../../../core/config/env';
 import { AI_VERIFIED_THRESHOLD } from '../../infrastructure/ml.client';
+import { classifyMediaUrl } from '../../infrastructure/media-type';
 
 export interface CreateReportInput {
   uid: string;
@@ -157,12 +158,32 @@ export async function createReport(
     ? (Date.now() - input.photoTakenAt.getTime()) / 60_000
     : null;
 
-  // Vision task: resolve signed URL then analyze — gates on media + injected ports
+  // Vision task: analiza hasta 3 imágenes (video/otros se excluyen) y agrega
+  // por MIN (más conservador) — un solo elemento inconsistente baja el score.
+  // Fail-open por imagen: un resolve/analyze fallido no descarta las demás.
   const visionTask = async (): Promise<number | null> => {
     if (!hasMedia || !deps.resolveSignedUrl || !deps.analyzeImageForIncident) return null;
-    const signedUrl = await deps.resolveSignedUrl(input.mediaUrls[0]);
-    if (!signedUrl) return null;
-    return deps.analyzeImageForIncident(signedUrl, input.type);
+    const imageUrls = input.mediaUrls.filter((u) => classifyMediaUrl(u) === 'image').slice(0, 3);
+    if (imageUrls.length === 0) return null; // solo video/otros → sin señal de visión
+
+    const resolve = deps.resolveSignedUrl;
+    const analyze = deps.analyzeImageForIncident;
+    const settled = await Promise.allSettled(
+      imageUrls.map(async (gsPath) => {
+        const signedUrl = await resolve(gsPath);
+        if (!signedUrl) return null;
+        return analyze(signedUrl, input.type);
+      }),
+    );
+
+    const scores = settled
+      .filter(
+        (s): s is PromiseFulfilledResult<number | null> => s.status === 'fulfilled',
+      )
+      .map((s) => s.value)
+      .filter((v): v is number => v !== null);
+
+    return scores.length === 0 ? null : Math.min(...scores);
   };
 
   // Verificación ML + visión en paralelo (fail-open independiente en cada rama)

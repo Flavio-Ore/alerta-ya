@@ -232,3 +232,122 @@ describe('createReport — vision multiplier', () => {
     expect(createdWith.aiVerified).toBeNull();
   });
 });
+
+describe('createReport — multi-image MIN aggregation (S1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('S1a GIVEN 3 images with scores [1, -1, 0] THEN visionMatch aggregates as MIN = -1', async () => {
+    const analyzeImageForIncident = vi
+      .fn()
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(-1)
+      .mockResolvedValueOnce(0);
+
+    const deps = makeDeps({
+      verifyReport: vi.fn().mockResolvedValue({ score: 0.7, verified: true }),
+      resolveSignedUrl: vi.fn().mockImplementation((gs: string) => Promise.resolve(`https://signed/${gs}`)),
+      analyzeImageForIncident,
+    });
+
+    await createReport(
+      makeInput({ mediaUrls: ['gs://bucket/a.jpg', 'gs://bucket/b.jpg', 'gs://bucket/c.jpg'] }),
+      deps,
+    );
+
+    expect(analyzeImageForIncident).toHaveBeenCalledTimes(3);
+    const createdWith = (deps.incidentRepo.create as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as { aiScore: number };
+    // MIN(1,-1,0) = -1 → finalScore = 0.7 * (1 + 0.2 * -1) = 0.7 * 0.8 = 0.56
+    expect(createdWith.aiScore).toBeCloseTo(0.56);
+  });
+
+  it('S1b GIVEN image+video mix THEN video is excluded and only images are analyzed', async () => {
+    const analyzeImageForIncident = vi.fn().mockResolvedValue(1);
+
+    const deps = makeDeps({
+      verifyReport: vi.fn().mockResolvedValue({ score: 0.7, verified: true }),
+      resolveSignedUrl: vi.fn().mockImplementation((gs: string) => Promise.resolve(`https://signed/${gs}`)),
+      analyzeImageForIncident,
+    });
+
+    await createReport(
+      makeInput({ mediaUrls: ['gs://bucket/clip.mp4', 'gs://bucket/a.jpg', 'gs://bucket/b.jpg'] }),
+      deps,
+    );
+
+    expect(analyzeImageForIncident).toHaveBeenCalledTimes(2);
+    const calledUrls = analyzeImageForIncident.mock.calls.map((c) => c[0]);
+    expect(calledUrls).not.toContain('https://signed/gs://bucket/clip.mp4');
+  });
+
+  it('S1c GIVEN only video media THEN vision is skipped entirely (visionMatch null, factor 1.0)', async () => {
+    const mlScore = 0.65;
+    const analyzeImageForIncident = vi.fn();
+    const resolveSignedUrl = vi.fn();
+
+    const deps = makeDeps({
+      verifyReport: vi.fn().mockResolvedValue({ score: mlScore, verified: true }),
+      resolveSignedUrl,
+      analyzeImageForIncident,
+    });
+
+    await createReport(makeInput({ mediaUrls: ['gs://bucket/clip.mp4'] }), deps);
+
+    expect(analyzeImageForIncident).not.toHaveBeenCalled();
+    expect(resolveSignedUrl).not.toHaveBeenCalled();
+    const createdWith = (deps.incidentRepo.create as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as { aiScore: number };
+    expect(createdWith.aiScore).toBeCloseTo(mlScore);
+  });
+
+  it('S1d GIVEN more than 3 images THEN only the first 3 are analyzed', async () => {
+    const analyzeImageForIncident = vi.fn().mockResolvedValue(1);
+
+    const deps = makeDeps({
+      verifyReport: vi.fn().mockResolvedValue({ score: 0.7, verified: true }),
+      resolveSignedUrl: vi.fn().mockImplementation((gs: string) => Promise.resolve(`https://signed/${gs}`)),
+      analyzeImageForIncident,
+    });
+
+    await createReport(
+      makeInput({
+        mediaUrls: [
+          'gs://bucket/a.jpg',
+          'gs://bucket/b.jpg',
+          'gs://bucket/c.jpg',
+          'gs://bucket/d.jpg',
+          'gs://bucket/e.jpg',
+        ],
+      }),
+      deps,
+    );
+
+    expect(analyzeImageForIncident).toHaveBeenCalledTimes(3);
+  });
+
+  it('S1e GIVEN one of several image resolves fails THEN MIN aggregates over the remaining successes', async () => {
+    const analyzeImageForIncident = vi.fn().mockResolvedValue(0.5);
+    const resolveSignedUrl = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.reject(new Error('resolve failed')))
+      .mockImplementationOnce((gs: string) => Promise.resolve(`https://signed/${gs}`))
+      .mockImplementationOnce((gs: string) => Promise.resolve(`https://signed/${gs}`));
+
+    const deps = makeDeps({
+      verifyReport: vi.fn().mockResolvedValue({ score: 0.7, verified: true }),
+      resolveSignedUrl,
+      analyzeImageForIncident,
+    });
+
+    await createReport(
+      makeInput({ mediaUrls: ['gs://bucket/a.jpg', 'gs://bucket/b.jpg', 'gs://bucket/c.jpg'] }),
+      deps,
+    );
+
+    // First resolve rejected → only 2 successful analyze calls
+    expect(analyzeImageForIncident).toHaveBeenCalledTimes(2);
+    const createdWith = (deps.incidentRepo.create as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as { aiScore: number };
+    // MIN over remaining successes (0.5, 0.5) = 0.5 → finalScore = 0.7 * (1 + 0.2*0.5) = 0.77
+    expect(createdWith.aiScore).toBeCloseTo(0.77);
+  });
+});
