@@ -14,7 +14,10 @@ const IMAGE_EXT = /\.(jpe?g|png|webp|heic|heif|gif)$/i;
 const VIDEO_EXT = /\.(mp4|mov|webm|m4v|3gp)$/i;
 
 export function classifyMediaUrl(url: string): MediaKind {
-  const path = url.split('?')[0]; // strip signed-URL query string
+  // trim whitespace, then strip signed-URL query string (?) and fragment (#)
+  // antes de clasificar — evita rechazar por error una imagen legítima cuyo
+  // path llega con espacios o fragmento.
+  const path = url.trim().split(/[?#]/)[0];
   if (IMAGE_EXT.test(path)) return 'image';
   if (VIDEO_EXT.test(path)) return 'video';
   return 'other';

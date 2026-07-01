@@ -60,6 +60,18 @@ describe('classifyMediaUrl', () => {
   it('GIVEN a path with no extension THEN classifies as other', () => {
     expect(classifyMediaUrl('gs://bucket/evidence/no-extension')).toBe('other');
   });
+
+  it('GIVEN a .jpg path with trailing whitespace THEN still classifies as image', () => {
+    expect(classifyMediaUrl('gs://bucket/evidence/photo.jpg ')).toBe('image');
+  });
+
+  it('GIVEN a .jpg path with leading whitespace THEN still classifies as image', () => {
+    expect(classifyMediaUrl('  gs://bucket/evidence/photo.jpg')).toBe('image');
+  });
+
+  it('GIVEN a signed URL with a fragment THEN strips fragment before matching', () => {
+    expect(classifyMediaUrl('gs://bucket/evidence/photo.jpg#section')).toBe('image');
+  });
 });
 
 describe('isAllowedMedia', () => {
