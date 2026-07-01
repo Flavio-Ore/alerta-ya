@@ -180,28 +180,79 @@ export async function analyzeHistoricalData(
 // ─── Vision relevance checker ────────────────────────────────────────────────
 
 function buildVisionPrompt(incidentType: string): string {
-  return `You are a content-relevance checker for a citizen safety app in Lima, Peru.
+  return `You are a content-authenticity checker for a citizen safety app in Lima, Peru.
 A user submitted a photo as evidence for an incident of type: "${incidentType}".
-Decide ONLY whether the photo's visible content is plausibly consistent with that incident type.
-Do NOT judge photo quality, identity, or legality — only topical relevance.
-Respond with EXACTLY ONE WORD, no punctuation, no explanation:
-- CONSISTENT     — the photo plausibly shows or relates to this incident type
-- INCONSISTENT   — the photo clearly contradicts or is unrelated to this incident type
-- INDETERMINATE  — you cannot tell (blurry, dark, ambiguous, generic scene)`;
+Analyze the photo and respond with ONLY a JSON object, no prose, no markdown code fences:
+{"relevance": -1 | 0 | 1, "screenshot": true | false, "stock_or_meme": true | false, "watermark": true | false}
+
+Field meaning:
+- relevance: -1 if the photo clearly contradicts or is unrelated to this incident type, 0 if you cannot tell (blurry, dark, ambiguous, generic scene), 1 if the photo plausibly shows or relates to this incident type
+- screenshot: true if this is a screen capture / UI screenshot rather than an original photo
+- stock_or_meme: true if this looks like a stock photo, meme, or other clearly non-original image
+- watermark: true if there is a visible watermark or overlaid logo
+
+Do NOT judge photo quality, identity, or legality — only topical relevance and originality.`;
 }
 
-function parseVisionVerdict(raw: string | undefined): number {
-  const t = (raw ?? '').toUpperCase();
-  // INCONSISTENT must be checked BEFORE CONSISTENT — "INCONSISTENT" contains the substring "CONSISTENT"
-  if (t.includes('INCONSISTENT')) return -1.0;
-  if (t.includes('CONSISTENT')) return 1.0;
-  return 0.0;
+interface VisionJsonResponse {
+  relevance: number;
+  screenshot?: boolean;
+  stock_or_meme?: boolean;
+  watermark?: boolean;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * Extrae el primer bloque `{...}` del texto crudo, tolerando prosa
+ * o code fences (```json ... ```) alrededor del JSON.
+ */
+function extractJsonBlock(raw: string): string {
+  const match = raw.match(/\{[\s\S]*\}/);
+  return match ? match[0] : raw;
+}
+
+/**
+ * Parsea la respuesta estructurada de GLM-4V a un visionMatch acotado en [-1,1].
+ * `relevance` es la señal base (contradice/indeterminado/consistente); cada
+ * sub-señal de artefacto (screenshot, stock/meme, watermark) resta puntos —
+ * son indicios de contenido NO genuino. Pesos heurísticos, ajustables.
+ * Fail-open: cualquier JSON ausente, inválido, o sin `relevance` numérico
+ * finito retorna null — nunca NaN/Infinity, nunca lanza.
+ */
+function parseVisionJson(raw: string | undefined): number | null {
+  if (!raw) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(extractJsonBlock(raw));
+  } catch {
+    return null;
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) return null;
+  const candidate = parsed as Partial<VisionJsonResponse>;
+  if (typeof candidate.relevance !== 'number' || !Number.isFinite(candidate.relevance)) {
+    return null;
+  }
+
+  const base = clamp(candidate.relevance, -1, 1);
+  const penalty =
+    (candidate.screenshot === true ? 0.5 : 0) +
+    (candidate.stock_or_meme === true ? 0.5 : 0) +
+    (candidate.watermark === true ? 0.25 : 0);
+
+  return clamp(base - penalty, -1, 1);
 }
 
 /**
  * Analiza una imagen contra el tipo de incidente declarado.
- * Retorna +1.0 (consistente), -1.0 (inconsistente), 0.0 (indeterminado) o null (fail-open).
- * Fail-open: null si no hay key, la red falla, hay timeout, o la respuesta no es 2xx.
+ * Retorna un visionMatch acotado en [-1,1] (contradice…consistente, penalizado
+ * por señales de artefacto/no-autenticidad) o null (fail-open).
+ * Fail-open: null si no hay key, la red falla, hay timeout, la respuesta no
+ * es 2xx, o el JSON es ausente/inválido/incompleto.
  */
 export async function analyzeImage(
   imageUrl: string,
@@ -222,7 +273,7 @@ export async function analyzeImage(
       body: JSON.stringify({
         model: env.GLM_VISION_MODEL,
         temperature: 0,
-        max_tokens: 10,
+        max_tokens: 120,
         thinking: { type: 'disabled' },
         messages: [
           {
@@ -242,7 +293,7 @@ export async function analyzeImage(
     const data = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
-    return parseVisionVerdict(data.choices?.[0]?.message?.content);
+    return parseVisionJson(data.choices?.[0]?.message?.content);
   } catch {
     return null;
   } finally {
