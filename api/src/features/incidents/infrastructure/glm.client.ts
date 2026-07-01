@@ -179,7 +179,17 @@ export async function analyzeHistoricalData(
 
 // ─── Vision relevance checker ────────────────────────────────────────────────
 
+/**
+ * Tipos de incidente donde un screenshot ES evidencia legítima (ej. captura de
+ * una amenaza por WhatsApp/SMS). Para estos NO penalizamos el screenshot, y se
+ * lo indicamos al modelo en el prompt.
+ */
+const SCREENSHOT_EVIDENCE_TYPES = new Set(['HARASSMENT', 'EXTORTION']);
+
 function buildVisionPrompt(incidentType: string): string {
+  const screenshotNote = SCREENSHOT_EVIDENCE_TYPES.has(incidentType)
+    ? `\nIMPORTANT: for incident type "${incidentType}", a screenshot of a threatening message or notification is EXPECTED, legitimate evidence — in that case set "screenshot" to false.`
+    : '';
   return `You are a content-authenticity checker for a citizen safety app in Lima, Peru.
 A user submitted a photo as evidence for an incident of type: "${incidentType}".
 Analyze the photo and respond with ONLY a JSON object, no prose, no markdown code fences:
@@ -189,7 +199,7 @@ Field meaning:
 - relevance: -1 if the photo clearly contradicts or is unrelated to this incident type, 0 if you cannot tell (blurry, dark, ambiguous, generic scene), 1 if the photo plausibly shows or relates to this incident type
 - screenshot: true if this is a screen capture / UI screenshot rather than an original photo
 - stock_or_meme: true if this looks like a stock photo, meme, or other clearly non-original image
-- watermark: true if there is a visible watermark or overlaid logo
+- watermark: true if there is a visible watermark or overlaid logo${screenshotNote}
 
 Do NOT judge photo quality, identity, or legality — only topical relevance and originality.`;
 }
@@ -203,6 +213,14 @@ interface VisionJsonResponse {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * Coerción tolerante: el modelo puede devolver el flag como boolean `true`,
+ * string `"true"`, o número `1`. Cualquier otra cosa se trata como false.
+ */
+function asBool(value: unknown): boolean {
+  return value === true || value === 'true' || value === 1;
 }
 
 /**
@@ -222,7 +240,7 @@ function extractJsonBlock(raw: string): string {
  * Fail-open: cualquier JSON ausente, inválido, o sin `relevance` numérico
  * finito retorna null — nunca NaN/Infinity, nunca lanza.
  */
-function parseVisionJson(raw: string | undefined): number | null {
+function parseVisionJson(raw: string | undefined, incidentType: string): number | null {
   if (!raw) return null;
 
   let parsed: unknown;
@@ -238,11 +256,15 @@ function parseVisionJson(raw: string | undefined): number | null {
     return null;
   }
 
+  // Un screenshot es evidencia legítima para delitos de mensaje (amenazas):
+  // no lo penalizamos en esos tipos.
+  const screenshotPenalized = !SCREENSHOT_EVIDENCE_TYPES.has(incidentType);
+
   const base = clamp(candidate.relevance, -1, 1);
   const penalty =
-    (candidate.screenshot === true ? 0.5 : 0) +
-    (candidate.stock_or_meme === true ? 0.5 : 0) +
-    (candidate.watermark === true ? 0.25 : 0);
+    (screenshotPenalized && asBool(candidate.screenshot) ? 0.5 : 0) +
+    (asBool(candidate.stock_or_meme) ? 0.5 : 0) +
+    (asBool(candidate.watermark) ? 0.25 : 0);
 
   return clamp(base - penalty, -1, 1);
 }
@@ -293,7 +315,7 @@ export async function analyzeImage(
     const data = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
-    return parseVisionJson(data.choices?.[0]?.message?.content);
+    return parseVisionJson(data.choices?.[0]?.message?.content, incidentType);
   } catch {
     return null;
   } finally {

@@ -86,6 +86,36 @@ describe('analyzeImage — structured JSON vision contract (S2)', () => {
     expect(result).toBe(-1.0);
   });
 
+  it('GIVEN JSON {relevance:1, screenshot:true} for HARASSMENT WHEN GLM responds THEN screenshot is NOT penalized (message evidence) → 1.0', async () => {
+    mockGlmResponse(JSON.stringify({ relevance: 1, screenshot: true }));
+    const result = await analyzeImage('https://example.com/img.jpg', 'HARASSMENT');
+    expect(result).toBe(1.0);
+  });
+
+  it('GIVEN JSON {relevance:1, screenshot:true} for EXTORTION WHEN GLM responds THEN screenshot is NOT penalized → 1.0', async () => {
+    mockGlmResponse(JSON.stringify({ relevance: 1, screenshot: true }));
+    const result = await analyzeImage('https://example.com/img.jpg', 'EXTORTION');
+    expect(result).toBe(1.0);
+  });
+
+  it('GIVEN JSON {relevance:1, stock_or_meme:true} for HARASSMENT WHEN GLM responds THEN stock/meme is STILL penalized (only screenshot is exempt) → 0.5', async () => {
+    mockGlmResponse(JSON.stringify({ relevance: 1, stock_or_meme: true }));
+    const result = await analyzeImage('https://example.com/img.jpg', 'HARASSMENT');
+    expect(result).toBe(0.5);
+  });
+
+  it('GIVEN screenshot as string "true" WHEN GLM responds THEN coerced to boolean and penalized → 0.5', async () => {
+    mockGlmResponse(JSON.stringify({ relevance: 1, screenshot: 'true' }));
+    const result = await analyzeImage('https://example.com/img.jpg', 'ROBBERY');
+    expect(result).toBe(0.5);
+  });
+
+  it('GIVEN screenshot as number 1 WHEN GLM responds THEN coerced to boolean and penalized → 0.5', async () => {
+    mockGlmResponse(JSON.stringify({ relevance: 1, screenshot: 1 }));
+    const result = await analyzeImage('https://example.com/img.jpg', 'ROBBERY');
+    expect(result).toBe(0.5);
+  });
+
   it('GIVEN JSON {relevance:5} (out-of-range) WHEN GLM responds THEN base is clamped to 1.0 before penalties', async () => {
     mockGlmResponse(JSON.stringify({ relevance: 5 }));
     const result = await analyzeImage('https://example.com/img.jpg', 'ROBBERY');
