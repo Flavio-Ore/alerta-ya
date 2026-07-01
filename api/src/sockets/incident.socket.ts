@@ -177,6 +177,9 @@ export function emitConfirmRequest(io: Server, payload: ConfirmRequestPayload): 
     `[WS] 📢 emitConfirmRequest origen=(${payload.lat}, ${payload.lng}) approx=(${approxLat}, ${approxLng}) tile=(${latT}, ${lngT}) zone=${payload.zoneLabel} type=${payload.type}`,
   );
 
+  // Excluir al reporter del WS emit — no tiene sentido que confirme su propio reporte.
+  const reporterRoom = payload.reporterUid ? userRoom(payload.reporterUid) : undefined;
+
   let totalRecipients = 0;
   const targetTiles: string[] = [];
   for (let dLat = -1; dLat <= 1; dLat++) {
@@ -186,7 +189,8 @@ export function emitConfirmRequest(io: Server, payload: ConfirmRequestPayload): 
       const size = io.sockets.adapter.rooms.get(room)?.size ?? 0;
       totalRecipients += size;
       if (size > 0) console.log(`[WS]    → ${room} (${size} client${size === 1 ? '' : 's'})`);
-      io.to(room).emit('alert:confirm-request', message);
+      const emitter = reporterRoom ? io.to(room).except(reporterRoom) : io.to(room);
+      emitter.emit('alert:confirm-request', message);
     }
   }
   console.log(`[WS] 📢 confirm-request emitido a ${totalRecipients} socket(s) en total`);
@@ -196,11 +200,15 @@ export function emitConfirmRequest(io: Server, payload: ConfirmRequestPayload): 
   deviceTokenRepo
     .findByProxTiles(targetTiles)
     .then(async (entries) => {
-      if (entries.length === 0) {
+      // Excluir token(s) del reporter para que no reciba su propia notificación.
+      const filtered = payload.reporterUserId
+        ? entries.filter((e) => e.userId !== payload.reporterUserId)
+        : entries;
+      if (filtered.length === 0) {
         console.log('[FCM] 0 device_tokens matching tiles — skip push');
         return;
       }
-      const tokens = entries.map((e) => e.token);
+      const tokens = filtered.map((e) => e.token);
       console.log(`[FCM] 🔔 enviando confirm-request push a ${tokens.length} token(s)`);
       const result = await sendConfirmRequestPush(
         {

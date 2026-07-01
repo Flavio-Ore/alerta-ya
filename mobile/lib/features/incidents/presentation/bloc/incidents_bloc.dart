@@ -55,6 +55,10 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
   // aplicamos cuando la transición a IncidentsLoaded termine.
   ConfirmRequestEvent? _bufferedConfirmRequest;
 
+  // Claves de confirm-requests ya mostrados en esta sesión.
+  // Evita que un tap repetido en la notificación FCM del sistema abra el sheet otra vez.
+  final _seenConfirmRequests = <String>{};
+
   Future<void> _onStarted(
       IncidentsStarted event, Emitter<IncidentsState> emit) async {
     emit(const IncidentsLoading());
@@ -149,8 +153,22 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
     );
   }
 
+  static String _confirmRequestKey(ConfirmRequestEvent e) {
+    final lat = e.approxLat?.toStringAsFixed(3) ?? '?';
+    final lng = e.approxLng?.toStringAsFixed(3) ?? '?';
+    final hour = e.reportedAt?.toIso8601String().substring(0, 13) ?? '?';
+    return 'cr:$lat:$lng:${e.type.name}:$hour';
+  }
+
   void _onConfirmRequestReceived(
       ConfirmRequestReceived event, Emitter<IncidentsState> emit) {
+    final key = _confirmRequestKey(event.event);
+    if (_seenConfirmRequests.contains(key)) {
+      debugPrint('[IncidentsBloc] ⚠ confirm-request ya mostrado — ignorando (key=$key)');
+      return;
+    }
+    _seenConfirmRequests.add(key);
+
     debugPrint('[IncidentsBloc] 📨 ConfirmRequestReceived state=${state.runtimeType} zone=${event.event.zoneLabel} type=${event.event.type}');
     if (state is IncidentsLoaded) {
       debugPrint('[IncidentsBloc] ✓ emit IncidentsLoaded con pendingConfirmRequest');

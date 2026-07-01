@@ -113,6 +113,7 @@ export async function createReport(
       lat: input.lat,
       lng: input.lng,
       reporterUserId: input.userId,
+      reporterUid: input.uid,
     };
     eventBus.emit(IncidentEvents.CONFIRM_REQUEST, payload);
     return null;
