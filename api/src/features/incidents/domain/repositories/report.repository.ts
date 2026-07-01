@@ -10,6 +10,8 @@ export interface CreateReportData {
   formData: ReportFormData;
   mediaUrls: string[];
   incidentId?: string | null;
+  photoTakenAt?: Date | null;
+  photoSource?: string | null;
 }
 
 export interface FindByUserIdOptions {

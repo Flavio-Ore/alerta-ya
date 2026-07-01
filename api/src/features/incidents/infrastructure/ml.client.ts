@@ -12,6 +12,12 @@ export interface MlVerifyInput {
   userReputation: number;
   hasEvidence: boolean;
   photoAgeMinutes: number | null;
+  /**
+   * 'exif' | 'device_clock' | null — informativo, forward-compat para el
+   * verificador ML (S4). El ML actual ignora campos desconocidos (pydantic
+   * extra='ignore'), así que esto NUNCA gatea/bloquea el resultado hoy.
+   */
+  photoSource: string | null;
 }
 
 export interface MlVerifyResult {
@@ -39,6 +45,7 @@ export async function verifyReport(input: MlVerifyInput): Promise<MlVerifyResult
         user_reputation: input.userReputation,
         has_evidence: input.hasEvidence,
         photo_age_minutes: input.photoAgeMinutes,
+        photo_source: input.photoSource,
       }),
       signal: controller.signal,
     });

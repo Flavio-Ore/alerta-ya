@@ -26,6 +26,8 @@ export class PrismaReportRepository implements ReportRepository {
         formData: formDataWithType,
         mediaUrls: data.mediaUrls,
         incidentId: data.incidentId ?? null,
+        photoTakenAt: data.photoTakenAt ?? null,
+        photoSource: data.photoSource ?? null,
       },
     });
   }

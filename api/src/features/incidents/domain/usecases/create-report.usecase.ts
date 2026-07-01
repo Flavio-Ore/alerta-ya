@@ -40,6 +40,7 @@ export interface VerifyReportPort {
     userReputation: number;
     hasEvidence: boolean;
     photoAgeMinutes: number | null;
+    photoSource: string | null;
   }): Promise<{ score: number; verified: boolean } | null>;
 }
 
@@ -90,6 +91,8 @@ export async function createReport(
     formData: input.formData,
     mediaUrls: input.mediaUrls,
     incidentId: null,
+    photoTakenAt: input.photoTakenAt ?? null,
+    photoSource: input.photoSource ?? null,
   });
 
   const decision = await evaluateThreshold(
@@ -154,9 +157,17 @@ export async function createReport(
   // Señales de evidencia derivadas en servidor (no provienen del cliente)
   const hasEvidence = input.mediaUrls.length > 0;
   const hasMedia = input.mediaUrls.length > 0;
-  const photoAgeMinutes = input.photoTakenAt
-    ? (Date.now() - input.photoTakenAt.getTime()) / 60_000
-    : null;
+
+  // Trust gate: solo un timestamp EXIF real (photoSource==='exif') es confiable como
+  // "foto reciente". device_clock (fallback del cliente cuando no hay EXIF) es
+  // indistinguible de una foto vieja resubida — nunca debe leerse como "fresca".
+  // Untrusted/ausente → null → el verificador aplica su sentinela 999 (peor caso),
+  // NUNCA bloquea el reporte (informativo, fail-open).
+  const photoTrusted = input.photoSource === 'exif';
+  const photoAgeMinutes =
+    input.photoTakenAt && photoTrusted
+      ? (Date.now() - input.photoTakenAt.getTime()) / 60_000
+      : null;
 
   // Vision task: analiza hasta 3 imágenes (video/otros se excluyen) y agrega
   // por MIN (más conservador) — un solo elemento inconsistente baja el score.
@@ -198,6 +209,7 @@ export async function createReport(
           userReputation: 0.5,
           hasEvidence,
           photoAgeMinutes,
+          photoSource: input.photoSource ?? null,
         })
       : Promise.resolve(null),
     visionTask(),
