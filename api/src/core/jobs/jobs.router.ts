@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 
 import { prisma } from '../config/prisma';
 import { expireIncidents } from './expire-incidents.job';
+import { recomputeRiskJob } from './recompute-risk.job';
 import { env } from '../config/env';
 import { eventBus, IncidentEvents, PanicEvents } from '../events/event-bus';
 import { toPublicDTO } from '../../features/incidents/domain/entities/incident.entity';
@@ -25,6 +26,18 @@ jobsRouter.post('/expire-incidents', async (req: Request, res: Response) => {
 
   const { closed } = await expireIncidents(prisma);
   res.json({ ok: true, closed });
+});
+
+/**
+ * Recalcula el artefacto de riesgo (api/data/risk-hourly.json) y refresca el cache
+ * en memoria del endpoint GET /risk. Correr diariamente vía Cloud Scheduler para
+ * mantener el riesgo al día (Fase I). Fail-safe: nunca tumba el proceso.
+ */
+jobsRouter.post('/recompute-risk', (req: Request, res: Response) => {
+  if (!authorizeJob(req, res)) return;
+
+  const result = recomputeRiskJob();
+  res.status(result.ok ? 200 : 500).json(result);
 });
 
 /**

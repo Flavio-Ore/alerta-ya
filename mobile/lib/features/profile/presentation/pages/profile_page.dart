@@ -88,7 +88,11 @@ class _ProfileView extends StatelessWidget {
                     const SizedBox(height: 12),
                     // Reputación — solo si cargó
                     if (state is ProfileData) ...[
-                      _ReputationBadge(score: state.profile.reputationScore),
+                      _ReputationBadge(
+                        score: state.profile.reputationScore,
+                        tier: state.profile.tier,
+                        pointsToNext: state.profile.pointsToNext,
+                      ),
                     ] else if (state is ProfileLoading) ...[
                       const SizedBox(
                         width: 80,
@@ -420,8 +424,18 @@ class _AvatarWidget extends StatelessWidget {
 }
 
 class _ReputationBadge extends StatelessWidget {
-  const _ReputationBadge({required this.score});
+  const _ReputationBadge({
+    required this.score,
+    this.tier,
+    this.pointsToNext,
+  });
   final int score;
+
+  /// Nivel de reputación ('high'|'medium'|'low'). Null = API vieja, sin nivel.
+  final String? tier;
+
+  /// Puntos que faltan para subir de nivel. Solo se muestra si no es null.
+  final int? pointsToNext;
 
   Color get _color {
     if (score >= 80) return AppColors.secondary;
@@ -429,26 +443,50 @@ class _ReputationBadge extends StatelessWidget {
     return AppColors.severityCritical;
   }
 
+  String? get _tierLabel => switch (tier) {
+        'high' => 'Confiable',
+        'medium' => 'Habitual',
+        'low' => 'Nuevo',
+        _ => null,
+      };
+
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: _color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: _color.withValues(alpha: 0.35)),
+  Widget build(BuildContext context) {
+    final tierLabel = _tierLabel;
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: _color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: _color.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star_rounded, size: 14, color: _color),
+              const SizedBox(width: 5),
+              Text(
+                tierLabel != null
+                    ? 'Reputación: $score · $tierLabel'
+                    : 'Reputación: $score',
+                style: AppTextStyles.labelMd.copyWith(color: _color),
+              ),
+            ],
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.star_rounded, size: 14, color: _color),
-            const SizedBox(width: 5),
-            Text(
-              'Reputación: $score',
-              style: AppTextStyles.labelMd.copyWith(color: _color),
-            ),
-          ],
-        ),
-      );
+        if (pointsToNext != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Faltan $pointsToNext pts para subir de nivel',
+            style: AppTextStyles.labelSm
+                .copyWith(color: AppColors.onSurfaceVariant),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class _SectionHeader extends StatelessWidget {

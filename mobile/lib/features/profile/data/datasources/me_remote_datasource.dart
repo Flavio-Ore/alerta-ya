@@ -25,9 +25,13 @@ class MeRemoteDataSourceImpl implements MeRemoteDataSource {
     try {
       final res = await _dio.get<Map<String, dynamic>>('/me/profile');
       final d = res.data!;
+      // Parser tolerante: `level` es un campo nuevo, puede no venir en APIs viejas.
+      final level = d['level'] as Map<String, dynamic>?;
       return UserProfileEntity(
         reputationScore: d['reputationScore'] as int,
         memberSince: DateTime.parse(d['memberSince'] as String),
+        tier: level?['tier'] as String?,
+        pointsToNext: level?['pointsToNext'] as int?,
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) throw const UnauthorizedException();

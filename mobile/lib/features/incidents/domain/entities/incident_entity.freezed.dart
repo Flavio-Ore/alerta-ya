@@ -507,6 +507,7 @@ mixin _$IncidentDetailEntity {
   int get weaponReports => throw _privateConstructorUsedError;
   int get injuredReports => throw _privateConstructorUsedError;
   int get stillHereReports => throw _privateConstructorUsedError;
+  String? get reporterTrust => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $IncidentDetailEntityCopyWith<IncidentDetailEntity> get copyWith =>
@@ -539,7 +540,8 @@ abstract class $IncidentDetailEntityCopyWith<$Res> {
       bool? aiVerified,
       int weaponReports,
       int injuredReports,
-      int stillHereReports});
+      int stillHereReports,
+      String? reporterTrust});
 }
 
 /// @nodoc
@@ -576,6 +578,7 @@ class _$IncidentDetailEntityCopyWithImpl<$Res,
     Object? weaponReports = null,
     Object? injuredReports = null,
     Object? stillHereReports = null,
+    Object? reporterTrust = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -658,6 +661,10 @@ class _$IncidentDetailEntityCopyWithImpl<$Res,
           ? _value.stillHereReports
           : stillHereReports // ignore: cast_nullable_to_non_nullable
               as int,
+      reporterTrust: freezed == reporterTrust
+          ? _value.reporterTrust
+          : reporterTrust // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -690,7 +697,8 @@ abstract class _$$IncidentDetailEntityImplCopyWith<$Res>
       bool? aiVerified,
       int weaponReports,
       int injuredReports,
-      int stillHereReports});
+      int stillHereReports,
+      String? reporterTrust});
 }
 
 /// @nodoc
@@ -724,6 +732,7 @@ class __$$IncidentDetailEntityImplCopyWithImpl<$Res>
     Object? weaponReports = null,
     Object? injuredReports = null,
     Object? stillHereReports = null,
+    Object? reporterTrust = freezed,
   }) {
     return _then(_$IncidentDetailEntityImpl(
       id: null == id
@@ -806,6 +815,10 @@ class __$$IncidentDetailEntityImplCopyWithImpl<$Res>
           ? _value.stillHereReports
           : stillHereReports // ignore: cast_nullable_to_non_nullable
               as int,
+      reporterTrust: freezed == reporterTrust
+          ? _value.reporterTrust
+          : reporterTrust // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -833,7 +846,8 @@ class _$IncidentDetailEntityImpl implements _IncidentDetailEntity {
       this.aiVerified,
       this.weaponReports = 0,
       this.injuredReports = 0,
-      this.stillHereReports = 0});
+      this.stillHereReports = 0,
+      this.reporterTrust});
 
   @override
   final String id;
@@ -878,10 +892,12 @@ class _$IncidentDetailEntityImpl implements _IncidentDetailEntity {
   @override
   @JsonKey()
   final int stillHereReports;
+  @override
+  final String? reporterTrust;
 
   @override
   String toString() {
-    return 'IncidentDetailEntity(id: $id, type: $type, severity: $severity, status: $status, lat: $lat, lng: $lng, district: $district, confirmCount: $confirmCount, denyCount: $denyCount, reportCount: $reportCount, expiresAt: $expiresAt, createdAt: $createdAt, updatedAt: $updatedAt, unitAssigned: $unitAssigned, feedback: $feedback, aiScore: $aiScore, aiVerified: $aiVerified, weaponReports: $weaponReports, injuredReports: $injuredReports, stillHereReports: $stillHereReports)';
+    return 'IncidentDetailEntity(id: $id, type: $type, severity: $severity, status: $status, lat: $lat, lng: $lng, district: $district, confirmCount: $confirmCount, denyCount: $denyCount, reportCount: $reportCount, expiresAt: $expiresAt, createdAt: $createdAt, updatedAt: $updatedAt, unitAssigned: $unitAssigned, feedback: $feedback, aiScore: $aiScore, aiVerified: $aiVerified, weaponReports: $weaponReports, injuredReports: $injuredReports, stillHereReports: $stillHereReports, reporterTrust: $reporterTrust)';
   }
 
   @override
@@ -922,7 +938,9 @@ class _$IncidentDetailEntityImpl implements _IncidentDetailEntity {
             (identical(other.injuredReports, injuredReports) ||
                 other.injuredReports == injuredReports) &&
             (identical(other.stillHereReports, stillHereReports) ||
-                other.stillHereReports == stillHereReports));
+                other.stillHereReports == stillHereReports) &&
+            (identical(other.reporterTrust, reporterTrust) ||
+                other.reporterTrust == reporterTrust));
   }
 
   @override
@@ -947,7 +965,8 @@ class _$IncidentDetailEntityImpl implements _IncidentDetailEntity {
         aiVerified,
         weaponReports,
         injuredReports,
-        stillHereReports
+        stillHereReports,
+        reporterTrust
       ]);
 
   @JsonKey(ignore: true)
@@ -980,7 +999,8 @@ abstract class _IncidentDetailEntity implements IncidentDetailEntity {
       final bool? aiVerified,
       final int weaponReports,
       final int injuredReports,
-      final int stillHereReports}) = _$IncidentDetailEntityImpl;
+      final int stillHereReports,
+      final String? reporterTrust}) = _$IncidentDetailEntityImpl;
 
   @override
   String get id;
@@ -1022,6 +1042,8 @@ abstract class _IncidentDetailEntity implements IncidentDetailEntity {
   int get injuredReports;
   @override
   int get stillHereReports;
+  @override
+  String? get reporterTrust;
   @override
   @JsonKey(ignore: true)
   _$$IncidentDetailEntityImplCopyWith<_$IncidentDetailEntityImpl>

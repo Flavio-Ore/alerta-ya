@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../../core/config/prisma';
 import { AppError } from '../../../core/errors/AppError';
 import { UpdatePreferencesDto } from './me.schema';
+import { ownerReputationLevel } from '../../incidents/application/reputation-tier';
 
 /**
  * GET /me/profile
@@ -38,6 +39,8 @@ export async function getProfile(
     res.json({
       reputationScore: user.reputationScore,
       memberSince: user.createdAt.toISOString(),
+      // Nivel personal detallado — solo visible al dueño (incluye puntaje y progreso).
+      level: ownerReputationLevel(user.reputationScore),
     });
   } catch (err) {
     next(err);
