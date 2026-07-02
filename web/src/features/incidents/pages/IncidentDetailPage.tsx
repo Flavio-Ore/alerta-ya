@@ -5,6 +5,7 @@ import { Siren, History, CheckCircle2, Clock, ArrowLeft, AlertCircle, FileText, 
 import { useIncidentDetail, useUpdateIncidentStatus } from '../infrastructure/incidents.api';
 import { IncidentsMap } from '../../dashboard/components/IncidentsMap';
 import { AiConfidenceBadge } from '../../../core/components/AiConfidenceBadge';
+import { ReporterTrustBadge } from '../../../core/components/ReporterTrustBadge';
 import {
   incidentTypeLabel,
   severityLabel,
@@ -187,6 +188,12 @@ export default function IncidentDetailPage() {
                   <span className="text-xs text-ay-text-muted uppercase">Reportes totales</span>
                   <span className="text-xs font-bold text-white">{incident.reportCount}</span>
                 </div>
+                {incident.reporterTrust != null && (
+                  <div className="flex justify-between items-center border-b border-ay-border pb-2">
+                    <span className="text-xs text-ay-text-muted uppercase">Confianza de reportantes</span>
+                    <ReporterTrustBadge tier={incident.reporterTrust} />
+                  </div>
+                )}
                 <div className="flex justify-between items-center border-b border-ay-border pb-2">
                   <span className="text-xs text-ay-text-muted uppercase">Reportes con arma</span>
                   <span className={`text-xs font-bold uppercase flex items-center gap-1 ${incident.weaponReports > 0 ? 'text-ay-critical' : 'text-ay-text-secondary'}`}>

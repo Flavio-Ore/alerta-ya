@@ -50,12 +50,16 @@ export interface StatusHistoryEntryDTO {
   changedAt: string;
 }
 
+export type ReporterTrustTier = 'high' | 'medium' | 'low';
+
 export interface PublicIncidentDetailDTO extends PublicIncidentDTO {
   weaponReports: number;
   injuredReports: number;
   stillHereReports: number;
   evidence: ReportEvidenceDTO[];
   statusHistory: StatusHistoryEntryDTO[];
+  /** Tier de confianza agregado de los reportantes — anónimo, sin puntaje. */
+  reporterTrust?: ReporterTrustTier | null;
 }
 
 export interface ListIncidentsResult {
