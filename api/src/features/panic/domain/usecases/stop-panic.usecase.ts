@@ -24,7 +24,7 @@ export async function stopPanic(
   // Verificar propiedad — nunca aceptar userId del body
   const user = await deps.userLookup.findOrCreate(input.uid);
   if (session.userId !== user.id) {
-    throw new AppError(403, 'No tenés permiso para desactivar esta sesión');
+    throw new AppError(403, 'No tienes permiso para desactivar esta sesión');
   }
 
   const updated = await deps.panicRepo.deactivate(input.sessionId, 'pin');

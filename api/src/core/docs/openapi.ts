@@ -623,7 +623,7 @@ Activa el botón de pánico. Devuelve **URLs firmadas de GCS** para subir audio 
         responses: {
           201: { description: 'Sesión iniciada', content: { 'application/json': { schema: { $ref: '#/components/schemas/PublicPanicSessionDTO' } } } },
           401: { description: 'No autenticado', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
-          409: { description: 'Ya tenés una sesión de pánico activa', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          409: { description: 'Ya tienes una sesión de pánico activa', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
         },
       },
     },

@@ -383,7 +383,7 @@ class _NotificationPermissionTileState
         leading: const Icon(Icons.notifications_off_outlined,
             color: AppColors.onSurfaceVariant),
         title: const Text('Alertas push', style: AppTextStyles.bodyLg),
-        subtitle: const Text('Permiso desactivado · Tocá para activar',
+        subtitle: const Text('Permiso desactivado · Toca para activar',
             style: AppTextStyles.bodyMd),
         trailing: const Icon(Icons.open_in_new,
             color: AppColors.onSurfaceVariant, size: 18),

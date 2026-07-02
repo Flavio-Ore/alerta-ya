@@ -50,7 +50,7 @@ List<TargetFocus> buildTutorialTargets(TutorialKeys keys) {
       align: ContentAlign.top,
       title: 'Tus alertas',
       description:
-          'Acá recibes notificaciones de incidentes cercanos a ti.',
+          'Aquí recibes notificaciones de incidentes cercanos a ti.',
     ),
     _target(
       id: 'tutorial_risk',

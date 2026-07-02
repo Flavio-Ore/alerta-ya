@@ -57,7 +57,7 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
             msg ?? 'Llegaste al límite de 3 reportes por hora.',
         unauthorized: () =>
             'Tu sesión expiró. Vuelve a iniciar sesión para reportar.',
-        forbidden: () => 'No tenés permisos para realizar esta acción.',
+        forbidden: () => 'No tienes permisos para realizar esta acción.',
         notFound: () => 'Recurso no encontrado.',
         validation: (msg) => msg,
         unknown: (msg) =>
