@@ -59,6 +59,18 @@ async function updateReputation(userId: string, delta: number): Promise<number> 
 }
 
 /**
+ * Reputación (reputationScore) del votante por firebaseUid, para ponderar su voto.
+ * Fail-open: reputación media (100) si el usuario no existe aún.
+ */
+async function getVoterReputation(uid: string): Promise<number> {
+  const user = await prisma.user.findUnique({
+    where: { firebaseUid: uid },
+    select: { reputationScore: true },
+  });
+  return user?.reputationScore ?? 100;
+}
+
+/**
  * Envía notificación push al usuario sobre su reputación.
  * Fail-open: si no hay tokens o el envío falla, se logea y se continúa.
  */
@@ -325,7 +337,7 @@ export async function confirmOrDenyIncident(req: Request, res: Response, next: N
 
     const dto = await confirmIncident(
       { incidentId: req.params['id']!, uid: req.user.uid, vote: body.vote, lat: body.lat, lng: body.lng },
-      { incidentRepo, redis },
+      { incidentRepo, redis, getVoterReputation },
     );
 
     res.json(dto);
