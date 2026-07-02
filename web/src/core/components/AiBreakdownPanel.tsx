@@ -23,6 +23,16 @@ export const AiBreakdownPanel: FC<Props> = ({ incident }) => {
   const { aiScore, aiVerified, evidence, photoTakenAt, photoSource } = incident;
   const hasEvidence = evidence.some((e) => e.mediaUrls.length > 0);
 
+  // La antigüedad solo es confiable si el timestamp viene de EXIF real. El
+  // verificador descarta la frescura cuando photoSource !== 'exif' (device_clock
+  // es spoofeable), así que el panel no debe mostrarla como fresca sin marcarla.
+  const photoTrusted = photoSource === 'exif';
+  const photoAgeLabel = !photoTakenAt
+    ? 'sin foto'
+    : photoTrusted
+      ? formatRelativeTime(photoTakenAt)
+      : `${formatRelativeTime(photoTakenAt)} (no verificado)`;
+
   if (aiScore == null && !hasEvidence) {
     return (
       <div className="bg-ay-bg-dark2 border border-ay-border p-6 flex flex-col items-center justify-center text-center gap-2">
@@ -63,9 +73,7 @@ export const AiBreakdownPanel: FC<Props> = ({ incident }) => {
 
         <div className="flex justify-between items-center border-b border-ay-border pb-2">
           <span className="text-xs text-ay-text-muted uppercase">Antigüedad de la foto</span>
-          <span className="text-xs font-bold text-white">
-            {photoTakenAt ? formatRelativeTime(photoTakenAt) : 'sin foto'}
-          </span>
+          <span className="text-xs font-bold text-white">{photoAgeLabel}</span>
         </div>
 
         {photoSource && (

@@ -65,6 +65,36 @@ describe('AiBreakdownPanel', () => {
     expect(screen.getByText(/Sin datos de IA/i)).toBeInTheDocument();
   });
 
+  it('GIVEN aiScore=null but evidence present THEN renders panel (not empty-state) with "Sin evaluar por IA"', () => {
+    const incident = makeIncident({
+      aiScore: null,
+      aiVerified: null,
+      evidence: [{ formData: {}, mediaUrls: ['gs://bucket/a.jpg'] }],
+    });
+
+    render(<AiBreakdownPanel incident={incident} />);
+
+    // Not the empty-state — evidence exists, so the full panel shows the AI verdict.
+    expect(screen.queryByText(/Sin datos de IA/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Sin evaluar por IA/i)).toBeInTheDocument();
+  });
+
+  it('GIVEN photoSource=device_clock THEN photo age is marked "(no verificado)" — mirrors the backend trust gate', () => {
+    const tenMinAgo = new Date(Date.now() - 10 * 60_000).toISOString();
+    const incident = makeIncident({
+      aiScore: 0.6,
+      aiVerified: true,
+      evidence: [{ formData: {}, mediaUrls: ['gs://bucket/a.jpg'] }],
+      photoTakenAt: tenMinAgo,
+      photoSource: 'device_clock',
+    });
+
+    render(<AiBreakdownPanel incident={incident} />);
+
+    // Not shown as a trusted fresh age — the verifier discounted it (999 sentinel).
+    expect(screen.getByText(/no verificado/i)).toBeInTheDocument();
+  });
+
   it('has_evidence is RECOMPUTED from evidence[].mediaUrls.length, not trusted blindly', () => {
     const incident = makeIncident({
       aiScore: 0.5,

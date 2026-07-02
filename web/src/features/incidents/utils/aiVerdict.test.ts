@@ -18,4 +18,12 @@ describe('aiVerdict', () => {
   it('GIVEN score=0.5 AND verified=null (regression guard) THEN returns not-evaluated, NEVER verified', () => {
     expect(aiVerdict(0.5, null)).toBe('not-evaluated');
   });
+
+  it('GIVEN score=0.5 AND verified=undefined (regression guard) THEN returns not-evaluated, NEVER verified', () => {
+    expect(aiVerdict(0.5, undefined)).toBe('not-evaluated');
+  });
+
+  it('GIVEN score=undefined THEN returns not-evaluated', () => {
+    expect(aiVerdict(undefined, true)).toBe('not-evaluated');
+  });
 });
