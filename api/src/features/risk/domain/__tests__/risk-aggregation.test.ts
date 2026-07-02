@@ -76,6 +76,13 @@ describe('computeRiskArtifact', () => {
     expect(art.districts['BARRANCO']!.badHours).toEqual([22, 20, 8]);
   });
 
+  it('is DETERMINISTIC: same inputs serialize to identical JSON (committeable artifact)', () => {
+    const seed = [inc('Barranco', 22), inc('Med', 1), inc('Barranco', 22, 'EXTORTION')];
+    const a = JSON.stringify(computeRiskArtifact(tiles, seed));
+    const b = JSON.stringify(computeRiskArtifact(tiles, seed));
+    expect(a).toBe(b);
+  });
+
   it('passes tiles through for the heatmap and keys districts by normalized name', () => {
     const art = computeRiskArtifact(tiles, []);
     expect(art.tiles).toHaveLength(3);
