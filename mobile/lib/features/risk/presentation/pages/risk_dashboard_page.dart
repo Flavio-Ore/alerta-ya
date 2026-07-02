@@ -162,7 +162,7 @@ class _ErrorState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Revisá tu conexión e intentá de nuevo en unos minutos.',
+              'Revisa tu conexión e intenta de nuevo en unos minutos.',
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyMd.copyWith(
                 color: AppColors.onSurfaceVariant,

@@ -193,7 +193,7 @@ class _RiskAddressSearchState extends State<RiskAddressSearch> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'No pudimos buscar direcciones. Revisá tu conexión.',
+                  'No pudimos buscar direcciones. Revisa tu conexión.',
                   style: AppTextStyles.bodySm.copyWith(
                     color: AppColors.onSurfaceVariant,
                   ),
