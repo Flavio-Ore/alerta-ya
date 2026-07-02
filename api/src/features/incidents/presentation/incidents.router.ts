@@ -3,9 +3,10 @@ import { Router } from 'express';
 import { authMiddleware } from '../../../core/middleware/auth.middleware';
 import { authorityMiddleware } from '../../../core/middleware/authority.middleware';
 import { reportRateLimiterMiddleware } from '../../../core/middleware/rateLimiter.middleware';
+import { evidenceRateLimiterMiddleware } from '../../../core/middleware/evidenceRateLimiter.middleware';
 import { validate } from '../../../core/middleware/validate.middleware';
 import { createReportSchema, listIncidentsQuerySchema, listMyReportsQuerySchema, idParamSchema, confirmSchema, updateStatusSchema, zoneConfirmSchema, reportIdParamSchema } from './incidents.schema';
-import { listIncidents, getIncident, submitReport, patchIncidentStatus, confirmOrDenyIncident, respondZoneConfirm, listMyReports, cancelReport } from './incidents.controller';
+import { listIncidents, getIncident, getIncidentEvidenceUrls, submitReport, patchIncidentStatus, confirmOrDenyIncident, respondZoneConfirm, listMyReports, cancelReport } from './incidents.controller';
 
 const router = Router();
 
@@ -18,6 +19,14 @@ router.get(
   listMyReports,
 );
 router.get('/:id', validate(idParamSchema, 'params'), getIncident);
+// Evidencia firmada del incidente — autenticado, rate-limited, authz autoridad/dueño en el usecase
+router.get(
+  '/:id/evidence/signed-urls',
+  authMiddleware,
+  evidenceRateLimiterMiddleware,
+  validate(idParamSchema, 'params'),
+  getIncidentEvidenceUrls,
+);
 router.post(
   '/reports',
   authMiddleware,

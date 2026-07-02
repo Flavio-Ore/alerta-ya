@@ -11,6 +11,7 @@ import { getIncidentById } from '../domain/usecases/get-incident-by-id.usecase';
 import { confirmIncident } from '../domain/usecases/confirm-incident.usecase';
 import { updateIncidentStatus } from '../domain/usecases/update-incident-status.usecase';
 import { getMyReports } from '../domain/usecases/get-my-reports.usecase';
+import { getIncidentEvidence } from '../domain/usecases/get-incident-evidence.usecase';
 import { PrismaNotificationRepository } from '../../notifications/infrastructure/prisma-notification.repository';
 import { verifyReport } from '../infrastructure/ml.client';
 import { getSignedUrl } from '../../../core/config/firebase';
@@ -118,6 +119,35 @@ export async function getIncident(req: Request, res: Response, next: NextFunctio
   try {
     const dto = await getIncidentById(req.params['id']!, incidentRepo, reportRepo);
     res.json(dto);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getIncidentEvidenceUrls(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user?.uid) {
+      next(new AppError(401, 'No autenticado'));
+      return;
+    }
+
+    const isAuthority =
+      req.user.role === 'AUTHORITY' || req.user.role === 'ADMIN' || req.user.authority === true;
+
+    // El id interno solo se usa para el filtro de propiedad del ciudadano; nunca se expone.
+    const prismaUserId = isAuthority ? '' : (await userLookup.findOrCreate(req.user.uid)).id;
+
+    const evidence = await getIncidentEvidence(
+      req.params['id']!,
+      { prismaUserId, isAuthority },
+      { reportRepo, resolveSignedUrl: getSignedUrl },
+    );
+
+    res.json({ evidence });
   } catch (err) {
     next(err);
   }
