@@ -4,7 +4,7 @@ import { Siren, History, CheckCircle2, Clock, ArrowLeft, AlertCircle, FileText, 
 
 import { useIncidentDetail, useUpdateIncidentStatus } from '../infrastructure/incidents.api';
 import { IncidentsMap } from '../../dashboard/components/IncidentsMap';
-import { AiConfidenceBadge } from '../../../core/components/AiConfidenceBadge';
+import { AiBreakdownPanel } from '../../../core/components/AiBreakdownPanel';
 import {
   incidentTypeLabel,
   severityLabel,
@@ -136,13 +136,14 @@ export default function IncidentDetailPage() {
       <div className={`flex flex-col sm:flex-row justify-between items-start gap-3 p-4 md:p-6 border ${sev.bg} ${sev.border}`}>
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <span className={`text-xs font-black px-3 py-1 uppercase ${sev.text} ${sev.bg} border ${sev.border}`}>
-              {severityLabel[incident.severity]}
-            </span>
-            <AiConfidenceBadge
-              score={incident.aiScore}
-              verified={incident.aiVerified}
-            />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-ay-text-secondary">
+                Gravedad, según reportes
+              </span>
+              <span className={`text-xs font-black px-3 py-1 uppercase ${sev.text} ${sev.bg} border ${sev.border} w-fit`}>
+                {severityLabel[incident.severity]}
+              </span>
+            </div>
             <h1 className="text-2xl font-bold text-white tracking-tighter">
               {incidentTypeLabel[incident.type]} · {incident.district}
             </h1>
@@ -290,6 +291,8 @@ export default function IncidentDetailPage() {
         </div>
 
         <div className="space-y-6">
+          <AiBreakdownPanel incident={incident} />
+
           <div className="bg-ay-bg-dark2 border border-ay-border p-6">
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-ay-text-secondary mb-6 flex items-center gap-2">
               <History size={14} /> Línea de tiempo

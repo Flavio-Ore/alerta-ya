@@ -35,6 +35,10 @@ export interface PublicIncidentDTO {
   aiScore?: number | null;
   /** true si el reporte pasó el verificador ML */
   aiVerified?: boolean | null;
+  /** Timestamp de la foto adjunta — null si no hay evidencia */
+  photoTakenAt?: string | null;
+  /** 'exif' | 'device_clock' — fuente del timestamp */
+  photoSource?: string | null;
 }
 
 export interface ReportEvidenceDTO {

@@ -68,6 +68,7 @@ function IncidentCard({
         </div>
         <div className="flex flex-col items-end gap-1">
           <span
+            title="Gravedad, según reportes ciudadanos"
             className={`text-[10px] font-bold px-2 py-0.5 rounded border ${SEVERITY_BADGE[incident.severity]}`}
           >
             {severityLabel[incident.severity].toUpperCase()}

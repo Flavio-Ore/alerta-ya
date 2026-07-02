@@ -22,6 +22,9 @@ const config: Config = {
         'ay-low': '#22C55E',
         'ay-moderate': '#F5A623',
         'ay-critical': '#EF4444',
+        // Warn dedicado al eje de confiabilidad IA — distinto de ay-moderate
+        // (severidad) para que ambos ejes nunca se confundan visualmente.
+        'ay-warn': '#D97706',
         'ay-text-pri': '#0D1B2A',
         'ay-text-sec': '#6B7A8D',
         'ay-text-muted': '#C4CDD8',
