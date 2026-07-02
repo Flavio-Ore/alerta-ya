@@ -321,10 +321,10 @@ export async function confirmOrDenyIncident(req: Request, res: Response, next: N
       return;
     }
 
-    const body = req.body as { vote: 'yes' | 'no' };
+    const body = req.body as { vote: 'yes' | 'no'; lat: number; lng: number };
 
     const dto = await confirmIncident(
-      { incidentId: req.params['id']!, uid: req.user.uid, vote: body.vote },
+      { incidentId: req.params['id']!, uid: req.user.uid, vote: body.vote, lat: body.lat, lng: body.lng },
       { incidentRepo, redis },
     );
 

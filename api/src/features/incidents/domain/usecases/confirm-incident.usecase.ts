@@ -5,6 +5,7 @@ import { PublicIncidentDTO, toPublicDTO } from '../entities/incident.entity';
 import { eventBus, IncidentEvents } from '../../../../core/events/event-bus';
 import { AppError } from '../../../../core/errors/AppError';
 import { IncidentStatus } from '@prisma/client';
+import { isWithinVoteRange } from '../vote-policy';
 
 const CLOSE_THRESHOLD = 5; // deny > confirm + N → cerrar incidente
 
@@ -12,6 +13,9 @@ export interface ConfirmIncidentInput {
   incidentId: string;
   uid: string;
   vote: 'yes' | 'no';
+  /** GPS del votante — obligatorio para el gate de proximidad (anti-manipulación). */
+  lat: number;
+  lng: number;
 }
 
 export interface ConfirmIncidentDeps {
@@ -26,6 +30,11 @@ export async function confirmIncident(
   const incident = await deps.incidentRepo.findById(input.incidentId);
   if (!incident) throw new AppError(404, 'Incidente no encontrado');
   if (incident.status !== 'ACTIVE') throw new AppError(409, 'El incidente ya no está activo');
+
+  // Gate de proximidad: solo cuenta el voto de quien está cerca del incidente.
+  if (!isWithinVoteRange(input.lat, input.lng, incident.lat, incident.lng)) {
+    throw new AppError(403, 'Debes estar cerca del incidente para confirmarlo o descartarlo');
+  }
 
   // Deduplicar: un usuario no puede votar dos veces
   const dedupeKey = `confirm:user:${input.uid}:${input.incidentId}`;

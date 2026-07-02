@@ -60,10 +60,10 @@ class IncidentRepositoryImpl implements IncidentRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> confirmIncident(String id, String vote) async {
+  Future<Either<Failure, Unit>> confirmIncident(String id, String vote, double lat, double lng) async {
     if (!await _networkInfo.isConnected) return const Left(Failure.network());
     try {
-      await _remote.confirmIncident(id, vote);
+      await _remote.confirmIncident(id, vote, lat, lng);
       return const Right(unit);
     } on UnauthorizedException {
       return const Left(Failure.unauthorized());

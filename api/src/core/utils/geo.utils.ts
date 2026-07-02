@@ -56,3 +56,19 @@ export function getDistrict(lat: number, lng: number): string {
 export function bucketCoord(coord: number): number {
   return Math.round(coord * 1000) / 1000;
 }
+
+const EARTH_RADIUS_METERS = 6_371_000;
+
+function toRadians(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+/** Distancia haversine en metros entre dos coordenadas. */
+export function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const dLat = toRadians(lat2 - lat1);
+  const dLng = toRadians(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) ** 2;
+  return EARTH_RADIUS_METERS * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}

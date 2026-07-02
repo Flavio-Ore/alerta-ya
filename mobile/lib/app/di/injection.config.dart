@@ -14,6 +14,7 @@ import 'package:alertaya/core/network/network_info.dart' as _i857;
 import 'package:alertaya/core/realtime/socket_client.dart' as _i635;
 import 'package:alertaya/core/services/fcm_service.dart' as _i66;
 import 'package:alertaya/core/services/firebase_storage_service.dart' as _i457;
+import 'package:alertaya/core/services/location_service.dart' as _i919;
 import 'package:alertaya/core/services/media_upload_service.dart' as _i846;
 import 'package:alertaya/core/storage/secure_storage_service.dart' as _i142;
 import 'package:alertaya/features/alerts/data/datasources/notification_remote_datasource.dart'
@@ -183,6 +184,7 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i764.SmsService>(() => _i764.SmsService());
     gh.lazySingleton<_i655.PanicLocationTracker>(
         () => _i655.PanicLocationTracker());
+    gh.lazySingleton<_i919.LocationService>(() => _i919.LocationService());
     gh.lazySingleton<_i457.FirebaseStorageService>(
         () => _i457.FirebaseStorageService(gh<_i457.FirebaseStorage>()));
     gh.lazySingleton<_i238.NotificationRemoteDataSource>(
@@ -258,6 +260,14 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i1069.GetIncidentsUseCase(gh<_i512.IncidentRepository>()));
     gh.factory<_i715.ConfirmIncidentUseCase>(
         () => _i715.ConfirmIncidentUseCase(gh<_i512.IncidentRepository>()));
+    gh.lazySingleton<_i352.IncidentsBloc>(() => _i352.IncidentsBloc(
+          gh<_i1069.GetIncidentsUseCase>(),
+          gh<_i125.GetIncidentDetailUseCase>(),
+          gh<_i715.ConfirmIncidentUseCase>(),
+          gh<_i414.ConfirmZoneUseCase>(),
+          gh<_i635.SocketClient>(),
+          gh<_i919.LocationService>(),
+        ));
     gh.factory<_i187.ResetTutorialUseCase>(
         () => _i187.ResetTutorialUseCase(gh<_i463.TutorialRepository>()));
     gh.factory<_i211.IsTutorialSeenUseCase>(
@@ -304,13 +314,6 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i655.PanicLocationTracker>(),
           gh<_i519.PanicRepository>(),
           gh<_i906.VideoRecordingService>(),
-        ));
-    gh.lazySingleton<_i352.IncidentsBloc>(() => _i352.IncidentsBloc(
-          gh<_i1069.GetIncidentsUseCase>(),
-          gh<_i125.GetIncidentDetailUseCase>(),
-          gh<_i715.ConfirmIncidentUseCase>(),
-          gh<_i414.ConfirmZoneUseCase>(),
-          gh<_i635.SocketClient>(),
         ));
     gh.factory<_i250.MyReportsBloc>(() => _i250.MyReportsBloc(
           gh<_i56.GetMyReportsUseCase>(),

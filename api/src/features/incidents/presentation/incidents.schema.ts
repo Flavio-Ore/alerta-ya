@@ -42,6 +42,9 @@ export const idParamSchema = z.object({
 
 export const confirmSchema = z.object({
   vote: z.enum(['yes', 'no']),
+  // GPS del votante — requerido para el gate de proximidad (anti-manipulación).
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
 });
 
 // Solo para autoridades — actualizar estado + mensaje de feedback al ciudadano

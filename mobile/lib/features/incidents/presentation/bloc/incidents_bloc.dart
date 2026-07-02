@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/realtime/socket_client.dart';
+import 'package:alertaya/core/services/location_service.dart';
 import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
 import 'package:alertaya/features/incidents/domain/usecases/confirm_incident_usecase.dart';
 import 'package:alertaya/features/incidents/domain/usecases/confirm_zone_usecase.dart';
@@ -22,6 +23,7 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
     this._confirmIncident,
     this._confirmZone,
     this._socketClient,
+    this._location,
   ) : super(const IncidentsInitial()) {
     on<IncidentsStarted>(_onStarted);
     on<IncidentNewReceived>(_onNewReceived);
@@ -45,6 +47,7 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
   final ConfirmIncidentUseCase _confirmIncident;
   final ConfirmZoneUseCase _confirmZone;
   final SocketClient _socketClient;
+  final LocationService _location;
 
   late final StreamSubscription<IncidentEntity> _newSub;
   late final StreamSubscription<IncidentEntity> _updatedSub;
@@ -137,9 +140,18 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
 
   Future<void> _onConfirmSubmitted(
       IncidentConfirmSubmitted event, Emitter<IncidentsState> emit) async {
+    // El voto requiere GPS: el backend valida proximidad (anti-manipulación).
+    // Sin ubicación no se puede confirmar — se aborta sin contar el voto.
+    final pos = await _location.currentLatLng();
+    if (pos == null) {
+      debugPrint('[IncidentsBloc] ⚠ confirm sin ubicación — voto no enviado');
+      return;
+    }
     await _confirmIncident(ConfirmIncidentParams(
       id: event.id,
       vote: event.stillHere ? 'yes' : 'no',
+      lat: pos.lat,
+      lng: pos.lng,
     ));
   }
 

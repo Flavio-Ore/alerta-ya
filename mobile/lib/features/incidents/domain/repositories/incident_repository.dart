@@ -14,7 +14,7 @@ abstract class IncidentRepository {
 
   Future<Either<Failure, IncidentDetailEntity>> getIncidentDetail(String id);
 
-  Future<Either<Failure, Unit>> confirmIncident(String id, String vote);
+  Future<Either<Failure, Unit>> confirmIncident(String id, String vote, double lat, double lng);
 
   // Mini-alert: respuesta del ciudadano al "¿viste algo en esta zona?"
   Future<Either<Failure, Unit>> confirmZone(String zoneKey, String response);

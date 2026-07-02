@@ -14,7 +14,7 @@ abstract class IncidentRemoteDataSource {
     int pageSize = 20,
   });
   Future<IncidentDetailEntity> getIncidentDetail(String id);
-  Future<void> confirmIncident(String id, String vote);
+  Future<void> confirmIncident(String id, String vote, double lat, double lng);
   Future<void> confirmZone(String zoneKey, String response);
 }
 
@@ -61,9 +61,12 @@ class IncidentRemoteDataSourceImpl implements IncidentRemoteDataSource {
   }
 
   @override
-  Future<void> confirmIncident(String id, String vote) async {
+  Future<void> confirmIncident(String id, String vote, double lat, double lng) async {
     try {
-      await _dio.post<void>('/incidents/$id/confirm', data: {'vote': vote});
+      await _dio.post<void>(
+        '/incidents/$id/confirm',
+        data: {'vote': vote, 'lat': lat, 'lng': lng},
+      );
     } on DioException catch (e) {
       throw _mapError(e);
     }
