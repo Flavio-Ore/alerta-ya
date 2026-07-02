@@ -154,3 +154,7 @@ uploads/
 tmp/
 temp/
 *.tmp
+
+# AI tooling docs — local only
+CLAUDE.md
+AGENTS.md
