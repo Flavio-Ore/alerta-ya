@@ -8,6 +8,7 @@ import {
   PaginatedIncidents,
 } from '../domain/repositories/incident.repository';
 import { bucketCoord } from '../../../core/utils/geo.utils';
+import { cappedExtendedExpiry } from '../domain/incident-lifecycle';
 
 const BUCKET_TOLERANCE = 0.001; // ~100m
 
@@ -119,7 +120,9 @@ export class PrismaIncidentRepository implements IncidentRepository {
     const incident = await this.prisma.incident.findUnique({ where: { id } });
     if (!incident) return;
 
-    const newExpiry = new Date(incident.expiresAt.getTime() + extraMinutes * 60 * 1000);
+    // Tope duro: un incidente no puede vivir más de MAX_INCIDENT_LIFE_MINUTES
+    // desde su creación, sin importar cuántos "sigue ahí" lleguen (anti-manipulación).
+    const newExpiry = cappedExtendedExpiry(incident.expiresAt, incident.createdAt, extraMinutes);
     await this.prisma.incident.update({ where: { id }, data: { expiresAt: newExpiry } });
   }
 
