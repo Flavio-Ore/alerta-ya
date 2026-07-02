@@ -17,42 +17,85 @@ class IncidentMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (severity == Severity.critical) {
-      return _CriticalMarker(isSelected: isSelected, onTap: onTap);
+    switch (severity) {
+      // Crítico: pulso fuerte y rápido — máxima atención.
+      case Severity.critical:
+        return _PulsingMarker(
+          color: AppColors.severityCritical,
+          coreSize: 32,
+          boxSize: 56,
+          ringScaleEnd: 1.5,
+          ringOpacityBegin: 0.45,
+          duration: const Duration(milliseconds: 1400),
+          iconSize: 16,
+          isSelected: isSelected,
+          onTap: onTap,
+        );
+      // Moderado: pulso SUTIL — da dinamismo sin competir con el crítico.
+      case Severity.moderate:
+        return _PulsingMarker(
+          color: AppColors.severityModerate,
+          coreSize: 28,
+          boxSize: 50,
+          ringScaleEnd: 1.3,
+          ringOpacityBegin: 0.28,
+          duration: const Duration(milliseconds: 2200),
+          iconSize: 14,
+          isSelected: isSelected,
+          onTap: onTap,
+        );
+      // Bajo: estático — mantiene la jerarquía visual.
+      case Severity.low:
+        return GestureDetector(
+          onTap: onTap,
+          child: AnimatedScale(
+            scale: isSelected ? 1.2 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: const BoxDecoration(
+                color: AppColors.severityLow,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.bolt, color: Colors.white, size: 12),
+            ),
+          ),
+        );
     }
-
-    final color = severity == Severity.low
-        ? AppColors.severityLow
-        : AppColors.severityModerate;
-    final size = severity == Severity.low ? 24.0 : 28.0;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedScale(
-        scale: isSelected ? 1.2 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          child: Icon(Icons.bolt, color: Colors.white, size: size * 0.5),
-        ),
-      ),
-    );
   }
 }
 
-class _CriticalMarker extends StatefulWidget {
-  const _CriticalMarker({required this.isSelected, required this.onTap});
+/// Marcador con anillo pulsante reutilizable. La intensidad del pulso (escala,
+/// opacidad, velocidad) se parametriza para preservar la jerarquía por gravedad.
+class _PulsingMarker extends StatefulWidget {
+  const _PulsingMarker({
+    required this.color,
+    required this.coreSize,
+    required this.boxSize,
+    required this.ringScaleEnd,
+    required this.ringOpacityBegin,
+    required this.duration,
+    required this.iconSize,
+    required this.isSelected,
+    required this.onTap,
+  });
 
+  final Color color;
+  final double coreSize;
+  final double boxSize;
+  final double ringScaleEnd;
+  final double ringOpacityBegin;
+  final Duration duration;
+  final double iconSize;
   final bool isSelected;
   final VoidCallback onTap;
 
   @override
-  State<_CriticalMarker> createState() => _CriticalMarkerState();
+  State<_PulsingMarker> createState() => _PulsingMarkerState();
 }
 
-class _CriticalMarkerState extends State<_CriticalMarker>
+class _PulsingMarkerState extends State<_PulsingMarker>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scale;
@@ -61,14 +104,12 @@ class _CriticalMarkerState extends State<_CriticalMarker>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat();
-    _scale = Tween<double>(begin: 1.0, end: 1.5).animate(
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..repeat();
+    _scale = Tween<double>(begin: 1.0, end: widget.ringScaleEnd).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
-    _opacity = Tween<double>(begin: 0.45, end: 0.0).animate(
+    _opacity = Tween<double>(begin: widget.ringOpacityBegin, end: 0.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
   }
@@ -87,8 +128,8 @@ class _CriticalMarkerState extends State<_CriticalMarker>
         scale: widget.isSelected ? 1.2 : 1.0,
         duration: const Duration(milliseconds: 150),
         child: SizedBox(
-          width: 56,
-          height: 56,
+          width: widget.boxSize,
+          height: widget.boxSize,
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -100,10 +141,10 @@ class _CriticalMarkerState extends State<_CriticalMarker>
                   child: Opacity(
                     opacity: _opacity.value,
                     child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        color: AppColors.severityCritical,
+                      width: widget.coreSize,
+                      height: widget.coreSize,
+                      decoration: BoxDecoration(
+                        color: widget.color,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -112,13 +153,13 @@ class _CriticalMarkerState extends State<_CriticalMarker>
               ),
               // Pin central
               Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  color: AppColors.severityCritical,
+                width: widget.coreSize,
+                height: widget.coreSize,
+                decoration: BoxDecoration(
+                  color: widget.color,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.bolt, color: Colors.white, size: 16),
+                child: Icon(Icons.bolt, color: Colors.white, size: widget.iconSize),
               ),
             ],
           ),
