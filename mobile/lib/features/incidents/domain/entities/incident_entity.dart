@@ -22,6 +22,8 @@ class IncidentEntity with _$IncidentEntity {
     required DateTime updatedAt,
     String? unitAssigned,
     String? feedback,
+    double? aiScore,
+    bool? aiVerified,
   }) = _IncidentEntity;
 }
 
@@ -43,6 +45,8 @@ class IncidentDetailEntity with _$IncidentDetailEntity {
     required DateTime updatedAt,
     String? unitAssigned,
     String? feedback,
+    double? aiScore,
+    bool? aiVerified,
     @Default(0) int weaponReports,
     @Default(0) int injuredReports,
     @Default(0) int stillHereReports,

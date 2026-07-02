@@ -31,6 +31,8 @@ mixin _$IncidentEntity {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String? get unitAssigned => throw _privateConstructorUsedError;
   String? get feedback => throw _privateConstructorUsedError;
+  double? get aiScore => throw _privateConstructorUsedError;
+  bool? get aiVerified => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $IncidentEntityCopyWith<IncidentEntity> get copyWith =>
@@ -58,7 +60,9 @@ abstract class $IncidentEntityCopyWith<$Res> {
       DateTime createdAt,
       DateTime updatedAt,
       String? unitAssigned,
-      String? feedback});
+      String? feedback,
+      double? aiScore,
+      bool? aiVerified});
 }
 
 /// @nodoc
@@ -89,6 +93,8 @@ class _$IncidentEntityCopyWithImpl<$Res, $Val extends IncidentEntity>
     Object? updatedAt = null,
     Object? unitAssigned = freezed,
     Object? feedback = freezed,
+    Object? aiScore = freezed,
+    Object? aiVerified = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -151,6 +157,14 @@ class _$IncidentEntityCopyWithImpl<$Res, $Val extends IncidentEntity>
           ? _value.feedback
           : feedback // ignore: cast_nullable_to_non_nullable
               as String?,
+      aiScore: freezed == aiScore
+          ? _value.aiScore
+          : aiScore // ignore: cast_nullable_to_non_nullable
+              as double?,
+      aiVerified: freezed == aiVerified
+          ? _value.aiVerified
+          : aiVerified // ignore: cast_nullable_to_non_nullable
+              as bool?,
     ) as $Val);
   }
 }
@@ -178,7 +192,9 @@ abstract class _$$IncidentEntityImplCopyWith<$Res>
       DateTime createdAt,
       DateTime updatedAt,
       String? unitAssigned,
-      String? feedback});
+      String? feedback,
+      double? aiScore,
+      bool? aiVerified});
 }
 
 /// @nodoc
@@ -207,6 +223,8 @@ class __$$IncidentEntityImplCopyWithImpl<$Res>
     Object? updatedAt = null,
     Object? unitAssigned = freezed,
     Object? feedback = freezed,
+    Object? aiScore = freezed,
+    Object? aiVerified = freezed,
   }) {
     return _then(_$IncidentEntityImpl(
       id: null == id
@@ -269,6 +287,14 @@ class __$$IncidentEntityImplCopyWithImpl<$Res>
           ? _value.feedback
           : feedback // ignore: cast_nullable_to_non_nullable
               as String?,
+      aiScore: freezed == aiScore
+          ? _value.aiScore
+          : aiScore // ignore: cast_nullable_to_non_nullable
+              as double?,
+      aiVerified: freezed == aiVerified
+          ? _value.aiVerified
+          : aiVerified // ignore: cast_nullable_to_non_nullable
+              as bool?,
     ));
   }
 }
@@ -291,7 +317,9 @@ class _$IncidentEntityImpl implements _IncidentEntity {
       required this.createdAt,
       required this.updatedAt,
       this.unitAssigned,
-      this.feedback});
+      this.feedback,
+      this.aiScore,
+      this.aiVerified});
 
   @override
   final String id;
@@ -323,10 +351,14 @@ class _$IncidentEntityImpl implements _IncidentEntity {
   final String? unitAssigned;
   @override
   final String? feedback;
+  @override
+  final double? aiScore;
+  @override
+  final bool? aiVerified;
 
   @override
   String toString() {
-    return 'IncidentEntity(id: $id, type: $type, severity: $severity, status: $status, lat: $lat, lng: $lng, district: $district, confirmCount: $confirmCount, denyCount: $denyCount, reportCount: $reportCount, expiresAt: $expiresAt, createdAt: $createdAt, updatedAt: $updatedAt, unitAssigned: $unitAssigned, feedback: $feedback)';
+    return 'IncidentEntity(id: $id, type: $type, severity: $severity, status: $status, lat: $lat, lng: $lng, district: $district, confirmCount: $confirmCount, denyCount: $denyCount, reportCount: $reportCount, expiresAt: $expiresAt, createdAt: $createdAt, updatedAt: $updatedAt, unitAssigned: $unitAssigned, feedback: $feedback, aiScore: $aiScore, aiVerified: $aiVerified)';
   }
 
   @override
@@ -358,7 +390,10 @@ class _$IncidentEntityImpl implements _IncidentEntity {
             (identical(other.unitAssigned, unitAssigned) ||
                 other.unitAssigned == unitAssigned) &&
             (identical(other.feedback, feedback) ||
-                other.feedback == feedback));
+                other.feedback == feedback) &&
+            (identical(other.aiScore, aiScore) || other.aiScore == aiScore) &&
+            (identical(other.aiVerified, aiVerified) ||
+                other.aiVerified == aiVerified));
   }
 
   @override
@@ -378,7 +413,9 @@ class _$IncidentEntityImpl implements _IncidentEntity {
       createdAt,
       updatedAt,
       unitAssigned,
-      feedback);
+      feedback,
+      aiScore,
+      aiVerified);
 
   @JsonKey(ignore: true)
   @override
@@ -404,7 +441,9 @@ abstract class _IncidentEntity implements IncidentEntity {
       required final DateTime createdAt,
       required final DateTime updatedAt,
       final String? unitAssigned,
-      final String? feedback}) = _$IncidentEntityImpl;
+      final String? feedback,
+      final double? aiScore,
+      final bool? aiVerified}) = _$IncidentEntityImpl;
 
   @override
   String get id;
@@ -437,6 +476,10 @@ abstract class _IncidentEntity implements IncidentEntity {
   @override
   String? get feedback;
   @override
+  double? get aiScore;
+  @override
+  bool? get aiVerified;
+  @override
   @JsonKey(ignore: true)
   _$$IncidentEntityImplCopyWith<_$IncidentEntityImpl> get copyWith =>
       throw _privateConstructorUsedError;
@@ -459,6 +502,8 @@ mixin _$IncidentDetailEntity {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String? get unitAssigned => throw _privateConstructorUsedError;
   String? get feedback => throw _privateConstructorUsedError;
+  double? get aiScore => throw _privateConstructorUsedError;
+  bool? get aiVerified => throw _privateConstructorUsedError;
   int get weaponReports => throw _privateConstructorUsedError;
   int get injuredReports => throw _privateConstructorUsedError;
   int get stillHereReports => throw _privateConstructorUsedError;
@@ -490,6 +535,8 @@ abstract class $IncidentDetailEntityCopyWith<$Res> {
       DateTime updatedAt,
       String? unitAssigned,
       String? feedback,
+      double? aiScore,
+      bool? aiVerified,
       int weaponReports,
       int injuredReports,
       int stillHereReports});
@@ -524,6 +571,8 @@ class _$IncidentDetailEntityCopyWithImpl<$Res,
     Object? updatedAt = null,
     Object? unitAssigned = freezed,
     Object? feedback = freezed,
+    Object? aiScore = freezed,
+    Object? aiVerified = freezed,
     Object? weaponReports = null,
     Object? injuredReports = null,
     Object? stillHereReports = null,
@@ -589,6 +638,14 @@ class _$IncidentDetailEntityCopyWithImpl<$Res,
           ? _value.feedback
           : feedback // ignore: cast_nullable_to_non_nullable
               as String?,
+      aiScore: freezed == aiScore
+          ? _value.aiScore
+          : aiScore // ignore: cast_nullable_to_non_nullable
+              as double?,
+      aiVerified: freezed == aiVerified
+          ? _value.aiVerified
+          : aiVerified // ignore: cast_nullable_to_non_nullable
+              as bool?,
       weaponReports: null == weaponReports
           ? _value.weaponReports
           : weaponReports // ignore: cast_nullable_to_non_nullable
@@ -629,6 +686,8 @@ abstract class _$$IncidentDetailEntityImplCopyWith<$Res>
       DateTime updatedAt,
       String? unitAssigned,
       String? feedback,
+      double? aiScore,
+      bool? aiVerified,
       int weaponReports,
       int injuredReports,
       int stillHereReports});
@@ -660,6 +719,8 @@ class __$$IncidentDetailEntityImplCopyWithImpl<$Res>
     Object? updatedAt = null,
     Object? unitAssigned = freezed,
     Object? feedback = freezed,
+    Object? aiScore = freezed,
+    Object? aiVerified = freezed,
     Object? weaponReports = null,
     Object? injuredReports = null,
     Object? stillHereReports = null,
@@ -725,6 +786,14 @@ class __$$IncidentDetailEntityImplCopyWithImpl<$Res>
           ? _value.feedback
           : feedback // ignore: cast_nullable_to_non_nullable
               as String?,
+      aiScore: freezed == aiScore
+          ? _value.aiScore
+          : aiScore // ignore: cast_nullable_to_non_nullable
+              as double?,
+      aiVerified: freezed == aiVerified
+          ? _value.aiVerified
+          : aiVerified // ignore: cast_nullable_to_non_nullable
+              as bool?,
       weaponReports: null == weaponReports
           ? _value.weaponReports
           : weaponReports // ignore: cast_nullable_to_non_nullable
@@ -760,6 +829,8 @@ class _$IncidentDetailEntityImpl implements _IncidentDetailEntity {
       required this.updatedAt,
       this.unitAssigned,
       this.feedback,
+      this.aiScore,
+      this.aiVerified,
       this.weaponReports = 0,
       this.injuredReports = 0,
       this.stillHereReports = 0});
@@ -795,6 +866,10 @@ class _$IncidentDetailEntityImpl implements _IncidentDetailEntity {
   @override
   final String? feedback;
   @override
+  final double? aiScore;
+  @override
+  final bool? aiVerified;
+  @override
   @JsonKey()
   final int weaponReports;
   @override
@@ -806,7 +881,7 @@ class _$IncidentDetailEntityImpl implements _IncidentDetailEntity {
 
   @override
   String toString() {
-    return 'IncidentDetailEntity(id: $id, type: $type, severity: $severity, status: $status, lat: $lat, lng: $lng, district: $district, confirmCount: $confirmCount, denyCount: $denyCount, reportCount: $reportCount, expiresAt: $expiresAt, createdAt: $createdAt, updatedAt: $updatedAt, unitAssigned: $unitAssigned, feedback: $feedback, weaponReports: $weaponReports, injuredReports: $injuredReports, stillHereReports: $stillHereReports)';
+    return 'IncidentDetailEntity(id: $id, type: $type, severity: $severity, status: $status, lat: $lat, lng: $lng, district: $district, confirmCount: $confirmCount, denyCount: $denyCount, reportCount: $reportCount, expiresAt: $expiresAt, createdAt: $createdAt, updatedAt: $updatedAt, unitAssigned: $unitAssigned, feedback: $feedback, aiScore: $aiScore, aiVerified: $aiVerified, weaponReports: $weaponReports, injuredReports: $injuredReports, stillHereReports: $stillHereReports)';
   }
 
   @override
@@ -839,6 +914,9 @@ class _$IncidentDetailEntityImpl implements _IncidentDetailEntity {
                 other.unitAssigned == unitAssigned) &&
             (identical(other.feedback, feedback) ||
                 other.feedback == feedback) &&
+            (identical(other.aiScore, aiScore) || other.aiScore == aiScore) &&
+            (identical(other.aiVerified, aiVerified) ||
+                other.aiVerified == aiVerified) &&
             (identical(other.weaponReports, weaponReports) ||
                 other.weaponReports == weaponReports) &&
             (identical(other.injuredReports, injuredReports) ||
@@ -848,26 +926,29 @@ class _$IncidentDetailEntityImpl implements _IncidentDetailEntity {
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      type,
-      severity,
-      status,
-      lat,
-      lng,
-      district,
-      confirmCount,
-      denyCount,
-      reportCount,
-      expiresAt,
-      createdAt,
-      updatedAt,
-      unitAssigned,
-      feedback,
-      weaponReports,
-      injuredReports,
-      stillHereReports);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        type,
+        severity,
+        status,
+        lat,
+        lng,
+        district,
+        confirmCount,
+        denyCount,
+        reportCount,
+        expiresAt,
+        createdAt,
+        updatedAt,
+        unitAssigned,
+        feedback,
+        aiScore,
+        aiVerified,
+        weaponReports,
+        injuredReports,
+        stillHereReports
+      ]);
 
   @JsonKey(ignore: true)
   @override
@@ -895,6 +976,8 @@ abstract class _IncidentDetailEntity implements IncidentDetailEntity {
       required final DateTime updatedAt,
       final String? unitAssigned,
       final String? feedback,
+      final double? aiScore,
+      final bool? aiVerified,
       final int weaponReports,
       final int injuredReports,
       final int stillHereReports}) = _$IncidentDetailEntityImpl;
@@ -929,6 +1012,10 @@ abstract class _IncidentDetailEntity implements IncidentDetailEntity {
   String? get unitAssigned;
   @override
   String? get feedback;
+  @override
+  double? get aiScore;
+  @override
+  bool? get aiVerified;
   @override
   int get weaponReports;
   @override

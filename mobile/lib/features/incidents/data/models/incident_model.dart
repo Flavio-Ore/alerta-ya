@@ -18,6 +18,8 @@ class IncidentModel {
         updatedAt: DateTime.parse(json['updatedAt'] as String),
         unitAssigned: json['unitAssigned'] as String?,
         feedback: json['feedback'] as String?,
+        aiScore: (json['aiScore'] as num?)?.toDouble(),
+        aiVerified: json['aiVerified'] as bool?,
       );
 }
 
@@ -39,6 +41,8 @@ class IncidentDetailModel {
         updatedAt: DateTime.parse(json['updatedAt'] as String),
         unitAssigned: json['unitAssigned'] as String?,
         feedback: json['feedback'] as String?,
+        aiScore: (json['aiScore'] as num?)?.toDouble(),
+        aiVerified: json['aiVerified'] as bool?,
         weaponReports: (json['weaponReports'] as int?) ?? 0,
         injuredReports: (json['injuredReports'] as int?) ?? 0,
         stillHereReports: (json['stillHereReports'] as int?) ?? 0,

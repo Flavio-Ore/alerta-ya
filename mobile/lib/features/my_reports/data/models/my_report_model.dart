@@ -15,6 +15,10 @@ class MyReportIncidentModel {
         expiresAt: DateTime.parse(json['expiresAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
         feedback: json['feedback'] as String?,
+        // null-safe: PR1c agrega estos campos al backend por separado;
+        // hasta entonces deben tolerarse ausentes.
+        aiScore: (json['aiScore'] as num?)?.toDouble(),
+        aiVerified: json['aiVerified'] as bool?,
       );
 }
 

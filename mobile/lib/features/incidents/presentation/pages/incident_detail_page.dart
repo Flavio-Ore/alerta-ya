@@ -6,6 +6,7 @@ import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/domain/enums.dart';
+import 'package:alertaya/core/widgets/ai_verdict_badge.dart';
 import 'package:alertaya/core/widgets/severity_chip.dart';
 import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
 import 'package:alertaya/features/incidents/presentation/bloc/incidents_bloc.dart';
@@ -208,6 +209,10 @@ class _DetailContent extends StatelessWidget {
                       _StatusBadge(status: detail.status),
                     ],
                   ),
+                  const SizedBox(height: 6),
+                  // Eje de IA — separado del eje de severidad (nunca mismo
+                  // color/fila), never-blank vía AiVerdictBadge.
+                  AiVerdictBadge(score: detail.aiScore, verified: detail.aiVerified),
                 ],
               ),
             ),
