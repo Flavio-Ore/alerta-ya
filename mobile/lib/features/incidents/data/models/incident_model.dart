@@ -42,5 +42,6 @@ class IncidentDetailModel {
         weaponReports: (json['weaponReports'] as int?) ?? 0,
         injuredReports: (json['injuredReports'] as int?) ?? 0,
         stillHereReports: (json['stillHereReports'] as int?) ?? 0,
+        reporterTrust: json['reporterTrust'] as String?,
       );
 }

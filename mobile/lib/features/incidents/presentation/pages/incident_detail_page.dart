@@ -294,6 +294,14 @@ class _DetailContent extends StatelessWidget {
           ],
         ),
 
+        // ── Confiabilidad agregada y anónima de los reportantes.
+        // PRIVACY: solo tier grueso ('high'|'medium'|'low'), nunca un número
+        // ni identidad — ver docs/rules/SECURITY_RULES.md.
+        if (detail.reporterTrust != null) ...[
+          const SizedBox(height: 12),
+          _ReporterTrustBadge(trust: detail.reporterTrust!),
+        ],
+
         // ── Indicadores de alerta (pill badges)
         if (detail.weaponReports > 0 ||
             detail.injuredReports > 0 ||
@@ -505,6 +513,46 @@ class _AlertBadge extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// Badge de confiabilidad agregada y ANÓNIMA de los reportantes de un incidente.
+/// Nunca muestra un número ni identidad — solo un tier grueso de 3 niveles.
+class _ReporterTrustBadge extends StatelessWidget {
+  const _ReporterTrustBadge({required this.trust});
+
+  /// 'high' | 'medium' | 'low'.
+  final String trust;
+
+  (Color, String)? get _config => switch (trust) {
+        'high' => (AppColors.severityLow, 'Reportantes confiables'),
+        'medium' => (AppColors.secondaryContainer, 'Reportantes habituales'),
+        'low' => (AppColors.severityModerate, 'Reportantes nuevos'),
+        _ => null,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final config = _config;
+    if (config == null) return const SizedBox.shrink();
+    final (color, label) = config;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.shield_outlined, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(label, style: AppTextStyles.labelSm.copyWith(color: color)),
+        ],
+      ),
+    );
+  }
 }
 
 class _StatusBadge extends StatelessWidget {

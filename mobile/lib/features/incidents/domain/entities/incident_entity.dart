@@ -46,5 +46,6 @@ class IncidentDetailEntity with _$IncidentDetailEntity {
     @Default(0) int weaponReports,
     @Default(0) int injuredReports,
     @Default(0) int stillHereReports,
+    String? reporterTrust,
   }) = _IncidentDetailEntity;
 }

@@ -4,6 +4,8 @@ class UserProfileEntity {
   const UserProfileEntity({
     required this.reputationScore,
     required this.memberSince,
+    this.tier,
+    this.pointsToNext,
   });
 
   /// Puntuación de reputación (gamificación). Default 100.
@@ -11,6 +13,13 @@ class UserProfileEntity {
 
   /// Fecha de alta en la plataforma.
   final DateTime memberSince;
+
+  /// Nivel de reputación ('high'|'medium'|'low'). Null si el API no lo envía
+  /// (compatibilidad con versiones anteriores del backend).
+  final String? tier;
+
+  /// Puntos que faltan para subir de nivel. Null si no aplica o no viene.
+  final int? pointsToNext;
 }
 
 /// Preferencias operativas del ciudadano (GET|PATCH /me/preferences).
