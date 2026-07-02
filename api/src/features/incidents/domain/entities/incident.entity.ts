@@ -5,6 +5,8 @@ import {
   IncidentStatus,
 } from "@prisma/client";
 
+import { ReputationTier } from "../../application/reputation-tier";
+
 export { IncidentType, Severity, IncidentStatus };
 
 export interface PublicIncidentDTO {
@@ -59,6 +61,12 @@ export interface PublicIncidentDetailDTO extends PublicIncidentDTO {
   evidence: ReportEvidenceDTO[];
   /** Historial de cambios de estado — auditoría visible para autoridades */
   statusHistory: StatusHistoryEntryDTO[];
+  /**
+   * Tier de confianza agregado de los reportantes ('high' | 'medium' | 'low').
+   * Anónimo: da seguridad a otros usuarios sin revelar identidad ni puntaje.
+   * null si no hay reportantes con reputación conocida.
+   */
+  reporterTrust?: ReputationTier | null;
 }
 
 export function toPublicDTO(incident: Incident): PublicIncidentDTO {

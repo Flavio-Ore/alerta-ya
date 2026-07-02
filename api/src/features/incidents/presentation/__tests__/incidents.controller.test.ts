@@ -50,6 +50,7 @@ vi.mock('../../infrastructure/prisma-report.repository', () => ({
     create: vi.fn().mockResolvedValue({ id: 'report-id', formData: {} }),
     findOrphanedNearby: vi.fn().mockResolvedValue([]),
     findByIncidentId: vi.fn().mockResolvedValue([]),
+    findReporterReputationsByIncidentId: vi.fn().mockResolvedValue([]),
   })),
 }));
 
