@@ -7,8 +7,10 @@ import 'package:latlong2/latlong.dart';
 import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
+import 'package:alertaya/core/services/photon_service.dart';
 import 'package:alertaya/features/risk/domain/entities/risk_info.dart';
 import 'package:alertaya/features/risk/presentation/bloc/risk_bloc.dart';
+import 'package:alertaya/features/risk/presentation/pages/risk_address_search.dart';
 
 class RiskDashboardPage extends StatefulWidget {
   const RiskDashboardPage({super.key});
@@ -22,6 +24,9 @@ class _RiskDashboardPageState extends State<RiskDashboardPage> {
   static const double _defaultLng = -77.0428;
 
   late final RiskBloc _riskBloc;
+  double _userLat = _defaultLat;
+  double _userLng = _defaultLng;
+  String? _activeAddress;
 
   @override
   void initState() {
@@ -33,6 +38,10 @@ class _RiskDashboardPageState extends State<RiskDashboardPage> {
   Future<void> _loadRisk() async {
     final position = await _resolvePosition();
     if (!mounted) return;
+    setState(() {
+      _userLat = position.lat;
+      _userLng = position.lng;
+    });
     _riskBloc.add(RiskRequested(lat: position.lat, lng: position.lng));
   }
 
@@ -55,6 +64,11 @@ class _RiskDashboardPageState extends State<RiskDashboardPage> {
     }
   }
 
+  void _onSuggestionSelected(PhotonSuggestion suggestion) {
+    setState(() => _activeAddress = suggestion.displayName);
+    _riskBloc.add(RiskRequested(lat: suggestion.lat, lng: suggestion.lng));
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
@@ -62,18 +76,35 @@ class _RiskDashboardPageState extends State<RiskDashboardPage> {
       child: Scaffold(
         backgroundColor: AppColors.surface,
         body: SafeArea(
-          child: BlocBuilder<RiskBloc, RiskState>(
-            builder: (context, state) {
-              if (state is RiskFailure) {
-                return _ErrorState(message: state.message);
-              }
-              if (state is RiskLoaded) {
-                return _RiskLoadedView(info: state.info);
-              }
-              // RiskInitial y RiskLoading comparten el mismo skeleton —
-              // nunca dejamos la pantalla en blanco.
-              return const _LoadingState();
-            },
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: RiskAddressSearch(
+                  userLat: _userLat,
+                  userLng: _userLng,
+                  onAddressSelected: _onSuggestionSelected,
+                ),
+              ),
+              Expanded(
+                child: BlocBuilder<RiskBloc, RiskState>(
+                  builder: (context, state) {
+                    if (state is RiskFailure) {
+                      return _ErrorState(message: state.message);
+                    }
+                    if (state is RiskLoaded) {
+                      return _RiskLoadedView(
+                        info: state.info,
+                        activeAddress: _activeAddress,
+                      );
+                    }
+                    // RiskInitial y RiskLoading comparten el mismo skeleton —
+                    // nunca dejamos la pantalla en blanco.
+                    return const _LoadingState();
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -145,15 +176,18 @@ class _ErrorState extends StatelessWidget {
 }
 
 class _RiskLoadedView extends StatelessWidget {
-  const _RiskLoadedView({required this.info});
+  const _RiskLoadedView({required this.info, this.activeAddress});
   final RiskInfo info;
+  final String? activeAddress;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
-        _Headline(info: info),
+        _Headline(info: info, activeAddress: activeAddress),
+        const SizedBox(height: 12),
+        _VerdictBanner(level: info.level),
         if (!info.hasData) ...[
           const SizedBox(height: 12),
           const _LowConfidenceBanner(),
@@ -170,8 +204,9 @@ class _RiskLoadedView extends StatelessWidget {
 }
 
 class _Headline extends StatelessWidget {
-  const _Headline({required this.info});
+  const _Headline({required this.info, this.activeAddress});
   final RiskInfo info;
+  final String? activeAddress;
 
   Color get _levelColor => switch (info.level) {
         'high' => AppColors.severityCritical,
@@ -193,7 +228,7 @@ class _Headline extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          info.district,
+          activeAddress ?? info.district,
           style: AppTextStyles.headlineSm.copyWith(
             color: AppColors.onSurface,
             fontWeight: FontWeight.w700,
@@ -227,6 +262,76 @@ class _Headline extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// Veredicto textual derivado de [RiskInfo.level] — "¿debería ir?".
+class RiskVerdict {
+  const RiskVerdict({
+    required this.message,
+    required this.color,
+    required this.icon,
+  });
+
+  final String message;
+  final Color color;
+  final IconData icon;
+}
+
+/// Mapea el nivel de riesgo a un veredicto accionable en español.
+/// Función pura — testeable sin widgets.
+RiskVerdict riskVerdictFor(String level) {
+  return switch (level) {
+    'high' => const RiskVerdict(
+        message:
+            'Zona de riesgo ALTO a esta hora — evita o ve acompañado',
+        color: AppColors.severityCritical,
+        icon: Icons.dangerous_outlined,
+      ),
+    'moderate' => const RiskVerdict(
+        message: 'Riesgo moderado — mantente alerta',
+        color: AppColors.severityModerate,
+        icon: Icons.warning_amber_outlined,
+      ),
+    'low' => const RiskVerdict(
+        message: 'Riesgo bajo',
+        color: AppColors.severityLow,
+        icon: Icons.check_circle_outline,
+      ),
+    _ => const RiskVerdict(
+        message: 'Sin datos suficientes para esta zona',
+        color: AppColors.onSurfaceVariant,
+        icon: Icons.help_outline,
+      ),
+  };
+}
+
+class _VerdictBanner extends StatelessWidget {
+  const _VerdictBanner({required this.level});
+  final String level;
+
+  @override
+  Widget build(BuildContext context) {
+    final verdict = riskVerdictFor(level);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: verdict.color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(verdict.icon, color: verdict.color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              verdict.message,
+              style: AppTextStyles.bodyMd.copyWith(color: verdict.color),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
