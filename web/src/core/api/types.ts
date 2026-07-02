@@ -128,3 +128,16 @@ export interface PanicSessionDTO {
   lng: number;
   startedAt: string; // ISO
 }
+
+/**
+ * Evidencia resuelta a URL firmada (short-TTL) — GET /incidents/:id/evidence/signed-urls.
+ * NUNCA contiene userId ni identidad del reportante.
+ */
+export interface EvidenceItemDTO {
+  signedUrl: string;
+  kind: 'image' | 'video';
+}
+
+export interface IncidentEvidenceDTO {
+  evidence: EvidenceItemDTO[];
+}

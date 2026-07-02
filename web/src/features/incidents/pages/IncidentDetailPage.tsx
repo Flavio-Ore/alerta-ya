@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
-import { Siren, History, CheckCircle2, Clock, ArrowLeft, AlertCircle, FileText, Image as ImageIcon, Music, ExternalLink } from 'lucide-react';
+import { Siren, History, CheckCircle2, Clock, ArrowLeft, AlertCircle, FileText } from 'lucide-react';
 
 import { useIncidentDetail, useUpdateIncidentStatus } from '../infrastructure/incidents.api';
 import { IncidentsMap } from '../../dashboard/components/IncidentsMap';
 import { AiBreakdownPanel } from '../../../core/components/AiBreakdownPanel';
+import { EvidenceCarousel } from '../components/EvidenceCarousel';
 import {
   incidentTypeLabel,
   severityLabel,
@@ -16,59 +17,6 @@ import {
 } from '../presentation/utils/labels';
 import type { IncidentStatus } from '../../../core/api/types';
 import { parseFormData } from '../presentation/utils/form-labels';
-
-/** Detecta el tipo de media por la extensión de la URL (Cloudinary). */
-function mediaKind(url: string): 'image' | 'video' | 'audio' | 'other' {
-  const clean = url.split('?')[0].toLowerCase();
-  if (/\.(jpe?g|png|webp|gif|avif|heic)$/.test(clean)) return 'image';
-  if (/\.(mp4|webm|mov|m4v)$/.test(clean)) return 'video';
-  if (/\.(mp3|wav|m4a|aac|ogg)$/.test(clean)) return 'audio';
-  return 'other';
-}
-
-/** Thumbnail de una prueba adjunta. Imagen/video se previsualizan; audio/otros como chip. */
-function EvidenceMedia({ url, index }: { url: string; index: number }) {
-  const kind = mediaKind(url);
-
-  if (kind === 'image') {
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="group block">
-        <img
-          src={url}
-          alt={`Prueba ${index + 1}`}
-          loading="lazy"
-          className="h-28 w-28 object-cover rounded-lg border border-ay-border group-hover:border-ay-accent transition-colors"
-        />
-      </a>
-    );
-  }
-
-  if (kind === 'video') {
-    return (
-      <video
-        src={url}
-        controls
-        preload="metadata"
-        className="h-28 w-auto max-w-[200px] rounded-lg border border-ay-border bg-black"
-      />
-    );
-  }
-
-  const Icon = kind === 'audio' ? Music : ExternalLink;
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="h-28 w-28 flex flex-col items-center justify-center gap-2 rounded-lg border border-ay-border text-ay-text-secondary hover:border-ay-accent hover:text-ay-accent transition-colors"
-    >
-      <Icon size={22} />
-      <span className="text-[10px] font-bold uppercase">
-        {kind === 'audio' ? 'Audio' : `Adjunto ${index + 1}`}
-      </span>
-    </a>
-  );
-}
 
 export default function IncidentDetailPage() {
   const { incidentId } = useParams({ strict: false }) as { incidentId: string };
@@ -269,23 +217,14 @@ export default function IncidentDetailPage() {
                           <p className="text-xs text-white italic leading-relaxed">"{f.value}"</p>
                         </div>
                       ))}
-
-                      {ev.mediaUrls.length > 0 && (
-                        <div className="pt-1 space-y-2">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-ay-text-secondary flex items-center gap-1.5">
-                            <ImageIcon size={12} /> Pruebas adjuntas ({ev.mediaUrls.length})
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {ev.mediaUrls.map((url, i) => (
-                              <EvidenceMedia key={i} url={url} index={i} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
               </div>
+
+              {/* Evidencia visual: resuelta a URLs firmadas vía endpoint autenticado
+                  (los gs:// crudos no son renderizables por el navegador). */}
+              <EvidenceCarousel incidentId={incident.id} />
             </div>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  IncidentEvidenceDTO,
   ListIncidentsQuery,
   ListIncidentsResult,
   PublicIncidentDetailDTO,
@@ -43,6 +44,25 @@ export function useIncidentDetail(id: string | undefined) {
     queryKey: incidentsKeys.detail(id ?? ''),
     queryFn: () => fetchIncidentById(id!),
     enabled: Boolean(id),
+  });
+}
+
+async function fetchIncidentEvidence(id: string): Promise<IncidentEvidenceDTO> {
+  const { data } = await apiClient.get<IncidentEvidenceDTO>(`/incidents/${id}/evidence/signed-urls`);
+  return data;
+}
+
+/**
+ * Resuelve la evidencia firmada del incidente. Las URLs firmadas expiran (5 min),
+ * así que no se cachean largo — refetch al montar. Requiere sesión autenticada.
+ */
+export function useIncidentEvidence(id: string | undefined) {
+  return useQuery({
+    queryKey: [...incidentsKeys.detail(id ?? ''), 'evidence'] as const,
+    queryFn: () => fetchIncidentEvidence(id!),
+    enabled: Boolean(id),
+    staleTime: 4 * 60_000, // < TTL de 5 min de la URL firmada
+    gcTime: 4 * 60_000,
   });
 }
 
