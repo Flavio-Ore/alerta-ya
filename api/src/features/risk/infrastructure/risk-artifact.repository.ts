@@ -27,3 +27,13 @@ export function getRiskArtifact(): RiskArtifact | null {
 export function __resetRiskArtifactCache(): void {
   cache = undefined;
 }
+
+/**
+ * Fuerza la relectura del artefacto desde disco (tras un recompute).
+ * El job periódico reescribe el archivo; sin esto un proceso vivo seguiría
+ * sirviendo el cache anterior. Retorna el artefacto recién cargado (o null).
+ */
+export function reloadRiskArtifact(): RiskArtifact | null {
+  cache = undefined;
+  return getRiskArtifact();
+}
