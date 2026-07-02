@@ -17,6 +17,7 @@ import { jobsRouter } from "./core/jobs/jobs.router";
 import { authRouter } from "./features/auth/presentation/auth.router";
 import { incidentsRouter } from "./features/incidents/presentation/incidents.router";
 import { zonesRouter } from "./features/zones/presentation/zones.router";
+import { riskRouter } from "./features/risk/presentation/risk.router";
 import { panicRouter } from "./features/panic/presentation/panic.router";
 import { notificationsRouter } from "./features/notifications/presentation/notifications.router";
 import { adminRouter } from "./features/admin/presentation/admin.router";
@@ -95,6 +96,7 @@ app.get("/health", (_req, res) => {
 app.use("/auth", authRouter);
 app.use("/incidents", incidentsRouter);
 app.use("/zones", zonesRouter);
+app.use("/risk", riskRouter);
 app.use("/panic", panicRouter);
 app.use("/notifications", notificationsRouter);
 app.use("/me", meRouter);
