@@ -47,7 +47,7 @@ const StatisticsPage = () => {
       </div>
 
       {/* Filter row */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-1 bg-[#141720] border border-[#2D3A4A] rounded-[12px] p-1">
           {PERIOD_PILLS.map((pill) => (
             <button
@@ -63,12 +63,12 @@ const StatisticsPage = () => {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 text-xs text-stitch-on-surface-variant">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 text-xs text-stitch-on-surface-variant shrink-0">
             <span className="material-symbols-outlined text-[16px]">
               location_on
             </span>
-            <span className="font-bold">Lima · </span>
+            <span className="font-bold hidden sm:inline">Lima · </span>
           </div>
           <FilterSelect
             value={district}
@@ -129,7 +129,7 @@ const StatisticsPage = () => {
       {/* Charts */}
       {!isLoading && !isError && (
         <>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <IncidentTypeBarChart data={data?.byType ?? []} />
             <DayHourHeatmap data={data?.byDayHour ?? []} />
           </div>

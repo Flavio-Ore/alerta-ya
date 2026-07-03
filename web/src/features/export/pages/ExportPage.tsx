@@ -259,7 +259,7 @@ const ExportPage = () => {
 
   return (
     <div className="flex-1 overflow-auto bg-ay-bg-dark text-stitch-on-surface">
-      <div className="max-w-[1440px] mx-auto px-10 py-10">
+      <div className="max-w-[1440px] mx-auto px-4 md:px-6 lg:px-10 py-4 md:py-6 lg:py-10">
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-2xl font-bold text-white font-headline mb-2">
@@ -279,7 +279,7 @@ const ExportPage = () => {
           <section className="w-full lg:w-[55%] flex flex-col gap-6">
             {/* Tipo de reporte */}
             <Card title="Tipo de reporte">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {REPORT_TYPES.map((opt) => (
                   <ReportTypeCard
                     key={opt.id}
@@ -315,7 +315,7 @@ const ExportPage = () => {
                   ),
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <DateInput
                   label="Desde"
                   value={from}
@@ -393,7 +393,7 @@ const ExportPage = () => {
 
             {/* Formato */}
             <Card title="Formato de exportación">
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <FormatButton
                   selected={format === "pdf"}
                   onClick={() => setFormat("pdf")}
@@ -674,7 +674,7 @@ function FormatButton({
   return (
     <button
       onClick={onClick}
-      className={`flex-1 flex flex-col items-center gap-2 p-5 rounded-xl transition-all ${
+      className={`flex-1 flex flex-col items-center gap-2 p-3 md:p-5 rounded-xl transition-all ${
         selected
           ? "bg-stitch-primary-container border-2 border-stitch-primary text-white"
           : "bg-stitch-surface-container-low border border-transparent text-ay-text-sec hover:bg-stitch-surface-container-high"

@@ -99,7 +99,7 @@ const AdminUsersPage = () => {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-stitch-surface">
-      <header className="flex items-center justify-between px-10 py-8">
+      <header className="flex items-center justify-between px-4 lg:px-10 py-4 lg:py-8">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold text-white font-headline tracking-tight">
             Administrar Autoridades
@@ -116,16 +116,16 @@ const AdminUsersPage = () => {
             setEditingUser(null);
             setFormOpen("create");
           }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-stitch-primary text-white rounded-lg hover:bg-stitch-primary/90 transition-all text-sm font-bold"
+          className="flex items-center gap-2 px-5 py-2.5 bg-stitch-primary-container text-white rounded-lg hover:bg-stitch-primary-container/90 transition-all text-sm font-bold"
         >
           <Plus size={16} />
           Nueva Autoridad
         </button>
       </header>
 
-      <section className="px-10 mb-6 flex flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
+      <section className="px-4 lg:px-10 mb-4 lg:mb-6 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1 w-full sm:max-w-md">
             <span className="material-symbols-outlined text-[18px] text-stitch-on-surface-variant absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
               search
             </span>
@@ -161,27 +161,28 @@ const AdminUsersPage = () => {
         </div>
       </section>
 
-      <section className="flex-1 px-10 overflow-hidden flex flex-col min-h-0">
+      <section className="flex-1 px-4 lg:px-10 overflow-hidden flex flex-col min-h-0">
         <div className="flex-1 overflow-auto rounded-xl border border-stitch-surface-container-high bg-stitch-surface-container-low/30">
-          <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[600px]">
             <thead className="sticky top-0 bg-stitch-surface-container-low z-10">
               <tr>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
+                <th className="px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
                   Nombre
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
+                <th className="hidden md:table-cell px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
                   Correo
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
+                <th className="px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
                   Rol
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
+                <th className="px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
                   Estado
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
+                <th className="hidden md:table-cell px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
                   Creado
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant text-right">
+                <th className="px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-on-surface-variant text-right">
                   Acción
                 </th>
               </tr>
@@ -234,13 +235,13 @@ const AdminUsersPage = () => {
                     idx % 2 === 0 ? "bg-stitch-surface/50" : ""
                   } ${user.disabled ? "opacity-50" : ""}`}
                 >
-                  <td className="px-6 py-4 text-sm font-semibold text-white">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-white whitespace-nowrap">
                     {user.displayName ?? "—"}
                   </td>
-                  <td className="px-6 py-4 text-sm text-stitch-on-surface-variant">
+                  <td className="hidden md:table-cell px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm text-stitch-on-surface-variant whitespace-nowrap">
                     {user.email}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <span
                       className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border ${
                         user.role === "ADMIN"
@@ -251,7 +252,7 @@ const AdminUsersPage = () => {
                       {user.role === "ADMIN" ? "Admin" : "Autoridad"}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <span
                       className={`flex items-center gap-1.5 text-xs font-bold ${
                         user.disabled ? "text-stitch-error" : "text-green-500"
@@ -262,13 +263,14 @@ const AdminUsersPage = () => {
                           user.disabled ? "bg-stitch-error" : "bg-green-500"
                         }`}
                       />
-                      {user.disabled ? "Deshabilitado" : "Activo"}
+                      <span className="hidden sm:inline">{user.disabled ? "Deshabilitado" : "Activo"}</span>
+                      <span className="sm:hidden">{user.disabled ? "No" : "Sí"}</span>
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-stitch-on-surface-variant">
+                  <td className="hidden md:table-cell px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm text-stitch-on-surface-variant whitespace-nowrap">
                     {formatDate(user.createdAt)}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => openEdit(user)}
@@ -292,6 +294,7 @@ const AdminUsersPage = () => {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="py-6 flex justify-center">
@@ -317,7 +320,7 @@ const AdminUsersPage = () => {
         </div>
       </section>
 
-      <footer className="h-10 border-t border-stitch-surface-container-high bg-stitch-surface-container-low px-10 flex items-center shrink-0">
+      <footer className="h-10 border-t border-stitch-surface-container-high bg-stitch-surface-container-low px-4 lg:px-10 flex items-center shrink-0">
         <div className="flex items-center gap-2 text-[11px] text-stitch-on-surface-variant">
           <RotateCcw size={14} />
           <span>

@@ -15,7 +15,7 @@ function getCurrentLabel(pathname: string): string {
   return ROUTE_LABELS[pathname] ?? "Panel";
 }
 
-const TopBar = () => {
+const TopBar = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) => {
   const routerState = useRouterState();
   const [secondsAgo, setSecondsAgo] = useState(0);
 
@@ -31,20 +31,27 @@ const TopBar = () => {
   const label = getCurrentLabel(routerState.location.pathname);
 
   return (
-    <header className="h-16 flex justify-between items-center px-8 w-full bg-stitch-surface-container/70 backdrop-blur-xl z-40 shrink-0">
-      <div className="flex items-center gap-6">
-        <h1 className="text-lg font-black text-white font-headline uppercase tracking-tight">
+    <header className="h-16 flex justify-between items-center px-4 md:px-6 lg:px-8 w-full bg-stitch-surface-container/70 backdrop-blur-xl z-40 shrink-0">
+      <div className="flex items-center gap-3 md:gap-6 min-w-0">
+        <button
+          onClick={onToggleSidebar}
+          className="lg:hidden text-stitch-on-surface-variant hover:text-white transition-colors shrink-0"
+          aria-label="Abrir menú"
+        >
+          <span className="material-symbols-outlined">menu</span>
+        </button>
+        <h1 className="text-sm md:text-lg font-black text-white font-headline uppercase tracking-tight truncate">
           {label}
         </h1>
-        <div className="flex items-center gap-2 px-3 py-1 bg-stitch-surface-container-low rounded-full">
+        <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-stitch-surface-container-low rounded-full shrink-0">
           <span className="w-2 h-2 rounded-full bg-green-500 pulse-live" />
-          <span className="text-[10px] font-bold text-stitch-on-surface uppercase tracking-widest font-label">
-            En vivo · Actualizado hace {secondsAgo}s
+          <span className="text-[10px] font-bold text-stitch-on-surface uppercase tracking-widest font-label whitespace-nowrap">
+            En vivo · {secondsAgo}s
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="hidden lg:flex items-center gap-6">
         <div className="flex items-center gap-2 bg-stitch-surface-container-high/50 px-4 py-1.5 rounded-lg cursor-not-allowed opacity-60">
           <span className="material-symbols-outlined text-sm text-stitch-on-surface-variant">
             filter_list

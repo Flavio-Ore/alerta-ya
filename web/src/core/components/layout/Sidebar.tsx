@@ -39,7 +39,7 @@ function getInitials(email: string, displayName: string | null): string {
   return email.slice(0, 2).toUpperCase();
 }
 
-export const Sidebar = () => {
+export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
@@ -48,21 +48,33 @@ export const Sidebar = () => {
     try {
       await signOut();
     } finally {
-      // Navegar SIEMPRE — incluso si signOut tira (Firebase desconectado, etc.)
-      // Force replace para evitar que el user vuelva con el back del browser
+      onClose?.();
       await navigate({ to: "/auth/login", replace: true });
     }
+  }
+
+  function handleNav() {
+    onClose?.();
   }
 
   return (
     <aside className="h-screen w-64 shrink-0 flex flex-col py-6 bg-stitch-surface-container-low z-50">
       {/* Logo — variante dark del SVG (azules → blanco, ámbar intacto) */}
-      <div className="px-6 mb-10 flex items-center">
+      <div className="px-6 mb-10 flex items-center justify-between">
         <img
           src="/assets/logo/alertaya-logo-horizontal-dark.svg"
           alt="AlertaYa"
           className="h-8 w-auto"
         />
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden text-stitch-on-surface-variant hover:text-white transition-colors"
+            aria-label="Cerrar menú"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        )}
       </div>
 
       {/* Nav principal */}
@@ -71,6 +83,7 @@ export const Sidebar = () => {
           <Link
             key={to}
             to={to}
+            onClick={handleNav}
             className="flex items-center gap-3 px-3 py-3 rounded-lg text-stitch-on-surface-variant hover:text-white hover:bg-stitch-surface-container/60 transition-colors"
             activeProps={{
               className:
@@ -89,6 +102,7 @@ export const Sidebar = () => {
           <div className="h-px bg-stitch-surface-container-high mb-2" />
           <Link
             to={ADMIN_NAV_ITEM.to}
+            onClick={handleNav}
             className="flex items-center gap-3 px-3 py-3 rounded-lg text-stitch-on-surface-variant hover:text-white hover:bg-stitch-surface-container/60 transition-colors"
             activeProps={{
               className:

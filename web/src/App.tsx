@@ -6,9 +6,13 @@ import {
   redirect,
   RouterProvider,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Sidebar } from "./core/components/layout/Sidebar";
 import TopBar from "./core/components/layout/TopBar";
+import {
+  Sheet,
+  SheetContent,
+} from "./components/ui/sheet";
 import AdminUsersPage from "./features/admin/pages/AdminUsersPage";
 import LoginPage from "./features/auth/presentation/pages/LoginPage";
 import { useAuthStore } from "./features/auth/presentation/stores/auth.store";
@@ -25,11 +29,24 @@ function isAuthorized() {
 }
 
 function AuthLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen bg-stitch-surface overflow-hidden">
-      <Sidebar />
+      {/* Desktop sidebar — visible from lg up */}
+      <div className="hidden lg:flex">
+        <Sidebar />
+      </div>
+
+      {/* Mobile sidebar — Sheet drawer */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent side="left" className="p-0 bg-stitch-surface-container-low w-64 z-[9999] [&>button:last-child]:hidden">
+          <Sidebar onClose={() => setSidebarOpen(false)} />
+        </SheetContent>
+      </Sheet>
+
       <div className="flex flex-col flex-1 overflow-hidden">
-        <TopBar />
+        <TopBar onToggleSidebar={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-hidden flex flex-col">
           <Outlet />
         </main>

@@ -78,7 +78,20 @@ const LoginPage = () => {
       </div>
 
       {/* Derecha — formulario */}
-      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-8 relative">
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-4 md:p-8 relative">
+        {/* Mobile branding */}
+        <div className="lg:hidden flex items-center gap-3 mb-6 self-start">
+          <img
+            src="/assets/logo/alertaya-isotipo.svg"
+            alt="AlertaYa"
+            className="h-8 w-8"
+          />
+          <div>
+            <span className="text-lg font-bold text-white">AlertaYa</span>
+            <span className="block text-[10px] text-ay-accent font-bold uppercase tracking-widest">Panel de Autoridades</span>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="w-full max-w-md space-y-8">
           <div className="space-y-2">
             <h2 className="text-3xl font-bold text-white">Iniciar Sesión</h2>

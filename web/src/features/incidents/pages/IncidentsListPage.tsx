@@ -146,9 +146,9 @@ const IncidentsListPage = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-ay-bg-dark">
+    <div className="flex-1 flex flex-col overflow-hidden bg-stitch-surface">
       {/* Header */}
-      <header className="flex items-center justify-between px-10 py-8">
+      <header className="flex items-center justify-between px-4 lg:px-10 py-4 lg:py-8">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold text-white font-headline tracking-tight">
             Incidentes
@@ -170,7 +170,7 @@ const IncidentsListPage = () => {
       </header>
 
       {/* Filter Bar */}
-      <section className="px-10 mb-6 flex flex-col gap-4">
+      <section className="px-4 lg:px-10 mb-6 flex flex-col gap-4">
         {/* Search */}
         <div className="relative">
           <span className="material-symbols-outlined text-[18px] text-stitch-outline absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -190,7 +190,7 @@ const IncidentsListPage = () => {
 
         <div className="bg-ay-bg-dark2 rounded-[10px] border border-ay-border p-4 flex flex-col gap-4">
           {/* Dropdown filters left + Date range right */}
-          <div className="flex items-start justify-between gap-6">
+          <div className="flex flex-col md:flex-row items-start justify-between gap-4">
             <div className="flex items-center gap-4 flex-wrap">
               <FilterSelect
                 value={typeFilter}
@@ -243,8 +243,8 @@ const IncidentsListPage = () => {
               />
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="material-symbols-outlined text-[18px] text-stitch-outline">
+            <div className="flex items-center gap-1.5 md:gap-2 shrink-0 w-full md:w-auto">
+              <span className="hidden sm:inline material-symbols-outlined text-[18px] text-stitch-outline">
                 calendar_today
               </span>
               <input
@@ -254,7 +254,7 @@ const IncidentsListPage = () => {
                   setDateFrom(e.target.value);
                   setPage(1);
                 }}
-                className="bg-ay-bg-dark border border-ay-border rounded px-3 py-1.5 text-sm text-white outline-none focus:border-ay-accent [color-scheme:dark]"
+                className="flex-1 md:flex-none bg-ay-bg-dark border border-ay-border rounded px-2 md:px-3 py-1.5 text-xs md:text-sm text-white outline-none focus:border-ay-accent [color-scheme:dark]"
               />
               <span className="text-stitch-outline text-sm">—</span>
               <input
@@ -264,7 +264,7 @@ const IncidentsListPage = () => {
                   setDateTo(e.target.value);
                   setPage(1);
                 }}
-                className="bg-ay-bg-dark border border-ay-border rounded px-3 py-1.5 text-sm text-white outline-none focus:border-ay-accent [color-scheme:dark]"
+                className="flex-1 md:flex-none bg-ay-bg-dark border border-ay-border rounded px-2 md:px-3 py-1.5 text-xs md:text-sm text-white outline-none focus:border-ay-accent [color-scheme:dark]"
               />
             </div>
           </div>
@@ -307,30 +307,31 @@ const IncidentsListPage = () => {
       </section>
 
       {/* Data Table */}
-      <section className="flex-1 px-10 overflow-hidden flex flex-col min-h-0">
+      <section className="flex-1 px-4 lg:px-10 overflow-hidden flex flex-col min-h-0">
         <div className="flex-1 overflow-auto rounded-xl border border-ay-border/30 bg-ay-bg-dark2/30">
-          <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[640px]">
             <thead className="sticky top-0 bg-ay-bg-dark2 z-10">
               <tr>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
+                <th className="px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
                   Severidad
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
+                <th className="px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
                   Tipo
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
+                <th className="px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
                   Distrito
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
+                <th className="hidden sm:table-cell px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
                   Hora
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
+                <th className="px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
                   Estado
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
+                <th className="hidden sm:table-cell px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline">
                   Reportes
                 </th>
-                <th className="px-6 py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline text-right">
+                <th className="px-3 md:px-6 py-3 md:py-4 text-[0.68rem] font-bold uppercase tracking-widest text-stitch-outline text-right">
                   Acción
                 </th>
               </tr>
@@ -384,7 +385,7 @@ const IncidentsListPage = () => {
                   }`}
                 >
                   <td
-                    className={`px-6 py-4 border-l-[3px] ${SEVERITY_BAR[inc.severity]}`}
+                    className={`px-3 md:px-6 py-3 md:py-4 border-l-[3px] ${SEVERITY_BAR[inc.severity]}`}
                   >
                     <span
                       className={`text-[0.68rem] font-bold tracking-wider ${SEVERITY_TEXT[inc.severity]}`}
@@ -392,26 +393,26 @@ const IncidentsListPage = () => {
                       {severityLabel[inc.severity].toUpperCase()}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm font-semibold text-white">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-white whitespace-nowrap">
                     {incidentTypeLabel[inc.type]}
                   </td>
-                  <td className="px-6 py-4 text-sm text-stitch-outline">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm text-stitch-outline whitespace-nowrap">
                     {inc.district}
                   </td>
-                  <td className="px-6 py-4 text-sm text-stitch-outline">
+                  <td className="hidden sm:table-cell px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm text-stitch-outline whitespace-nowrap">
                     {formatHHMM(inc.createdAt)}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border ${STATUS_PILL[inc.status]}`}
+                      className={`px-2 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border ${STATUS_PILL[inc.status]}`}
                     >
                       {statusLabel[inc.status]}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-white">
+                  <td className="hidden sm:table-cell px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-medium text-white">
                     {inc.reportCount}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-right">
                     <button
                       onClick={() =>
                         navigate({
@@ -428,6 +429,7 @@ const IncidentsListPage = () => {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Pagination */}
@@ -455,7 +457,7 @@ const IncidentsListPage = () => {
       </section>
 
       {/* Footer — Anonymity reminder */}
-      <footer className="h-10 border-t border-ay-border bg-ay-bg-dark2 px-10 flex items-center shrink-0">
+      <footer className="h-10 border-t border-ay-border bg-ay-bg-dark2 px-4 lg:px-10 flex items-center shrink-0">
         <div className="flex items-center gap-2 text-[11px] text-ay-text-sec">
           <span className="material-symbols-outlined text-sm">lock</span>
           <span>

@@ -1,6 +1,7 @@
 import "leaflet/dist/leaflet.css";
-import { useState } from "react";
-import { CircleMarker, MapContainer, TileLayer, Tooltip } from "react-leaflet";
+import { useEffect, useState } from "react";
+import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap } from "react-leaflet";
+import L from "leaflet";
 import type {
   PanicSessionDTO,
   PublicIncidentDTO,
@@ -17,6 +18,22 @@ const SEVERITY_HEX: Record<Severity, string> = {
   LOW: "#22c55e",
 };
 
+function MapBoundsController({ incidents }: { incidents: { lat: number; lng: number }[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (incidents.length === 0) return;
+    if (incidents.length === 1) {
+      map.flyTo([incidents[0].lat, incidents[0].lng], 15, { duration: 0.5 });
+    } else {
+      const bounds = L.latLngBounds(incidents.map((i) => [i.lat, i.lng]));
+      map.flyToBounds(bounds, { padding: [30, 30], duration: 0.5 });
+    }
+  }, [map, incidents]);
+
+  return null;
+}
+
 interface IncidentsMapProps {
   incidents: PublicIncidentDTO[];
   panicSessions?: PanicSessionDTO[];
@@ -31,11 +48,16 @@ const IncidentsMap = ({
   showHeatmap = true,
 }: IncidentsMapProps) => {
   const [dark, setDark] = useState(false);
+  const mapCenter: [number, number] =
+    incidents.length === 1
+      ? [incidents[0].lat, incidents[0].lng]
+      : LIMA_CENTER;
+  const mapZoom = incidents.length === 1 ? 15 : 12;
   return (
     <div className="relative h-full w-full">
       <MapContainer
-        center={LIMA_CENTER}
-        zoom={12}
+        center={mapCenter}
+        zoom={mapZoom}
         scrollWheelZoom
         className="h-full w-full"
         style={{ background: dark ? "#0b0e14" : "#f5f5f0" }}
@@ -51,6 +73,7 @@ const IncidentsMap = ({
         {showHeatmap && incidents.length > 1 && (
           <HeatmapLayer incidents={incidents} />
         )}
+        <MapBoundsController incidents={incidents} />
         {incidents.map((inc) => {
           const color = SEVERITY_HEX[inc.severity];
           return (
@@ -117,7 +140,11 @@ const IncidentsMap = ({
       </MapContainer>
       <button
         onClick={() => setDark((v) => !v)}
-        className="absolute top-4 right-4 z-[1000] w-9 h-9 flex items-center justify-center rounded-full border bg-white text-gray-700 shadow-md transition-colors hover:bg-gray-100"
+        className={`absolute top-4 right-4 z-[1000] w-9 h-9 flex items-center justify-center rounded-full border shadow-md transition-colors ${
+          dark
+            ? "bg-white text-gray-700 hover:bg-gray-100"
+            : "bg-gray-800 text-gray-200 hover:bg-gray-700"
+        }`}
         title={dark ? "Mapa claro" : "Mapa oscuro"}
         aria-label="Alternar estilo de mapa"
       >

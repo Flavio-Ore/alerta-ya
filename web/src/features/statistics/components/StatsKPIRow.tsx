@@ -56,7 +56,7 @@ function KPICard({
 export function StatsKPIRow({ data }: { data: StatsResponse | undefined }) {
   if (!data) {
     return (
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
@@ -71,7 +71,7 @@ export function StatsKPIRow({ data }: { data: StatsResponse | undefined }) {
   const trend = data.comparison?.percentChange;
 
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
       <KPICard
         value={kpis.totalReportes.toString()}
         label="Reportes"

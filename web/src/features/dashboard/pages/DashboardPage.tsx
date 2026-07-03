@@ -197,9 +197,9 @@ const DashboardPage = () => {
   }, [data, typeFilter, severityFilter, districtFilter, searchQuery]);
 
   return (
-    <div className="flex-1 p-6 overflow-hidden flex flex-col gap-6">
+    <div className="flex-1 p-4 md:p-6 overflow-y-auto lg:overflow-hidden flex flex-col gap-4 md:gap-6">
       {/* Stat Cards Row */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
         <StatCard
           label="Total"
           value={isLoading ? "—" : stats.total}
@@ -229,10 +229,10 @@ const DashboardPage = () => {
         />
       </div>
 
-      {/* Split: Mapa 65% + Lista 35% */}
-      <div className="flex-1 flex gap-6 min-h-0">
+      {/* Split: Mapa arriba (mobile) / Mapa 65% (desktop) + Lista abajo / Lista 35% */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
         {/* Map */}
-        <section className="w-[65%] bg-stitch-surface-container-low rounded-xl relative overflow-hidden flex flex-col">
+        <section className="w-full lg:w-[65%] min-h-[60vh] lg:min-h-0 lg:h-auto bg-stitch-surface-container-low rounded-xl relative overflow-hidden flex flex-col isolate">
           <div className="absolute inset-0">
             <IncidentsMap
               incidents={filteredIncidents}
@@ -281,7 +281,7 @@ const DashboardPage = () => {
         </section>
 
         {/* Incident + Panic List */}
-        <section className="w-[35%] flex flex-col gap-4 min-h-0">
+        <section className="w-full lg:w-[35%] flex flex-col gap-4 min-h-0">
           {/* Panic session alerts — always at top when active */}
           {panicSessions.length > 0 && (
             <div className="space-y-2">
@@ -334,8 +334,8 @@ const DashboardPage = () => {
                 className="w-full bg-stitch-surface rounded-md border border-stitch-outline/20 pl-3 pr-3 py-2 text-xs text-white outline-none focus:border-stitch-primary transition-colors placeholder:text-stitch-outline"
               />
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
                 <div className="flex-1 min-w-0 bg-stitch-surface rounded-md border border-stitch-outline/20 px-2 py-1 overflow-hidden">
                   <FilterSelect
                     value={typeFilter}

@@ -91,7 +91,7 @@ const IncidentDetailPage = () => {
       : 0;
 
   return (
-    <div className="flex-1 overflow-auto p-8 space-y-6 bg-stitch-surface">
+    <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 space-y-6 bg-stitch-surface">
       <button
         onClick={() => navigate({ to: "/incidents" })}
         className="flex items-center gap-2 text-xs text-ay-text-secondary hover:text-white transition-colors"
@@ -140,7 +140,7 @@ const IncidentDetailPage = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-ay-bg-dark2 p-6 border border-ay-border space-y-4">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-ay-text-secondary">
                 Inteligencia Ciudadana
