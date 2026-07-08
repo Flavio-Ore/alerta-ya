@@ -88,6 +88,32 @@
     }
   }
 
+  /* Pin animado del mapa de incidentes — anillo pulsante por severidad.
+     El color se inyecta por marker vía la variable --ay-pin-c. */
+  .ay-pin { position: relative; display: block; width: 100%; height: 100%; }
+  .ay-pin__dot {
+    position: absolute; inset: 0; margin: auto;
+    width: 14px; height: 14px; border-radius: 9999px;
+    background: var(--ay-pin-c); border: 2px solid #fff;
+    box-shadow: 0 0 8px var(--ay-pin-c);
+  }
+  .ay-pin__ping {
+    position: absolute; inset: 0; margin: auto;
+    width: 14px; height: 14px; border-radius: 9999px;
+    background: var(--ay-pin-c);
+    animation: ay-pin-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  .ay-pin--hl .ay-pin__dot,
+  .ay-pin--hl .ay-pin__ping { width: 20px; height: 20px; }
+  /* Crítico pulsa más rápido y fuerte; leve más lento (se setea por clase). */
+  .ay-pin--fast .ay-pin__ping { animation-duration: 1.2s; }
+  .ay-pin--slow .ay-pin__ping { animation-duration: 2.6s; }
+  @keyframes ay-pin-ping {
+    0%   { transform: scale(1);   opacity: 0.55; }
+    70%  { transform: scale(2.6); opacity: 0; }
+    100% { transform: scale(2.6); opacity: 0; }
+  }
+
   /* Scrollbar custom — incidentes activos */
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;

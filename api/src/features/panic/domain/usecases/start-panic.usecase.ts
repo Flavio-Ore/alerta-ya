@@ -18,7 +18,7 @@ export async function startPanic(
 ): Promise<PublicPanicSessionDTO> {
   const existing = await deps.panicRepo.findActiveByUser(input.userId);
   if (existing) {
-    throw new AppError(409, 'Ya tenés una sesión de pánico activa');
+    throw new AppError(409, 'Ya tienes una sesión de pánico activa');
   }
 
   const session = await deps.panicRepo.create({

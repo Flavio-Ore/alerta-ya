@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { IncidentType, IncidentStatus, Severity } from '@prisma/client';
 
+import { isAllowedMedia } from '../infrastructure/media-type';
+
 export const createReportSchema = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
@@ -9,7 +11,19 @@ export const createReportSchema = z.object({
   // URLs de evidencia subidas desde el dispositivo (Firebase Storage o GCS)
   // El cliente sube primero, luego manda las URLs aquí
   // Acepta https:// (Cloudinary legacy) y gs:// (Firebase Storage)
-  mediaUrls: z.array(z.string().min(1)).max(5).default([]),
+  // Allow-list servidor-side: solo imágenes y video (extension-sniff). Documentos
+  // u otros tipos se rechazan — un cliente conforme (image_picker) nunca los produce.
+  mediaUrls: z
+    .array(
+      z.string().min(1).refine(isAllowedMedia, {
+        message: 'Tipo de archivo no permitido (solo imágenes y video)',
+      }),
+    )
+    .max(5)
+    .default([]),
+  // Evidencia fotográfica — opcional, nunca obligatoria
+  photoTakenAt: z.string().datetime({ offset: true }).optional(),
+  photoSource: z.enum(['exif', 'device_clock']).optional(),
 });
 
 export const listIncidentsQuerySchema = z.object({
@@ -28,6 +42,9 @@ export const idParamSchema = z.object({
 
 export const confirmSchema = z.object({
   vote: z.enum(['yes', 'no']),
+  // GPS del votante — requerido para el gate de proximidad (anti-manipulación).
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
 });
 
 // Solo para autoridades — actualizar estado + mensaje de feedback al ciudadano

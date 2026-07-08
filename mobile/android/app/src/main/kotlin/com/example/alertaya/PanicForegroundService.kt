@@ -7,8 +7,8 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
-import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Handler
 import android.os.IBinder
@@ -41,6 +41,21 @@ class PanicForegroundService : Service() {
 
     private val notificationManager by lazy {
         getSystemService(NotificationManager::class.java)
+    }
+
+    private val audioManager by lazy {
+        getSystemService(AudioManager::class.java)
+    }
+
+    // Re-fuerza STREAM_ALARM al máximo cada segundo mientras suena la alarma.
+    // ponytail: snap-back, no bloqueo real de la tecla. Hay un dip breve entre
+    // que el atacante baja y vuelve a subir. Para bloqueo duro de VOLUME_DOWN,
+    // consumir el KeyEvent desde PanicAccessibilityService mientras pánico activo.
+    private val volumeLockRunnable = object : Runnable {
+        override fun run() {
+            forceAlarmVolumeMax()
+            handler.postDelayed(this, 1000)
+        }
     }
 
     override fun onCreate() {
@@ -85,10 +100,9 @@ class PanicForegroundService : Service() {
 
     private fun startAlarmSound() {
         try {
+            // Sonido propio de AlertaYa (res/raw/panic_alarm.mp3).
             val alarmUri: Uri =
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                    ?: return
+                Uri.parse("android.resource://$packageName/${R.raw.panic_alarm}")
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -101,12 +115,17 @@ class PanicForegroundService : Service() {
                 prepare()
                 start()
             }
+            // Subir alarma al máximo y mantenerla ahí — anula intentos de mute.
+            forceAlarmVolumeMax()
+            handler.removeCallbacks(volumeLockRunnable)
+            handler.postDelayed(volumeLockRunnable, 1000)
         } catch (_: Exception) {
             // Fail silencioso — la grabación y el servicio siguen activos
         }
     }
 
     private fun stopAlarmSound() {
+        handler.removeCallbacks(volumeLockRunnable)
         try {
             mediaPlayer?.let {
                 if (it.isPlaying) it.stop()
@@ -114,6 +133,14 @@ class PanicForegroundService : Service() {
             }
         } catch (_: Exception) {}
         mediaPlayer = null
+    }
+
+    private fun forceAlarmVolumeMax() {
+        try {
+            val am = audioManager ?: return
+            val max = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            am.setStreamVolume(AudioManager.STREAM_ALARM, max, 0)
+        } catch (_: Exception) {}
     }
 
     private fun buildNotification(elapsedSeconds: Long): Notification {

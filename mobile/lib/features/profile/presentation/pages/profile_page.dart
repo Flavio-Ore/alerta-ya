@@ -2,6 +2,7 @@ import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:alertaya/app/di/injection.dart';
@@ -11,9 +12,41 @@ import 'package:alertaya/core/services/fcm_service.dart';
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:alertaya/features/profile/domain/entities/user_profile_entity.dart';
 import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:alertaya/features/tutorial/presentation/service/tutorial_service.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Carga el perfil al abrir la página por primera vez.
+    _refreshProfile();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresca el perfil cuando la app vuelve al primer plano
+    // (p.ej. después de volver desde el flujo de reporte).
+    if (state == AppLifecycleState.resumed) _refreshProfile();
+  }
+
+  void _refreshProfile() {
+    if (!mounted) return;
+    context.read<ProfileBloc>().add(const ProfileLoaded());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +88,11 @@ class _ProfileView extends StatelessWidget {
                     const SizedBox(height: 12),
                     // Reputación — solo si cargó
                     if (state is ProfileData) ...[
-                      _ReputationBadge(score: state.profile.reputationScore),
+                      _ReputationBadge(
+                        score: state.profile.reputationScore,
+                        tier: state.profile.tier,
+                        pointsToNext: state.profile.pointsToNext,
+                      ),
                     ] else if (state is ProfileLoading) ...[
                       const SizedBox(
                         width: 80,
@@ -103,6 +140,21 @@ class _ProfileView extends StatelessWidget {
                   onTap: () {},
                 ),
               ],
+
+              const SizedBox(height: 8),
+
+              // ── Tutorial
+              const _SectionHeader(label: 'Tutorial'),
+              _SettingTile(
+                icon: Icons.help_outline_rounded,
+                label: 'Ver tutorial de nuevo',
+                onTap: () async {
+                  // Resetea el flag y navega al mapa; AppShell.didUpdateWidget
+                  // detectará el cambio de branch y disparará maybeStart.
+                  await getIt<TutorialService>().prepareManualRestart();
+                  if (context.mounted) context.go('/map');
+                },
+              ),
 
               const SizedBox(height: 8),
 
@@ -331,7 +383,7 @@ class _NotificationPermissionTileState
         leading: const Icon(Icons.notifications_off_outlined,
             color: AppColors.onSurfaceVariant),
         title: const Text('Alertas push', style: AppTextStyles.bodyLg),
-        subtitle: const Text('Permiso desactivado · Tocá para activar',
+        subtitle: const Text('Permiso desactivado · Toca para activar',
             style: AppTextStyles.bodyMd),
         trailing: const Icon(Icons.open_in_new,
             color: AppColors.onSurfaceVariant, size: 18),
@@ -372,8 +424,18 @@ class _AvatarWidget extends StatelessWidget {
 }
 
 class _ReputationBadge extends StatelessWidget {
-  const _ReputationBadge({required this.score});
+  const _ReputationBadge({
+    required this.score,
+    this.tier,
+    this.pointsToNext,
+  });
   final int score;
+
+  /// Nivel de reputación ('high'|'medium'|'low'). Null = API vieja, sin nivel.
+  final String? tier;
+
+  /// Puntos que faltan para subir de nivel. Solo se muestra si no es null.
+  final int? pointsToNext;
 
   Color get _color {
     if (score >= 80) return AppColors.secondary;
@@ -381,26 +443,50 @@ class _ReputationBadge extends StatelessWidget {
     return AppColors.severityCritical;
   }
 
+  String? get _tierLabel => switch (tier) {
+        'high' => 'Confiable',
+        'medium' => 'Habitual',
+        'low' => 'Nuevo',
+        _ => null,
+      };
+
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: _color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: _color.withValues(alpha: 0.35)),
+  Widget build(BuildContext context) {
+    final tierLabel = _tierLabel;
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: _color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: _color.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star_rounded, size: 14, color: _color),
+              const SizedBox(width: 5),
+              Text(
+                tierLabel != null
+                    ? 'Reputación: $score · $tierLabel'
+                    : 'Reputación: $score',
+                style: AppTextStyles.labelMd.copyWith(color: _color),
+              ),
+            ],
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.star_rounded, size: 14, color: _color),
-            const SizedBox(width: 5),
-            Text(
-              'Reputación: $score',
-              style: AppTextStyles.labelMd.copyWith(color: _color),
-            ),
-          ],
-        ),
-      );
+        if (pointsToNext != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Faltan $pointsToNext pts para subir de nivel',
+            style: AppTextStyles.labelSm
+                .copyWith(color: AppColors.onSurfaceVariant),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class _SectionHeader extends StatelessWidget {

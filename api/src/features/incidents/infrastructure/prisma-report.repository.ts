@@ -26,6 +26,8 @@ export class PrismaReportRepository implements ReportRepository {
         formData: formDataWithType,
         mediaUrls: data.mediaUrls,
         incidentId: data.incidentId ?? null,
+        photoTakenAt: data.photoTakenAt ?? null,
+        photoSource: data.photoSource ?? null,
       },
     });
   }
@@ -84,6 +86,14 @@ export class PrismaReportRepository implements ReportRepository {
     });
     const uids = reports.map((r) => r.user.firebaseUid);
     return [...new Set(uids)];
+  }
+
+  async findReporterReputationsByIncidentId(incidentId: string): Promise<number[]> {
+    const reports = await this.prisma.report.findMany({
+      where: { incidentId },
+      select: { user: { select: { reputationScore: true } } },
+    });
+    return reports.map((r) => r.user.reputationScore);
   }
 
   async cancelReport(reportId: string, userId: string): Promise<void> {

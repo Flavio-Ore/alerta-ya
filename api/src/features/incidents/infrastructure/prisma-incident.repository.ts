@@ -1,12 +1,14 @@
-import { PrismaClient, Incident, IncidentType, Severity, IncidentStatus } from '@prisma/client';
+import { PrismaClient, Incident, IncidentStatusHistory, IncidentType, Severity, IncidentStatus } from '@prisma/client';
 
 import {
   IncidentRepository,
   CreateIncidentData,
+  CreateStatusHistoryData,
   IncidentFilters,
   PaginatedIncidents,
 } from '../domain/repositories/incident.repository';
 import { bucketCoord } from '../../../core/utils/geo.utils';
+import { cappedExtendedExpiry } from '../domain/incident-lifecycle';
 
 const BUCKET_TOLERANCE = 0.001; // ~100m
 
@@ -22,13 +24,21 @@ export class PrismaIncidentRepository implements IncidentRepository {
     // Status filter — comportamiento según valor:
     //   - 'ALL'      → trae todos los status, sin filtro de expiración (panel autoridad)
     //   - <enum>     → filtra por ese status exacto, sin filtro de expiración
-    //   - undefined  → solo ACTIVE no expirados (default app móvil)
+    //   - undefined  → default app móvil. El ciudadano ve incidentes vivos:
+    //                  ACTIVE solo si no expiró (el timer auto-cierra reportes
+    //                  no atendidos), e IN_ATTENTION siempre — si una autoridad
+    //                  lo está atendiendo es relevante hasta que pase a CLOSED.
     const statusWhere =
       filters.status === 'ALL'
         ? {}
         : filters.status
           ? { status: filters.status }
-          : { status: IncidentStatus.ACTIVE, expiresAt: { gt: now } };
+          : {
+              OR: [
+                { status: IncidentStatus.ACTIVE, expiresAt: { gt: now } },
+                { status: IncidentStatus.IN_ATTENTION },
+              ],
+            };
 
     const where = {
       ...statusWhere,
@@ -76,6 +86,10 @@ export class PrismaIncidentRepository implements IncidentRepository {
         reportCount: 1,
         confirmCount: 0,
         denyCount: 0,
+        aiScore: data.aiScore ?? null,
+        aiVerified: data.aiVerified ?? null,
+        photoTakenAt: data.photoTakenAt ?? null,
+        photoSource: data.photoSource ?? null,
       },
     });
   }
@@ -106,7 +120,9 @@ export class PrismaIncidentRepository implements IncidentRepository {
     const incident = await this.prisma.incident.findUnique({ where: { id } });
     if (!incident) return;
 
-    const newExpiry = new Date(incident.expiresAt.getTime() + extraMinutes * 60 * 1000);
+    // Tope duro: un incidente no puede vivir más de MAX_INCIDENT_LIFE_MINUTES
+    // desde su creación, sin importar cuántos "sigue ahí" lleguen (anti-manipulación).
+    const newExpiry = cappedExtendedExpiry(incident.expiresAt, incident.createdAt, extraMinutes);
     await this.prisma.incident.update({ where: { id }, data: { expiresAt: newExpiry } });
   }
 
@@ -121,6 +137,17 @@ export class PrismaIncidentRepository implements IncidentRepository {
     return this.prisma.incident.update({
       where: { id },
       data: { denyCount: { increment: 1 } },
+    });
+  }
+
+  async addStatusHistory(data: CreateStatusHistoryData): Promise<IncidentStatusHistory> {
+    return this.prisma.incidentStatusHistory.create({ data });
+  }
+
+  async getStatusHistory(incidentId: string): Promise<IncidentStatusHistory[]> {
+    return this.prisma.incidentStatusHistory.findMany({
+      where: { incidentId },
+      orderBy: { changedAt: 'asc' },
     });
   }
 }

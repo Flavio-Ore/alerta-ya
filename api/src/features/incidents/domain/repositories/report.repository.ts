@@ -10,6 +10,8 @@ export interface CreateReportData {
   formData: ReportFormData;
   mediaUrls: string[];
   incidentId?: string | null;
+  photoTakenAt?: Date | null;
+  photoSource?: string | null;
 }
 
 export interface FindByUserIdOptions {
@@ -36,6 +38,11 @@ export interface ReportRepository {
   findByUserId(userId: string, opts: FindByUserIdOptions): Promise<FindByUserIdResult>;
   /** Devuelve los firebaseUid únicos de los reportantes de un incidente */
   findFirebaseUidsByIncidentId(incidentId: string): Promise<string[]>;
+  /**
+   * Devuelve SOLO los reputationScore de los reportantes de un incidente.
+   * No expone userId ni identidad — insumo anónimo para el tier agregado.
+   */
+  findReporterReputationsByIncidentId(incidentId: string): Promise<number[]>;
   /**
    * Cancela (elimina) un reporte pendiente.
    * Solo si el reporte pertenece a userId y su incidentId es null.

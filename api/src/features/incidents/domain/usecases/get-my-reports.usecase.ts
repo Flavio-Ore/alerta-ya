@@ -22,6 +22,8 @@ export interface MyReportIncidentDTO {
   expiresAt: string;
   feedback: string | null;
   updatedAt: string;
+  aiScore: number | null;
+  aiVerified: boolean | null;
 }
 
 export interface MyReportDTO {
@@ -88,6 +90,8 @@ function toDTO(report: ReportWithIncident): MyReportDTO {
           expiresAt: report.incident.expiresAt.toISOString(),
           feedback: report.incident.feedback,
           updatedAt: report.incident.updatedAt.toISOString(),
+          aiScore: report.incident.aiScore,
+          aiVerified: report.incident.aiVerified,
         }
       : null,
   };

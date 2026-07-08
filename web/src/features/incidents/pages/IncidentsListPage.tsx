@@ -148,7 +148,7 @@ const IncidentsListPage = () => {
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-ay-bg-dark">
       {/* Header */}
-      <header className="flex items-center justify-between px-10 py-8">
+      <header className="flex items-center justify-between flex-wrap gap-3 px-4 md:px-10 py-4 md:py-8">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold text-white font-headline tracking-tight">
             Incidentes
@@ -170,7 +170,7 @@ const IncidentsListPage = () => {
       </header>
 
       {/* Filter Bar */}
-      <section className="px-10 mb-6 flex flex-col gap-4">
+      <section className="px-4 md:px-10 mb-6 flex flex-col gap-4">
         {/* Search */}
         <div className="relative">
           <span className="material-symbols-outlined text-[18px] text-stitch-outline absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -190,7 +190,7 @@ const IncidentsListPage = () => {
 
         <div className="bg-ay-bg-dark2 rounded-[10px] border border-ay-border p-4 flex flex-col gap-4">
           {/* Dropdown filters left + Date range right */}
-          <div className="flex items-start justify-between gap-6">
+          <div className="flex flex-col lg:flex-row items-start gap-4">
             <div className="flex items-center gap-4 flex-wrap">
               <FilterSelect
                 value={typeFilter}
@@ -243,7 +243,7 @@ const IncidentsListPage = () => {
               />
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="material-symbols-outlined text-[18px] text-stitch-outline">
                 calendar_today
               </span>
@@ -307,7 +307,7 @@ const IncidentsListPage = () => {
       </section>
 
       {/* Data Table */}
-      <section className="flex-1 px-10 overflow-hidden flex flex-col min-h-0">
+      <section className="flex-1 px-4 md:px-10 overflow-hidden flex flex-col min-h-0">
         <div className="flex-1 overflow-auto rounded-xl border border-ay-border/30 bg-ay-bg-dark2/30">
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 bg-ay-bg-dark2 z-10">
@@ -455,7 +455,7 @@ const IncidentsListPage = () => {
       </section>
 
       {/* Footer — Anonymity reminder */}
-      <footer className="h-10 border-t border-ay-border bg-ay-bg-dark2 px-10 flex items-center shrink-0">
+      <footer className="h-10 border-t border-ay-border bg-ay-bg-dark2 px-4 md:px-10 flex items-center shrink-0">
         <div className="flex items-center gap-2 text-[11px] text-ay-text-sec">
           <span className="material-symbols-outlined text-sm">lock</span>
           <span>

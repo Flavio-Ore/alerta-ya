@@ -113,7 +113,7 @@ socket.emit('room:update', { lat: -12.12, lng: -77.03, district: 'Miraflores' })
           mediaUrls: {
             type: 'array',
             items: { type: 'string', format: 'uri' },
-            description: 'URLs de Cloudinary con fotos/video subidos por el reportante',
+            description: 'URLs de Firebase Storage (gs://) con fotos/video subidos por el reportante',
           },
         },
       },
@@ -419,9 +419,9 @@ ACTIVE → IN_ATTENTION → CLOSED
         description: `
 Crea un reporte anónimo. La identidad del reportante **nunca se expone** en ningún endpoint.
 
-**Flujo de media (Cloudinary):**
-1. La app sube la foto/video directo a Cloudinary usando el upload preset
-2. La app recibe las URLs de Cloudinary
+**Flujo de media (Firebase Storage):**
+1. La app sube la foto/video directo a Firebase Storage
+2. La app recibe las URLs (\`gs://\`) del archivo subido
 3. Las URLs se incluyen en \`mediaUrls[]\` de este endpoint
 
 **Lógica del Threshold Engine:**
@@ -456,7 +456,7 @@ Crea un reporte anónimo. La identidad del reportante **nunca se expone** en nin
                     type: 'array',
                     items: { type: 'string', format: 'uri' },
                     maxItems: 5,
-                    description: 'URLs de Cloudinary. La app sube primero, luego manda las URLs.',
+                    description: 'URLs de Firebase Storage (gs://). La app sube primero, luego manda las URLs.',
                   },
                 },
               },
@@ -466,7 +466,7 @@ Crea un reporte anónimo. La identidad del reportante **nunca se expone** en nin
                   value: {
                     lat: -12.1167, lng: -77.0372, type: 'ROBBERY',
                     formData: { personsInvolved: '2-3', weapon: true, stillInArea: false, fleeDirection: 'north' },
-                    mediaUrls: ['https://res.cloudinary.com/alertaya/image/upload/v1/evidence/abc.jpg'],
+                    mediaUrls: ['gs://alertaya-1b963.appspot.com/evidence/abc.jpg'],
                   },
                 },
                 accident: {
@@ -623,7 +623,7 @@ Activa el botón de pánico. Devuelve **URLs firmadas de GCS** para subir audio 
         responses: {
           201: { description: 'Sesión iniciada', content: { 'application/json': { schema: { $ref: '#/components/schemas/PublicPanicSessionDTO' } } } },
           401: { description: 'No autenticado', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
-          409: { description: 'Ya tenés una sesión de pánico activa', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          409: { description: 'Ya tienes una sesión de pánico activa', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
         },
       },
     },

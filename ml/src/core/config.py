@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     API_URL: str = "http://localhost:3000"
 
     # Modelos — rutas a archivos .joblib
-    VERIFIER_MODEL_PATH: str = "src/models/verifier_v1.joblib"
+    VERIFIER_MODEL_PATH: str = "src/models/verifier_v3.joblib"
     PREDICTOR_MODEL_PATH: str = "src/models/predictor_v1.joblib"
 
     # Geofencing Lima Metropolitana

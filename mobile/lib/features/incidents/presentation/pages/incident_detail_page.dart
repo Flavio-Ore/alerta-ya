@@ -6,6 +6,7 @@ import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/domain/enums.dart';
+import 'package:alertaya/core/widgets/ai_verdict_badge.dart';
 import 'package:alertaya/core/widgets/severity_chip.dart';
 import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
 import 'package:alertaya/features/incidents/presentation/bloc/incidents_bloc.dart';
@@ -208,6 +209,10 @@ class _DetailContent extends StatelessWidget {
                       _StatusBadge(status: detail.status),
                     ],
                   ),
+                  const SizedBox(height: 6),
+                  // Eje de IA — separado del eje de severidad (nunca mismo
+                  // color/fila), never-blank vía AiVerdictBadge.
+                  AiVerdictBadge(score: detail.aiScore, verified: detail.aiVerified),
                 ],
               ),
             ),
@@ -284,15 +289,23 @@ class _DetailContent extends StatelessWidget {
               label: 'Desmentidos',
               count: detail.denyCount,
             ),
-            const SizedBox(width: 8),
-            _CounterTile(
-              icon: Icons.person_outline,
-              color: AppColors.mapOnSurfaceVariant,
-              label: 'Reportes',
-              count: detail.reportCount,
-            ),
+            // const SizedBox(width: 8),
+            // _CounterTile(
+            //   icon: Icons.person_outline,
+            //   color: AppColors.mapOnSurfaceVariant,
+            //   label: 'Reportes',
+            //   count: detail.reportCount,
+            // ),
           ],
         ),
+
+        // ── Confiabilidad agregada y anónima de los reportantes.
+        // PRIVACY: solo tier grueso ('high'|'medium'|'low'), nunca un número
+        // ni identidad — ver docs/rules/SECURITY_RULES.md.
+        if (detail.reporterTrust != null) ...[
+          const SizedBox(height: 12),
+          _ReporterTrustBadge(trust: detail.reporterTrust!),
+        ],
 
         // ── Indicadores de alerta (pill badges)
         if (detail.weaponReports > 0 ||
@@ -501,11 +514,50 @@ class _AlertBadge extends StatelessWidget {
           children: [
             Icon(icon, size: 13, color: color),
             const SizedBox(width: 5),
-            Text(label,
-                style: AppTextStyles.labelSm.copyWith(color: color)),
+            Text(label, style: AppTextStyles.labelSm.copyWith(color: color)),
           ],
         ),
       );
+}
+
+/// Badge de confiabilidad agregada y ANÓNIMA de los reportantes de un incidente.
+/// Nunca muestra un número ni identidad — solo un tier grueso de 3 niveles.
+class _ReporterTrustBadge extends StatelessWidget {
+  const _ReporterTrustBadge({required this.trust});
+
+  /// 'high' | 'medium' | 'low'.
+  final String trust;
+
+  (Color, String)? get _config => switch (trust) {
+        'high' => (AppColors.severityLow, 'Reportantes confiables'),
+        'medium' => (AppColors.secondaryContainer, 'Reportantes habituales'),
+        'low' => (AppColors.severityModerate, 'Reportantes nuevos'),
+        _ => null,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final config = _config;
+    if (config == null) return const SizedBox.shrink();
+    final (color, label) = config;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.shield_outlined, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(label, style: AppTextStyles.labelSm.copyWith(color: color)),
+        ],
+      ),
+    );
+  }
 }
 
 class _StatusBadge extends StatelessWidget {
@@ -525,8 +577,7 @@ class _StatusBadge extends StatelessWidget {
         color: color.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label,
-          style: AppTextStyles.labelSm.copyWith(color: color)),
+      child: Text(label, style: AppTextStyles.labelSm.copyWith(color: color)),
     );
   }
 }

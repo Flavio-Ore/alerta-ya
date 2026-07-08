@@ -50,6 +50,7 @@ vi.mock('../../infrastructure/prisma-report.repository', () => ({
     create: vi.fn().mockResolvedValue({ id: 'report-id', formData: {} }),
     findOrphanedNearby: vi.fn().mockResolvedValue([]),
     findByIncidentId: vi.fn().mockResolvedValue([]),
+    findReporterReputationsByIncidentId: vi.fn().mockResolvedValue([]),
   })),
 }));
 
@@ -119,9 +120,10 @@ describe('POST /incidents/reports', () => {
 });
 
 describe('GET /incidents/:id', () => {
-  it('GIVEN id inválido (no UUID) WHEN request THEN 400', async () => {
+  it('GIVEN id inválido (no UUID) WHEN request THEN 404', async () => {
+    // idParamSchema accepts any non-empty string (seeds + UUIDs) — 404 when not found, not 400
     const res = await request(app).get('/incidents/not-a-uuid');
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
   });
 
   it('GIVEN UUID inexistente WHEN request THEN 404', async () => {

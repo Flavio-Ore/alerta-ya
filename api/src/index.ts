@@ -17,11 +17,12 @@ import { jobsRouter } from "./core/jobs/jobs.router";
 import { authRouter } from "./features/auth/presentation/auth.router";
 import { incidentsRouter } from "./features/incidents/presentation/incidents.router";
 import { zonesRouter } from "./features/zones/presentation/zones.router";
+import { riskRouter } from "./features/risk/presentation/risk.router";
 import { panicRouter } from "./features/panic/presentation/panic.router";
 import { notificationsRouter } from "./features/notifications/presentation/notifications.router";
 import { adminRouter } from "./features/admin/presentation/admin.router";
 import { meRouter } from "./features/me/presentation/me.router";
-import { statisticsRouter } from "./features/statistics/presentation/statistics.router";
+import { aiRouter } from "./features/ai/presentation/ai.router";
 
 import { registerIncidentSocket } from "./sockets/incident.socket";
 import { registerSocketAuth } from "./sockets/auth.socket";
@@ -95,12 +96,13 @@ app.get("/health", (_req, res) => {
 app.use("/auth", authRouter);
 app.use("/incidents", incidentsRouter);
 app.use("/zones", zonesRouter);
+app.use("/risk", riskRouter);
 app.use("/panic", panicRouter);
 app.use("/notifications", notificationsRouter);
 app.use("/me", meRouter);
+app.use("/ai", aiRouter);
 app.use("/internal/jobs", jobsRouter);
 app.use("/admin/users", adminRouter);
-app.use("/stats", statisticsRouter);
 
 // Error handler — siempre al final
 app.use(errorHandlerMiddleware);

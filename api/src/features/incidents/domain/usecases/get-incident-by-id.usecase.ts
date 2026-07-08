@@ -5,9 +5,11 @@ import { ReportRepository } from '../repositories/report.repository';
 import {
   PublicIncidentDetailDTO,
   ReportEvidenceDTO,
+  StatusHistoryEntryDTO,
   toPublicDTO,
 } from '../entities/incident.entity';
 import { AppError } from '../../../../core/errors/AppError';
+import { aggregateReporterTier } from '../../application/reputation-tier';
 
 /**
  * Cuenta reportes que satisfacen una flag de formulario.
@@ -53,7 +55,19 @@ export async function getIncidentById(
     throw new AppError(404, 'Incidente no encontrado');
   }
 
-  const reports = await reportRepo.findByIncidentId(id);
+  const [reports, historyRows, reporterScores] = await Promise.all([
+    reportRepo.findByIncidentId(id),
+    incidentRepo.getStatusHistory(id),
+    reportRepo.findReporterReputationsByIncidentId(id),
+  ]);
+
+  const statusHistory: StatusHistoryEntryDTO[] = historyRows.map((h) => ({
+    id: h.id,
+    status: h.status,
+    feedback: h.feedback,
+    actorRole: h.actorRole,
+    changedAt: h.changedAt.toISOString(),
+  }));
 
   return {
     ...toPublicDTO(incident),
@@ -61,5 +75,7 @@ export async function getIncidentById(
     injuredReports: countFormFlag(reports, 'injured'),
     stillHereReports: countFormFlag(reports, 'stillInArea'),
     evidence: reports.map(toEvidenceDTO),
+    statusHistory,
+    reporterTrust: aggregateReporterTier(reporterScores),
   };
 }

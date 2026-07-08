@@ -20,5 +20,7 @@ class MyReportIncident with _$MyReportIncident {
     required DateTime expiresAt,
     required DateTime updatedAt,
     String? feedback,
+    double? aiScore,
+    bool? aiVerified,
   }) = _MyReportIncident;
 }

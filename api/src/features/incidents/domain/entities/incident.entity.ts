@@ -5,6 +5,8 @@ import {
   IncidentStatus,
 } from "@prisma/client";
 
+import { ReputationTier } from "../../application/reputation-tier";
+
 export { IncidentType, Severity, IncidentStatus };
 
 export interface PublicIncidentDTO {
@@ -24,6 +26,16 @@ export interface PublicIncidentDTO {
   unitAssigned?: string | null;
   /** Mensaje de la autoridad visible al ciudadano al atender el incidente */
   feedback?: string | null;
+  /** Confianza del verificador ML (0–1) — null si la IA no corrió */
+  aiScore?: number | null;
+  /** true si el reporte pasó el verificador ML */
+  aiVerified?: boolean | null;
+  /** Timestamp de la foto adjunta — null si no hay evidencia */
+  photoTakenAt?: string | null;
+  /** 'exif' | 'device_clock' — fuente del timestamp */
+  photoSource?: string | null;
+  /** Delta de reputación aplicado tras verificación — null hasta que B1 lo calcule */
+  reputationDelta?: number | null;
 }
 
 export interface ReportEvidenceDTO {
@@ -33,12 +45,28 @@ export interface ReportEvidenceDTO {
   mediaUrls: string[];
 }
 
+export interface StatusHistoryEntryDTO {
+  id: string;
+  status: IncidentStatus;
+  feedback: string | null;
+  actorRole: string;
+  changedAt: string; // ISO
+}
+
 export interface PublicIncidentDetailDTO extends PublicIncidentDTO {
   weaponReports: number;
   injuredReports: number;
   stillHereReports: number;
   /** Evidencia agregada por reporte — nunca expone userId ni firebaseUid */
   evidence: ReportEvidenceDTO[];
+  /** Historial de cambios de estado — auditoría visible para autoridades */
+  statusHistory: StatusHistoryEntryDTO[];
+  /**
+   * Tier de confianza agregado de los reportantes ('high' | 'medium' | 'low').
+   * Anónimo: da seguridad a otros usuarios sin revelar identidad ni puntaje.
+   * null si no hay reportantes con reputación conocida.
+   */
+  reporterTrust?: ReputationTier | null;
 }
 
 export function toPublicDTO(incident: Incident): PublicIncidentDTO {
@@ -58,5 +86,10 @@ export function toPublicDTO(incident: Incident): PublicIncidentDTO {
     updatedAt: incident.updatedAt.toISOString(),
     unitAssigned: incident.unitAssigned,
     feedback: incident.feedback,
+    aiScore: incident.aiScore,
+    aiVerified: incident.aiVerified,
+    photoTakenAt: incident.photoTakenAt?.toISOString() ?? null,
+    photoSource: incident.photoSource ?? null,
+    reputationDelta: null,
   };
 }

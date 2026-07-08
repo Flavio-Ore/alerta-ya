@@ -1,1 +1,21 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"alertaya-1b963","appId":"1:562740646244:android:45b6b0e5ecaf08e87daa71","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"alertaya-1b963","configurations":{"android":"1:562740646244:android:45b6b0e5ecaf08e87daa71"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "alertaya-1b963",
+          "appId": "1:562740646244:android:45b6b0e5ecaf08e87daa71",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "alertaya-1b963",
+          "configurations": {
+            "android": "1:562740646244:android:45b6b0e5ecaf08e87daa71"
+          }
+        }
+      }
+    }
+  }
+}

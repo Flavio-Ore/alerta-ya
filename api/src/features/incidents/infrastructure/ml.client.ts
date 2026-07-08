@@ -1,5 +1,8 @@
 import { env } from '../../../core/config/env';
 
+/** Umbral para derivar aiVerified desde el finalScore del pipeline ML + visión. */
+export const AI_VERIFIED_THRESHOLD = 0.5;
+
 export interface MlVerifyInput {
   reportId: string;
   lat: number;
@@ -7,6 +10,14 @@ export interface MlVerifyInput {
   type: string;
   formData: Record<string, unknown>;
   userReputation: number;
+  hasEvidence: boolean;
+  photoAgeMinutes: number | null;
+  /**
+   * 'exif' | 'device_clock' | null — informativo, forward-compat para el
+   * verificador ML (S4). El ML actual ignora campos desconocidos (pydantic
+   * extra='ignore'), así que esto NUNCA gatea/bloquea el resultado hoy.
+   */
+  photoSource: string | null;
 }
 
 export interface MlVerifyResult {
@@ -32,6 +43,9 @@ export async function verifyReport(input: MlVerifyInput): Promise<MlVerifyResult
         type: input.type,
         form_data: input.formData,
         user_reputation: input.userReputation,
+        has_evidence: input.hasEvidence,
+        photo_age_minutes: input.photoAgeMinutes,
+        photo_source: input.photoSource,
       }),
       signal: controller.signal,
     });

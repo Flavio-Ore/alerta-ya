@@ -55,6 +55,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     on<PanicInitialized>(_onInitialized);
     on<PanicActivationRequested>(_onActivationRequested);
     on<PanicDeactivationRequested>(_onDeactivationRequested);
+    on<PanicPinRetryRequested>(_onPinRetryRequested);
     on<PanicSavedPinUpdated>(_onSavedPinUpdated);
     on<_PanicAmplitudeUpdated>(_onAmplitudeUpdated);
     on<_PanicBlockCompleted>(_onBlockCompleted);
@@ -211,6 +212,18 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
         emit(const PanicIdle());
       },
     );
+  }
+
+  Future<void> _onPinRetryRequested(
+    PanicPinRetryRequested event,
+    Emitter<PanicState> emit,
+  ) async {
+    if (state is! PanicActive) return;
+    final current = state as PanicActive;
+    if (!current.isPinLocked) return;
+    // Resetear el contador reabre _DeactivateCard. El PIN sigue siendo requerido.
+    await _storage.write(_kFailedAttempts, '0');
+    emit(current.copyWith(failedPinAttempts: 0));
   }
 
   void _onAmplitudeUpdated(

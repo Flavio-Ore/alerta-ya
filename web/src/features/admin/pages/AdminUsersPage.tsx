@@ -99,7 +99,7 @@ const AdminUsersPage = () => {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-stitch-surface">
-      <header className="flex items-center justify-between px-10 py-8">
+      <header className="flex items-center justify-between flex-wrap gap-3 px-4 md:px-10 py-4 md:py-8">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold text-white font-headline tracking-tight">
             Administrar Autoridades
@@ -123,8 +123,8 @@ const AdminUsersPage = () => {
         </button>
       </header>
 
-      <section className="px-10 mb-6 flex flex-col gap-4">
-        <div className="flex items-center gap-4">
+      <section className="px-4 md:px-10 mb-6 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <span className="material-symbols-outlined text-[18px] text-stitch-on-surface-variant absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
               search
@@ -161,7 +161,7 @@ const AdminUsersPage = () => {
         </div>
       </section>
 
-      <section className="flex-1 px-10 overflow-hidden flex flex-col min-h-0">
+      <section className="flex-1 px-4 md:px-10 overflow-hidden flex flex-col min-h-0">
         <div className="flex-1 overflow-auto rounded-xl border border-stitch-surface-container-high bg-stitch-surface-container-low/30">
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 bg-stitch-surface-container-low z-10">
@@ -317,7 +317,7 @@ const AdminUsersPage = () => {
         </div>
       </section>
 
-      <footer className="h-10 border-t border-stitch-surface-container-high bg-stitch-surface-container-low px-10 flex items-center shrink-0">
+      <footer className="h-10 border-t border-stitch-surface-container-high bg-stitch-surface-container-low px-4 md:px-10 flex items-center shrink-0">
         <div className="flex items-center gap-2 text-[11px] text-stitch-on-surface-variant">
           <RotateCcw size={14} />
           <span>

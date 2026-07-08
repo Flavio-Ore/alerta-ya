@@ -59,5 +59,4 @@ class DefaultFirebaseOptions {
     projectId: 'alertaya-1b963',
     storageBucket: 'alertaya-1b963.firebasestorage.app',
   );
-
 }

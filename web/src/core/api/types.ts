@@ -31,6 +31,14 @@ export interface PublicIncidentDTO {
   updatedAt: string;
   unitAssigned?: string | null;
   feedback?: string | null;
+  /** Confianza del verificador ML (0–1) — null si la IA no corrió */
+  aiScore?: number | null;
+  /** true si el reporte pasó el verificador ML */
+  aiVerified?: boolean | null;
+  /** Timestamp de la foto adjunta — null si no hay evidencia */
+  photoTakenAt?: string | null;
+  /** 'exif' | 'device_clock' — fuente del timestamp */
+  photoSource?: string | null;
 }
 
 export interface ReportEvidenceDTO {
@@ -38,11 +46,24 @@ export interface ReportEvidenceDTO {
   mediaUrls: string[];
 }
 
+export interface StatusHistoryEntryDTO {
+  id: string;
+  status: string;
+  feedback: string | null;
+  actorRole: string;
+  changedAt: string;
+}
+
+export type ReporterTrustTier = 'high' | 'medium' | 'low';
+
 export interface PublicIncidentDetailDTO extends PublicIncidentDTO {
   weaponReports: number;
   injuredReports: number;
   stillHereReports: number;
   evidence: ReportEvidenceDTO[];
+  statusHistory: StatusHistoryEntryDTO[];
+  /** Tier de confianza agregado de los reportantes — anónimo, sin puntaje. */
+  reporterTrust?: ReporterTrustTier | null;
 }
 
 export interface ListIncidentsResult {
@@ -112,51 +133,15 @@ export interface PanicSessionDTO {
   startedAt: string; // ISO
 }
 
-// ── Stats ─────────────────────────────────────────────────
-
-export type StatsPeriod = 'today' | 'yesterday' | '7d' | '30d' | '12m' | 'all';
-
-export interface StatsQuery {
-  period?: StatsPeriod;
-  district?: string;
-  type?: IncidentType;
-  from?: string;
-  to?: string;
+/**
+ * Evidencia resuelta a URL firmada (short-TTL) — GET /incidents/:id/evidence/signed-urls.
+ * NUNCA contiene userId ni identidad del reportante.
+ */
+export interface EvidenceItemDTO {
+  signedUrl: string;
+  kind: 'image' | 'video';
 }
 
-export interface StatsResponse {
-  summary: {
-    totalIncidents: number;
-    activeIncidents: number;
-    inAttentionIncidents: number;
-    closedIncidents: number;
-    criticalIncidents: number;
-    totalReports: number;
-    totalPanicSessions: number;
-    avgConfirmations: number;
-    kpis: {
-      totalReportes: number;
-      completeFormPct: number;
-      criticalPct: number;
-      aiAccuracyPct: number;
-      avgResponseMin: number;
-      trend: number;
-    };
-  };
-  byType: { type: IncidentType; count: number }[];
-  bySeverity: { severity: Severity; count: number }[];
-  byStatus: { status: IncidentStatus; count: number }[];
-  byDistrict: { district: string; count: number }[];
-  byDay: { date: string; count: number }[];
-  byHour: { hour: number; count: number }[];
-  byDayHour: { day: number; hour: number; count: number }[];
-  byTypeAndSeverity: { type: IncidentType; severity: Severity; count: number }[];
-  formAnalysis: {
-    weaponType: { label: string; count: number; pct: number }[];
-    escapeMethod: { label: string; count: number; pct: number }[];
-    stillInZonePct: number;
-    avgResponseMin: number;
-    topVehicleDistrict: string | null;
-  };
-  comparison: { current: number; previous: number; percentChange: number } | null;
+export interface IncidentEvidenceDTO {
+  evidence: EvidenceItemDTO[];
 }

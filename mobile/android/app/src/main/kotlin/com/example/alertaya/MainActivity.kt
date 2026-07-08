@@ -190,12 +190,16 @@ class MainActivity : FlutterActivity() {
     // PanicAccessibilityService ya maneja el triple-press y evita el doble disparo.
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            val now = System.currentTimeMillis()
-            volumePressTimestamps.add(now)
-            volumePressTimestamps.removeAll { now - it > triplePresWindowMs }
-            if (volumePressTimestamps.size >= 3) {
-                volumePressTimestamps.clear()
-                panicChannel?.invokeMethod("triggerVolumePanic", null)
+            // Cuando el AccessibilityService está activo él ya maneja el triple-press
+            // vía onNewIntent. Si también contamos aquí dispararíamos dos veces → 409.
+            if (!isPanicAccessibilityServiceEnabled()) {
+                val now = System.currentTimeMillis()
+                volumePressTimestamps.add(now)
+                volumePressTimestamps.removeAll { now - it > triplePresWindowMs }
+                if (volumePressTimestamps.size >= 3) {
+                    volumePressTimestamps.clear()
+                    panicChannel?.invokeMethod("triggerVolumePanic", null)
+                }
             }
         }
         return super.onKeyDown(keyCode, event)

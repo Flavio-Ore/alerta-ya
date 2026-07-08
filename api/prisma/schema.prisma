@@ -93,10 +93,30 @@ model Incident {
   updatedAt    DateTime       @updatedAt
   unitAssigned  String?        // ID de unidad operativa asignada
   feedback      String?        // Mensaje de la autoridad visible al ciudadano (max 200 chars)
+  aiScore       Float?         // Confianza del verificador ML (0–1) — null si la IA no corrió
+  aiVerified    Boolean?       // true si el reporte pasó el verificador ML
+  photoTakenAt  DateTime?      // Timestamp EXIF de la foto adjunta (o device_clock si no hay EXIF)
+  photoSource   String?        // 'exif' | 'device_clock'
   reports       Report[]
   notifications Notification[]
+  statusHistory IncidentStatusHistory[]
 
   @@map("incidents")
+}
+
+// Historial de cambios de estado — auditoría inmutable
+model IncidentStatusHistory {
+  id         String         @id @default(uuid())
+  incidentId String
+  status     IncidentStatus
+  feedback   String?        // Mensaje adjunto al cambio
+  actorUid   String         // Firebase UID de quien actuó
+  actorRole  String         // 'AUTHORITY' | 'ADMIN'
+  changedAt  DateTime       @default(now())
+  incident   Incident       @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, changedAt])
+  @@map("incident_status_history")
 }
 
 // Reportes individuales — identidad nunca sale de aquí
@@ -110,6 +130,8 @@ model Report {
   lng        Float
   aiVerified Boolean?
   aiScore    Float?
+  photoTakenAt DateTime? // Timestamp EXIF de la foto adjunta (o device_clock si no hay EXIF) — por reporte
+  photoSource  String?   // 'exif' | 'device_clock'
   createdAt  DateTime  @default(now())
   user       User      @relation(fields: [userId], references: [id])
   incident   Incident? @relation(fields: [incidentId], references: [id])

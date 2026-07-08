@@ -259,7 +259,7 @@ const ExportPage = () => {
 
   return (
     <div className="flex-1 overflow-auto bg-ay-bg-dark text-stitch-on-surface">
-      <div className="max-w-[1440px] mx-auto px-10 py-10">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-10 py-6 sm:py-10">
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-2xl font-bold text-white font-headline mb-2">
@@ -279,7 +279,7 @@ const ExportPage = () => {
           <section className="w-full lg:w-[55%] flex flex-col gap-6">
             {/* Tipo de reporte */}
             <Card title="Tipo de reporte">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {REPORT_TYPES.map((opt) => (
                   <ReportTypeCard
                     key={opt.id}

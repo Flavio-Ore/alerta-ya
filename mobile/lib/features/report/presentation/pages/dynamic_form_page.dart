@@ -358,6 +358,53 @@ class _EvidencePickerSection extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          // Incentive chip — visible solo cuando NO hay media adjunta.
+          // Desaparece y muestra confirmación cuando hay evidencia.
+          if (selectedMedia.isEmpty)
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 13,
+                        color: AppColors.secondary,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Una foto reciente aumenta tu reputación',
+                        style: AppTextStyles.labelMd.copyWith(
+                          color: AppColors.secondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                const Icon(Icons.check_circle_outline, size: 13, color: AppColors.secondary),
+                const SizedBox(width: 5),
+                Text(
+                  'Evidencia adjunta',
+                  style: AppTextStyles.labelMd.copyWith(
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           if (selectedMedia.isNotEmpty) ...[
             const SizedBox(height: 12),
             SizedBox(

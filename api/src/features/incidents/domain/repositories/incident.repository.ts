@@ -1,4 +1,12 @@
-import { Incident, IncidentType, Severity, IncidentStatus } from '@prisma/client';
+import { Incident, IncidentStatusHistory, IncidentType, Severity, IncidentStatus } from '@prisma/client';
+
+export interface CreateStatusHistoryData {
+  incidentId: string;
+  status: IncidentStatus;
+  feedback?: string;
+  actorUid: string;
+  actorRole: string;
+}
 
 export interface CreateIncidentData {
   type: IncidentType;
@@ -7,6 +15,10 @@ export interface CreateIncidentData {
   lng: number;
   district: string;
   expiresAt: Date;
+  aiScore?: number | null;
+  aiVerified?: boolean | null;
+  photoTakenAt?: Date | null;
+  photoSource?: string | null;
 }
 
 export interface IncidentFilters {
@@ -42,4 +54,6 @@ export interface IncidentRepository {
   extendExpiry(id: string, extraMinutes: number): Promise<void>;
   incrementConfirm(id: string): Promise<Incident>;
   incrementDeny(id: string): Promise<Incident>;
+  addStatusHistory(data: CreateStatusHistoryData): Promise<IncidentStatusHistory>;
+  getStatusHistory(incidentId: string): Promise<IncidentStatusHistory[]>;
 }

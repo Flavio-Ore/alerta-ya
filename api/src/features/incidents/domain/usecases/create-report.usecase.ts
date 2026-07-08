@@ -6,9 +6,13 @@ import { ReportRepository } from '../repositories/report.repository';
 import { ReportFormData } from '../entities/report.entity';
 import { PublicIncidentDTO, toPublicDTO } from '../entities/incident.entity';
 import { evaluateThreshold } from '../../application/threshold.engine';
+import { computeReputationDelta } from '../../application/reputation';
 import { eventBus, IncidentEvents, ConfirmRequestPayload } from '../../../../core/events/event-bus';
 import { AppError } from '../../../../core/errors/AppError';
 import { isWithinLima, getDistrict, bucketCoord } from '../../../../core/utils/geo.utils';
+import { env } from '../../../../core/config/env';
+import { AI_VERIFIED_THRESHOLD } from '../../infrastructure/ml.client';
+import { classifyMediaUrl } from '../../infrastructure/media-type';
 
 export interface CreateReportInput {
   uid: string;
@@ -18,12 +22,55 @@ export interface CreateReportInput {
   type: IncidentType;
   formData: ReportFormData;
   mediaUrls: string[];
+  photoTakenAt?: Date;
+  photoSource?: string;
+}
+
+/**
+ * Puerto del verificador ML (la implementación vive en infraestructura — ml.client).
+ * Inyectado desde el controller para no acoplar el dominio a la infra.
+ */
+export interface VerifyReportPort {
+  (input: {
+    reportId: string;
+    lat: number;
+    lng: number;
+    type: IncidentType;
+    formData: Record<string, unknown>;
+    userReputation: number;
+    hasEvidence: boolean;
+    photoAgeMinutes: number | null;
+    photoSource: string | null;
+  }): Promise<{ score: number; verified: boolean } | null>;
 }
 
 export interface CreateReportDeps {
   incidentRepo: IncidentRepository;
   reportRepo: ReportRepository;
   redis: Redis;
+  /** Opcional: si no se inyecta, el flujo sigue sin verificación (fail-open). */
+  verifyReport?: VerifyReportPort;
+  /**
+   * Actualiza el reputationScore del usuario sumando `delta`.
+   * Fire-and-forget — errores se logean y no bloquean la respuesta.
+   * Retorna el nuevo score (útil para tests).
+   */
+  updateReputation?: (userId: string, delta: number) => Promise<number>;
+  /**
+   * Envía una notificación push al usuario por reputación.
+   * Fire-and-forget — errores se logean y no bloquean la respuesta.
+   */
+  sendFcmToUser?: (userId: string, title: string, body: string) => Promise<void>;
+  /**
+   * Resuelve un gs:// path a una URL HTTPS firmada para análisis visual.
+   * Fail-open: null si el bucket no está configurado o el path es inválido.
+   */
+  resolveSignedUrl?: (gsPath: string) => Promise<string | null>;
+  /**
+   * Analiza la primera imagen del reporte contra el tipo de incidente declarado.
+   * Retorna +1.0 (consistente), -1.0 (inconsistente), 0.0 (indeterminado) o null (fail-open).
+   */
+  analyzeImageForIncident?: (signedUrl: string, type: IncidentType) => Promise<number | null>;
 }
 
 const WINDOW_20_MIN_SECONDS = 20 * 60;
@@ -44,6 +91,8 @@ export async function createReport(
     formData: input.formData,
     mediaUrls: input.mediaUrls,
     incidentId: null,
+    photoTakenAt: input.photoTakenAt ?? null,
+    photoSource: input.photoSource ?? null,
   });
 
   const decision = await evaluateThreshold(
@@ -68,6 +117,7 @@ export async function createReport(
       lat: input.lat,
       lng: input.lng,
       reporterUserId: input.userId,
+      reporterUid: input.uid,
     };
     eventBus.emit(IncidentEvents.CONFIRM_REQUEST, payload);
     return null;
@@ -104,6 +154,81 @@ export async function createReport(
     return dto;
   }
 
+  // Señales de evidencia derivadas en servidor (no provienen del cliente)
+  const hasEvidence = input.mediaUrls.length > 0;
+  const hasMedia = input.mediaUrls.length > 0;
+
+  // Trust gate: solo un timestamp EXIF real (photoSource==='exif') es confiable como
+  // "foto reciente". device_clock (fallback del cliente cuando no hay EXIF) es
+  // indistinguible de una foto vieja resubida — nunca debe leerse como "fresca".
+  // Untrusted/ausente → null → el verificador aplica su sentinela 999 (peor caso),
+  // NUNCA bloquea el reporte (informativo, fail-open).
+  const photoTrusted = input.photoSource === 'exif';
+  const photoAgeMinutes =
+    input.photoTakenAt && photoTrusted
+      ? (Date.now() - input.photoTakenAt.getTime()) / 60_000
+      : null;
+
+  // Vision task: analiza hasta 3 imágenes (video/otros se excluyen) y agrega
+  // por MIN (más conservador) — un solo elemento inconsistente baja el score.
+  // Fail-open por imagen: un resolve/analyze fallido no descarta las demás.
+  const visionTask = async (): Promise<number | null> => {
+    if (!hasMedia || !deps.resolveSignedUrl || !deps.analyzeImageForIncident) return null;
+    const imageUrls = input.mediaUrls.filter((u) => classifyMediaUrl(u) === 'image').slice(0, 3);
+    if (imageUrls.length === 0) return null; // solo video/otros → sin señal de visión
+
+    const resolve = deps.resolveSignedUrl;
+    const analyze = deps.analyzeImageForIncident;
+    const settled = await Promise.allSettled(
+      imageUrls.map(async (gsPath) => {
+        const signedUrl = await resolve(gsPath);
+        if (!signedUrl) return null;
+        return analyze(signedUrl, input.type);
+      }),
+    );
+
+    const scores = settled
+      .filter(
+        (s): s is PromiseFulfilledResult<number | null> => s.status === 'fulfilled',
+      )
+      .map((s) => s.value)
+      .filter((v): v is number => v !== null);
+
+    return scores.length === 0 ? null : Math.min(...scores);
+  };
+
+  // Verificación ML + visión en paralelo (fail-open independiente en cada rama)
+  const [mlSettled, visionSettled] = await Promise.allSettled([
+    deps.verifyReport
+      ? deps.verifyReport({
+          reportId: report.id,
+          lat: input.lat,
+          lng: input.lng,
+          type: input.type,
+          formData: input.formData as Record<string, unknown>,
+          userReputation: 0.5,
+          hasEvidence,
+          photoAgeMinutes,
+          photoSource: input.photoSource ?? null,
+        })
+      : Promise.resolve(null),
+    visionTask(),
+  ]);
+
+  const mlRaw = mlSettled.status === 'fulfilled' ? mlSettled.value : null;
+  const visionMatch = visionSettled.status === 'fulfilled' ? visionSettled.value : null;
+
+  // Multiplicador de visión: finalScore = clamp(mlScore * (1 + k * visionMatch), 0, 1)
+  // visionMatch null → factor = 1.0 → score identity (sin regresión en fail-open)
+  const k = env.VISION_SCORE_K;
+  const finalScore =
+    mlRaw !== null
+      ? Math.min(1, Math.max(0, mlRaw.score * (1 + k * (visionMatch ?? 0))))
+      : null;
+
+  // aiVerified se re-deriva siempre desde finalScore (fuente única de verdad)
+  const aiVerified = finalScore !== null ? finalScore >= AI_VERIFIED_THRESHOLD : null;
+
   // Primer incidente para esta zona+tipo — crear y vincular reportes huérfanos
   incident = await deps.incidentRepo.create({
     type: input.type,
@@ -112,6 +237,10 @@ export async function createReport(
     lng: input.lng,
     district,
     expiresAt,
+    aiScore: finalScore,
+    aiVerified,
+    photoTakenAt: input.photoTakenAt ?? null,
+    photoSource: input.photoSource ?? null,
   });
 
   const orphaned = await deps.reportRepo.findOrphanedNearby(
@@ -124,6 +253,32 @@ export async function createReport(
   await Promise.all(orphaned.map((r) => deps.incidentRepo.linkReport(r.id, incident.id)));
 
   const dto = toPublicDTO(incident);
+
+  // Calcular y aplicar delta de reputación cuando el pipeline ML emitió veredicto
+  if (finalScore !== null) {
+    const delta = computeReputationDelta(aiVerified!, hasEvidence);
+    dto.reputationDelta = delta;
+
+    const fcmTitle = aiVerified
+      ? 'Reporte verificado ✓'
+      : 'Reporte marcado como sospechoso';
+    const fcmBody = aiVerified
+      ? `+${delta} puntos de reputación`
+      : `${delta} puntos de reputación`;
+
+    // Fire-and-forget — nunca bloquear la respuesta por estas operaciones secundarias
+    if (deps.updateReputation) {
+      deps.updateReputation(input.userId, delta).catch((err: unknown) =>
+        console.error('[REPUTATION] updateReputation failed:', err),
+      );
+    }
+    if (deps.sendFcmToUser) {
+      deps.sendFcmToUser(input.userId, fcmTitle, fcmBody).catch((err: unknown) =>
+        console.error('[REPUTATION] sendFcmToUser failed:', err),
+      );
+    }
+  }
+
   eventBus.emit(IncidentEvents.NEW, {
     incident: dto,
     reporterUserId: input.userId,

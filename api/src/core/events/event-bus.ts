@@ -32,8 +32,10 @@ export interface ConfirmRequestPayload {
   type: string;        // "ROBBERY"
   lat: number;
   lng: number;
-  /** userId del reportante — para excluirlo de la notificación */
+  /** Prisma userId del reportante — para excluirlo del push FCM */
   reporterUserId?: string;
+  /** Firebase UID del reportante — para excluirlo del WS emit */
+  reporterUid?: string;
 }
 
 /** Payload del evento NEW/UPDATED — incluye reporter para exclusión de notif */

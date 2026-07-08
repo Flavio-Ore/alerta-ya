@@ -24,7 +24,7 @@ export async function updatePanicLocation(
 
   const userId = await deps.getUserId(input.uid);
   if (session.userId !== userId) {
-    throw new AppError(403, 'No tenés acceso a esta sesión');
+    throw new AppError(403, 'No tienes acceso a esta sesión');
   }
 
   if (session.status !== 'ACTIVE') {

@@ -1,143 +1,234 @@
-import { useState } from "react";
-import type { IncidentType, StatsPeriod } from "../../../core/api/types";
+import { useEffect, useState } from "react";
+
 import {
-  DISTRICT_OPTIONS,
-  FilterSelect,
-  TYPE_OPTIONS,
-} from "../../../core/components/ui/FilterSelect";
-import { incidentTypeLabel } from "../../../features/incidents/presentation/utils/labels";
-import { DayHourHeatmap } from "../components/DayHourHeatmap";
-import { FormInsightsPanel } from "../components/FormInsightsPanel";
-import { IncidentTypeBarChart } from "../components/IncidentTypeBarChart";
-import { StatsKPIRow } from "../components/StatsKPIRow";
-import { useStats } from "../infrastructure/stats.api";
+  RiskHeatMap,
+  riskColor,
+  type RiskZone,
+} from "../components/RiskHeatMap";
+import { AiAnalystChat } from "../components/AiAnalystChat";
 
-const PERIOD_PILLS: { label: string; value: StatsPeriod }[] = [
-  { label: "Esta semana", value: "7d" },
-  { label: "Este mes", value: "30d" },
-  { label: "Últimos 3 meses", value: "12m" },
-  { label: "Personalizado", value: "all" },
-];
+interface District {
+  district: string;
+  risk: number;
+  count: number;
+  zones: number;
+}
 
-const StatisticsPage = () => {
-  const [period, setPeriod] = useState<StatsPeriod>("30d");
-  const [district, setDistrict] = useState("ALL");
-  const [type, setType] = useState<IncidentType | "ALL">("ALL");
+interface CrimeType {
+  type: string;
+  count: number;
+}
 
-  const query = {
-    period,
-    ...(district !== "ALL" && { district }),
-    ...(type !== "ALL" && { type }),
-  };
+/** Hook mínimo para leer un JSON estático desde /public/data. */
+function useJson<T>(url: string): T | null {
+  const [data, setData] = useState<T | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(url)
+      .then((r) => r.json())
+      .then((d: T) => {
+        if (alive) setData(d);
+      })
+      .catch(() => {
+        /* silencioso: archivo aún no generado */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+  return data;
+}
 
-  const { data, isLoading, isError } = useStats(query);
+function KpiCard({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: string | number;
+  unit: string;
+}) {
+  // Números → grandes y prominentes. Texto largo (nombre de distrito) → más
+  // chico con leading apretado, para que las 4 cards se vean balanceadas.
+  const isText = typeof value === 'string';
 
   return (
-    <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-headline font-bold text-white">
-            Estadísticas
-          </h1>
-          <p className="text-xs text-stitch-on-surface-variant mt-1 font-label">
-            Panel de análisis táctico y operacional
-          </p>
-        </div>
+    <div className="bg-stitch-surface-container rounded-xl border border-stitch-outline-variant p-5 flex flex-col">
+      <p className="text-[10px] font-bold text-stitch-on-surface-variant uppercase tracking-widest mb-2">
+        {label}
+      </p>
+      <div className="mt-auto flex items-baseline gap-2 min-h-[2.75rem]">
+        <span
+          className={`font-bold text-white ${
+            isText ? 'text-lg leading-tight' : 'text-3xl leading-none'
+          }`}
+        >
+          {value}
+        </span>
+        {unit && <span className="text-xs text-stitch-on-surface-variant shrink-0">{unit}</span>}
       </div>
-
-      {/* Filter row */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-1 bg-[#141720] border border-[#2D3A4A] rounded-[12px] p-1">
-          {PERIOD_PILLS.map((pill) => (
-            <button
-              key={pill.value}
-              onClick={() => setPeriod(pill.value)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold font-label uppercase tracking-wider transition-all ${
-                period === pill.value
-                  ? "bg-stitch-primary text-[#0D1B2A]"
-                  : "text-stitch-on-surface-variant hover:text-white"
-              }`}
-            >
-              {pill.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 text-xs text-stitch-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px]">
-              location_on
-            </span>
-            <span className="font-bold">Lima · </span>
-          </div>
-          <FilterSelect
-            value={district}
-            onChange={setDistrict}
-            options={DISTRICT_OPTIONS.map((opt) => ({
-              value: opt,
-              label: opt === "ALL" ? "Todos" : opt,
-            }))}
-          />
-          <FilterSelect
-            value={type}
-            onChange={(v) => setType(v as IncidentType | "ALL")}
-            options={TYPE_OPTIONS.map((opt) => ({
-              value: opt,
-              label:
-                opt === "ALL" ? "Tipo" : incidentTypeLabel[opt as IncidentType],
-            }))}
-            icon="category"
-          />
-        </div>
-      </div>
-
-      {/* KPI Row */}
-      <StatsKPIRow data={data} />
-
-      {/* Error state */}
-      {isError && (
-        <div className="flex items-center justify-center py-20">
-          <div className="flex flex-col items-center gap-3">
-            <span className="material-symbols-outlined text-4xl text-stitch-error">
-              error
-            </span>
-            <p className="text-xs text-stitch-error font-bold uppercase tracking-widest font-label">
-              Error al cargar estadísticas
-            </p>
-            <p className="text-xs text-stitch-on-surface-variant">
-              Verifica que el backend esté disponible y tengas permisos de
-              autoridad
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Loading state */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-20">
-          <div className="flex flex-col items-center gap-3">
-            <span className="material-symbols-outlined text-4xl text-stitch-primary animate-pulse">
-              bar_chart
-            </span>
-            <p className="text-xs text-stitch-on-surface-variant font-bold uppercase tracking-widest font-label">
-              Cargando estadísticas…
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Charts */}
-      {!isLoading && !isError && (
-        <>
-          <div className="grid grid-cols-2 gap-6">
-            <IncidentTypeBarChart data={data?.byType ?? []} />
-            <DayHourHeatmap data={data?.byDayHour ?? []} />
-          </div>
-
-          <FormInsightsPanel data={data?.formAnalysis} />
-        </>
-      )}
     </div>
   );
-};
-export default StatisticsPage;
+}
+
+export default function StatisticsPage() {
+  const zones = useJson<RiskZone[]>("/data/zones.json");
+  const districts = useJson<District[]>("/data/districts.json");
+  const types = useJson<CrimeType[]>("/data/types.json");
+
+  const loading = !zones || !districts || !types;
+
+  if (loading) {
+    return (
+      <div className="flex-1 grid place-items-center bg-stitch-surface text-stitch-on-surface-variant text-sm">
+        Cargando estadísticas…
+      </div>
+    );
+  }
+
+  const totalCasos = zones.reduce((acc, z) => acc + z.count, 0);
+  const maxType = Math.max(...types.map((t) => t.count), 1);
+
+  return (
+    <div className="flex-1 overflow-y-auto bg-stitch-surface text-stitch-on-surface p-6 flex flex-col gap-6">
+      {/* Header honesto */}
+      <header className="flex flex-col sm:flex-row items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">
+            Mapa de Riesgo — Histórico
+          </h1>
+          <p className="text-sm text-stitch-on-surface-variant mt-1">
+            Dónde se concentran las denuncias en Lima. Riesgo por zona (0–100)
+            según conteo histórico.
+          </p>
+        </div>
+        <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-stitch-tertiary bg-stitch-tertiary-container/40 border border-stitch-tertiary/30 px-3 py-1.5 rounded-lg">
+          Histórico
+        </span>
+      </header>
+
+      {/* Banner de fuente honesto */}
+      <div className="bg-stitch-primary-container/25 border border-stitch-primary/20 rounded-lg px-4 py-2.5 text-xs text-stitch-primary flex items-center gap-2">
+        <span className="material-symbols-outlined text-base">info</span>
+        Fuente: DataCrim (INEI) · denuncias 2017–2020. El conteo crudo favorece
+        zonas más pobladas.
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          label="Denuncias"
+          value={totalCasos.toLocaleString("es-PE")}
+          unit="casos"
+        />
+        <KpiCard
+          label="Zonas analizadas"
+          value={zones.length.toLocaleString("es-PE")}
+          unit="celdas"
+        />
+        <KpiCard label="Distritos" value={districts.length} unit="con datos" />
+        <KpiCard
+          label="Mayor riesgo"
+          value={districts[0]?.district ?? "—"}
+          unit=""
+        />
+      </div>
+
+      {/* Mapa + Ranking */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-fit">
+        {/* Mapa de calor — tiles claros (intencional, contraste con panel oscuro) */}
+        <section className="xl:col-span-2 bg-stitch-surface-container rounded-xl border border-stitch-outline-variant overflow-hidden relative min-h-[400px]">
+          <div className="absolute inset-0">
+            <RiskHeatMap zones={zones} />
+          </div>
+          {/* Leyenda */}
+          <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur p-3 rounded-lg shadow z-[1000] flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+              Riesgo
+            </span>
+            {[
+              { c: "#22c55e", t: "Bajo" },
+              { c: "#f59e0b", t: "Moderado" },
+              { c: "#ef4444", t: "Crítico" },
+            ].map((l) => (
+              <div key={l.t} className="flex items-center gap-2">
+                <span
+                  className="w-3 h-3 rounded-full"
+                  style={{ background: l.c }}
+                />
+                <span className="text-[11px] text-slate-600">{l.t}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Ranking de distritos */}
+        <section className="bg-stitch-surface-container rounded-xl border border-stitch-outline-variant p-5 flex flex-col">
+          <h2 className="text-xs font-bold text-stitch-on-surface-variant uppercase tracking-widest mb-4">
+            Ranking de riesgo
+          </h2>
+          <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto pr-1">
+            {districts.slice(0, 12).map((d, i) => (
+              <div key={d.district}>
+                <div className="flex justify-between items-baseline mb-1">
+                  <span className="text-sm font-semibold text-stitch-on-surface">
+                    {i + 1}. {d.district}
+                  </span>
+                  <span
+                    className="text-sm font-bold"
+                    style={{ color: riskColor(d.risk) }}
+                  >
+                    {d.risk}%
+                  </span>
+                </div>
+                <div className="h-2 bg-stitch-surface-container-high rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${d.risk}%`,
+                      background: riskColor(d.risk),
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* Desglose por tipo de delito */}
+      <section className="bg-stitch-surface-container rounded-xl border border-stitch-outline-variant p-5">
+        <h2 className="text-xs font-bold text-stitch-on-surface-variant uppercase tracking-widest mb-4">
+          Tipos de delito
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+          {types.map((t) => (
+            <div key={t.type}>
+              <div className="flex justify-between items-baseline mb-1">
+                <span className="text-xs font-medium text-stitch-on-surface truncate pr-2">
+                  {t.type}
+                </span>
+                <span className="text-xs font-bold text-stitch-on-surface-variant">
+                  {t.count.toLocaleString("es-PE")}
+                </span>
+              </div>
+              <div className="h-1.5 bg-stitch-surface-container-high rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-stitch-primary"
+                  style={{ width: `${(t.count / maxType) * 100}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Asistente de análisis IA — anclado a los datos históricos reales */}
+      <AiAnalystChat districts={districts} types={types} />
+
+      <footer className="text-center text-[11px] text-stitch-on-surface-variant/60 pb-2">
+        Riesgo histórico basado en denuncias de 2017–2020
+      </footer>
+    </div>
+  );
+}

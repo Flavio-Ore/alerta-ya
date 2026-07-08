@@ -22,6 +22,11 @@ const config: Config = {
         'ay-low': '#22C55E',
         'ay-moderate': '#F5A623',
         'ay-critical': '#EF4444',
+        // Warn dedicado al eje de confiabilidad IA — rust/orange-red, alejado en
+        // tono y luminosidad de ay-moderate (#F5A623, amber de severidad) para que
+        // ambos ejes nunca se confundan; el icono + label son el diferenciador
+        // primario, el color es secundario. (Color ajustable a criterio de marca.)
+        'ay-warn': '#C2410C',
         'ay-text-pri': '#0D1B2A',
         'ay-text-sec': '#6B7A8D',
         'ay-text-muted': '#C4CDD8',

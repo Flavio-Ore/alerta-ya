@@ -16,6 +16,10 @@ export interface UpdateIncidentStatusInput {
   status: IncidentStatus;
   /** Mensaje opcional de la autoridad — máximo 200 caracteres */
   feedback?: string;
+  /** Firebase UID de la autoridad que ejecuta el cambio */
+  actorUid: string;
+  /** Rol de la autoridad — 'AUTHORITY' | 'ADMIN' */
+  actorRole: string;
 }
 
 export interface UpdateIncidentStatusDeps {
@@ -53,8 +57,17 @@ export async function updateIncidentStatus(
 
   const dto = toPublicDTO(updated);
 
+  // Guardar entrada de auditoría — inmutable, nunca se borra
+  await deps.incidentRepo.addStatusHistory({
+    incidentId: input.incidentId,
+    status: input.status,
+    feedback: input.feedback,
+    actorUid: input.actorUid,
+    actorRole: input.actorRole,
+  });
+
   // Emitir por WebSocket — el mapa actualiza el color del pin en tiempo real
-  eventBus.emit(IncidentEvents.UPDATED, dto);
+  eventBus.emit(IncidentEvents.UPDATED, { incident: dto });
 
   // Emitir evento dirigido a los reportantes — "Mis reportes" se actualiza en vivo
   // Fail open — si falla no bloquea la respuesta a la autoridad

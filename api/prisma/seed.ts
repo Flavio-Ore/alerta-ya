@@ -21,7 +21,7 @@ async function main(): Promise<void> {
 
   await prisma.incident.upsert({
     where: { id: 'seed-incident-001' },
-    update: {},
+    update: { aiScore: 0.88, aiVerified: true },
     create: {
       id: 'seed-incident-001',
       type: IncidentType.ROBBERY,
@@ -34,12 +34,14 @@ async function main(): Promise<void> {
       denyCount: 0,
       reportCount: 3,
       expiresAt: new Date(Date.now() + 20 * 60 * 1000),
+      aiScore: 0.88,        // verificado por IA
+      aiVerified: true,
     },
   });
 
   await prisma.incident.upsert({
     where: { id: 'seed-incident-002' },
-    update: {},
+    update: { aiScore: 0.34, aiVerified: false },
     create: {
       id: 'seed-incident-002',
       type: IncidentType.ACCIDENT,
@@ -52,6 +54,8 @@ async function main(): Promise<void> {
       denyCount: 0,
       reportCount: 2,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      aiScore: 0.34,        // marcado como sospechoso por IA
+      aiVerified: false,
     },
   });
 
@@ -86,7 +90,7 @@ async function main(): Promise<void> {
   // Incidente CRITICAL pre-cargado en la zona de la universidad para la demo
   await prisma.incident.upsert({
     where: { id: 'seed-incident-demo' },
-    update: {},
+    update: { aiScore: 0.79, aiVerified: true },
     create: {
       id: 'seed-incident-demo',
       type: IncidentType.ROBBERY,
@@ -99,6 +103,8 @@ async function main(): Promise<void> {
       denyCount: 0,
       reportCount: 5,
       expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hora
+      aiScore: 0.79,        // verificado por IA (alta confianza)
+      aiVerified: true,
     },
   });
 

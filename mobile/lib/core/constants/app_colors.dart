@@ -66,6 +66,21 @@ class AppColors {
   /// Leve — quiet, usa onSurface tintado.
   static const Color severityLow       = Color(0xFFD6E4F9);
 
+  // ─── IA / Confiabilidad (eje distinto de severidad) ──
+  // Eje semántico separado de severidad: NUNCA reusar severityModerate/
+  // severityCritical aquí — deben leerse como ejes visualmente diferentes.
+  // Tokens derivados (alias), no hex nuevo: mismo criterio que el web
+  // (ay-primary/ay-warn/ay-text-sec en tailwind.config.ts).
+  /// Verificado por IA — brand-blue (alias de primary).
+  static const Color aiVerified = primary;
+
+  /// Sospechoso / a revisar — warn dedicado (alias de secondaryContainer),
+  /// distinto del ámbar de severidad (severityModerate).
+  static const Color aiSuspicious = secondaryContainer;
+
+  /// Sin evaluar por IA — neutral (alias de onSurfaceVariant).
+  static const Color aiNotEvaluated = onSurfaceVariant;
+
   // ─── Map / Light surfaces ────────────────────────────
   // Superficies claras para componentes que flotan sobre el mapa
   // (search bar, incident sheet). El resto de la app sigue dark.

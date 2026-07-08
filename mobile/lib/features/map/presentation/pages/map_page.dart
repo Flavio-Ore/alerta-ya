@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
+import 'package:alertaya/features/tutorial/presentation/keys/tutorial_keys.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/services/fcm_service.dart';
 import 'package:alertaya/core/services/photon_service.dart';
@@ -50,6 +51,9 @@ class _MapPageState extends State<MapPage> {
   // Botón "ir a mi ubicación" — visible cuando la cámara se alejó.
   bool _showRecenterButton = false;
   static const double _recenterThresholdMeters = 200.0;
+
+  // Leyenda de colores de los puntos — colapsada por defecto.
+  bool _showLegend = false;
 
   @override
   void initState() {
@@ -112,6 +116,9 @@ class _MapPageState extends State<MapPage> {
     setState(() {
       _searchedLocation = point;
       _searchedLabel = label;
+      // La búsqueda mueve la cámara programáticamente (sin gesto), así que
+      // _onMapPositionChanged no se dispara. Forzamos el botón de recentrar.
+      _showRecenterButton = true;
     });
     _mapController.move(point, 15.5);
   }
@@ -379,19 +386,6 @@ class _MapPageState extends State<MapPage> {
                     ),
                   MarkerLayer(
                     markers: [
-                      Marker(
-                        point: LatLng(_userLat, _userLng),
-                        width: 20,
-                        height: 20,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryContainer,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: AppColors.mapSurface, width: 2),
-                          ),
-                        ),
-                      ),
                       // Pin de la dirección buscada
                       if (_searchedLocation != null)
                         Marker(
@@ -415,6 +409,15 @@ class _MapPageState extends State<MapPage> {
                           ),
                         );
                       }),
+                      // Ubicación del usuario — SIEMPRE al final = encima de todo,
+                      // así ningún incidente en tu posición te tapa. Punto azul
+                      // con halo pulsante (patrón "blue dot" de Google Maps).
+                      Marker(
+                        point: LatLng(_userLat, _userLng),
+                        width: 44,
+                        height: 44,
+                        child: const _UserLocationMarker(),
+                      ),
                     ],
                   ),
                 ],
@@ -476,8 +479,19 @@ class _MapPageState extends State<MapPage> {
                   ),
                 ),
 
+              // Leyenda de los puntos (esquina inferior izquierda)
+              Positioned(
+                left: 12,
+                bottom: 100,
+                child: _MapLegend(
+                  expanded: _showLegend,
+                  onToggle: () => setState(() => _showLegend = !_showLegend),
+                ),
+              ),
+
               // Overlay: búsqueda + riesgo de zona
               _SearchOverlay(
+                key: getIt<TutorialKeys>().search,
                 incidents: incidents,
                 userLat: _userLat,
                 userLng: _userLng,
@@ -514,6 +528,7 @@ class _MapPageState extends State<MapPage> {
               ),
               if (_showRecenterButton) const SizedBox(height: 12),
               _AnimatedReportFab(
+                key: getIt<TutorialKeys>().reportFab,
                 onPressed: () => context.push('/report/type'),
               ),
             ],
@@ -528,6 +543,7 @@ class _MapPageState extends State<MapPage> {
 
 class _SearchOverlay extends StatefulWidget {
   const _SearchOverlay({
+    super.key,
     required this.incidents,
     required this.userLat,
     required this.userLng,
@@ -659,15 +675,6 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                             color: AppColors.primaryContainer),
                         tooltip: 'Comparar rutas',
                         onPressed: widget.onRouteTap,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                      const SizedBox(width: 12),
-                      IconButton(
-                        icon: const Icon(Icons.notifications_outlined,
-                            color: AppColors.mapOnSurfaceVariant),
-                        tooltip: 'Alertas',
-                        onPressed: () => context.go('/alerts'),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
@@ -1333,7 +1340,7 @@ class _SheetActionButton extends StatelessWidget {
 // ─── Animated report FAB ───────────────────────────────────────────────────────
 
 class _AnimatedReportFab extends StatefulWidget {
-  const _AnimatedReportFab({required this.onPressed});
+  const _AnimatedReportFab({super.key, required this.onPressed});
 
   final VoidCallback onPressed;
 
@@ -1403,6 +1410,88 @@ class _AnimatedReportFabState extends State<_AnimatedReportFab> {
   }
 }
 
+// ─── Marcador de la ubicación del usuario (blue dot + halo pulsante) ────────────
+
+class _UserLocationMarker extends StatefulWidget {
+  const _UserLocationMarker();
+
+  @override
+  State<_UserLocationMarker> createState() => _UserLocationMarkerState();
+}
+
+class _UserLocationMarkerState extends State<_UserLocationMarker>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    // Más lento que el pin crítico (1400ms) — "vivo" pero no alarmante.
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
+    _scale = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    _opacity = Tween<double>(begin: 0.35, end: 0.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Halo pulsante exterior
+        AnimatedBuilder(
+          animation: _controller,
+          builder: (_, __) => Transform.scale(
+            scale: _scale.value,
+            child: Opacity(
+              opacity: _opacity.value,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Punto azul sólido con anillo blanco
+        Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: AppColors.primaryContainer,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.mapSurface, width: 3),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ─── Pin de la dirección buscada ───────────────────────────────────────────────
 
 class _SearchedLocationPin extends StatelessWidget {
@@ -1445,6 +1534,86 @@ class _SearchedLocationPin extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Leyenda de los puntos del mapa ────────────────────────────────────────────
+
+class _MapLegend extends StatelessWidget {
+  const _MapLegend({required this.expanded, required this.onToggle});
+
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  static const _items = [
+    (AppColors.severityCritical, 'Crítico'),
+    (AppColors.severityModerate, 'Moderado'),
+    (AppColors.severityLow, 'Leve'),
+    (AppColors.primaryContainer, 'Tú'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.mapSurface,
+      elevation: 4,
+      borderRadius: BorderRadius.circular(expanded ? 12 : 999),
+      child: InkWell(
+        onTap: onToggle,
+        borderRadius: BorderRadius.circular(expanded ? 12 : 999),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          child: Padding(
+            padding: EdgeInsets.all(expanded ? 12 : 10),
+            child: expanded
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Leyenda',
+                            style: AppTextStyles.labelMd.copyWith(
+                              color: AppColors.mapOnSurface,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.close,
+                              size: 14, color: AppColors.mapOnSurfaceVariant),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      for (final (color, label) in _items)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                    color: color, shape: BoxShape.circle),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                label,
+                                style: AppTextStyles.labelSm.copyWith(
+                                    color: AppColors.mapOnSurfaceVariant),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  )
+                : const Icon(Icons.layers_outlined,
+                    size: 22, color: AppColors.primaryContainer),
+          ),
+        ),
+      ),
     );
   }
 }

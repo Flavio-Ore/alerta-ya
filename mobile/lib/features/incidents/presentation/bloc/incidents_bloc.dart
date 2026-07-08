@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 
 import 'package:alertaya/core/realtime/socket_client.dart';
+import 'package:alertaya/core/services/location_service.dart';
 import 'package:alertaya/features/incidents/domain/entities/incident_entity.dart';
 import 'package:alertaya/features/incidents/domain/usecases/confirm_incident_usecase.dart';
 import 'package:alertaya/features/incidents/domain/usecases/confirm_zone_usecase.dart';
@@ -22,6 +23,7 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
     this._confirmIncident,
     this._confirmZone,
     this._socketClient,
+    this._location,
   ) : super(const IncidentsInitial()) {
     on<IncidentsStarted>(_onStarted);
     on<IncidentNewReceived>(_onNewReceived);
@@ -45,6 +47,7 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
   final ConfirmIncidentUseCase _confirmIncident;
   final ConfirmZoneUseCase _confirmZone;
   final SocketClient _socketClient;
+  final LocationService _location;
 
   late final StreamSubscription<IncidentEntity> _newSub;
   late final StreamSubscription<IncidentEntity> _updatedSub;
@@ -54,6 +57,10 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
   // Si el WS dispara durante IncidentsLoading, guardamos el evento aquí y lo
   // aplicamos cuando la transición a IncidentsLoaded termine.
   ConfirmRequestEvent? _bufferedConfirmRequest;
+
+  // Claves de confirm-requests ya mostrados en esta sesión.
+  // Evita que un tap repetido en la notificación FCM del sistema abra el sheet otra vez.
+  final _seenConfirmRequests = <String>{};
 
   Future<void> _onStarted(
       IncidentsStarted event, Emitter<IncidentsState> emit) async {
@@ -133,9 +140,18 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
 
   Future<void> _onConfirmSubmitted(
       IncidentConfirmSubmitted event, Emitter<IncidentsState> emit) async {
+    // El voto requiere GPS: el backend valida proximidad (anti-manipulación).
+    // Sin ubicación no se puede confirmar — se aborta sin contar el voto.
+    final pos = await _location.currentLatLng();
+    if (pos == null) {
+      debugPrint('[IncidentsBloc] ⚠ confirm sin ubicación — voto no enviado');
+      return;
+    }
     await _confirmIncident(ConfirmIncidentParams(
       id: event.id,
       vote: event.stillHere ? 'yes' : 'no',
+      lat: pos.lat,
+      lng: pos.lng,
     ));
   }
 
@@ -149,8 +165,22 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
     );
   }
 
+  static String _confirmRequestKey(ConfirmRequestEvent e) {
+    final lat = e.approxLat?.toStringAsFixed(3) ?? '?';
+    final lng = e.approxLng?.toStringAsFixed(3) ?? '?';
+    final hour = e.reportedAt?.toIso8601String().substring(0, 13) ?? '?';
+    return 'cr:$lat:$lng:${e.type.name}:$hour';
+  }
+
   void _onConfirmRequestReceived(
       ConfirmRequestReceived event, Emitter<IncidentsState> emit) {
+    final key = _confirmRequestKey(event.event);
+    if (_seenConfirmRequests.contains(key)) {
+      debugPrint('[IncidentsBloc] ⚠ confirm-request ya mostrado — ignorando (key=$key)');
+      return;
+    }
+    _seenConfirmRequests.add(key);
+
     debugPrint('[IncidentsBloc] 📨 ConfirmRequestReceived state=${state.runtimeType} zone=${event.event.zoneLabel} type=${event.event.type}');
     if (state is IncidentsLoaded) {
       debugPrint('[IncidentsBloc] ✓ emit IncidentsLoaded con pendingConfirmRequest');

@@ -26,6 +26,8 @@ mixin _$MyReportIncident {
   DateTime get expiresAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String? get feedback => throw _privateConstructorUsedError;
+  double? get aiScore => throw _privateConstructorUsedError;
+  bool? get aiVerified => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $MyReportIncidentCopyWith<MyReportIncident> get copyWith =>
@@ -48,7 +50,9 @@ abstract class $MyReportIncidentCopyWith<$Res> {
       int reportCount,
       DateTime expiresAt,
       DateTime updatedAt,
-      String? feedback});
+      String? feedback,
+      double? aiScore,
+      bool? aiVerified});
 }
 
 /// @nodoc
@@ -74,6 +78,8 @@ class _$MyReportIncidentCopyWithImpl<$Res, $Val extends MyReportIncident>
     Object? expiresAt = null,
     Object? updatedAt = null,
     Object? feedback = freezed,
+    Object? aiScore = freezed,
+    Object? aiVerified = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -116,6 +122,14 @@ class _$MyReportIncidentCopyWithImpl<$Res, $Val extends MyReportIncident>
           ? _value.feedback
           : feedback // ignore: cast_nullable_to_non_nullable
               as String?,
+      aiScore: freezed == aiScore
+          ? _value.aiScore
+          : aiScore // ignore: cast_nullable_to_non_nullable
+              as double?,
+      aiVerified: freezed == aiVerified
+          ? _value.aiVerified
+          : aiVerified // ignore: cast_nullable_to_non_nullable
+              as bool?,
     ) as $Val);
   }
 }
@@ -138,7 +152,9 @@ abstract class _$$MyReportIncidentImplCopyWith<$Res>
       int reportCount,
       DateTime expiresAt,
       DateTime updatedAt,
-      String? feedback});
+      String? feedback,
+      double? aiScore,
+      bool? aiVerified});
 }
 
 /// @nodoc
@@ -162,6 +178,8 @@ class __$$MyReportIncidentImplCopyWithImpl<$Res>
     Object? expiresAt = null,
     Object? updatedAt = null,
     Object? feedback = freezed,
+    Object? aiScore = freezed,
+    Object? aiVerified = freezed,
   }) {
     return _then(_$MyReportIncidentImpl(
       id: null == id
@@ -204,6 +222,14 @@ class __$$MyReportIncidentImplCopyWithImpl<$Res>
           ? _value.feedback
           : feedback // ignore: cast_nullable_to_non_nullable
               as String?,
+      aiScore: freezed == aiScore
+          ? _value.aiScore
+          : aiScore // ignore: cast_nullable_to_non_nullable
+              as double?,
+      aiVerified: freezed == aiVerified
+          ? _value.aiVerified
+          : aiVerified // ignore: cast_nullable_to_non_nullable
+              as bool?,
     ));
   }
 }
@@ -221,7 +247,9 @@ class _$MyReportIncidentImpl implements _MyReportIncident {
       required this.reportCount,
       required this.expiresAt,
       required this.updatedAt,
-      this.feedback});
+      this.feedback,
+      this.aiScore,
+      this.aiVerified});
 
   @override
   final String id;
@@ -243,10 +271,14 @@ class _$MyReportIncidentImpl implements _MyReportIncident {
   final DateTime updatedAt;
   @override
   final String? feedback;
+  @override
+  final double? aiScore;
+  @override
+  final bool? aiVerified;
 
   @override
   String toString() {
-    return 'MyReportIncident(id: $id, status: $status, severity: $severity, district: $district, confirmCount: $confirmCount, denyCount: $denyCount, reportCount: $reportCount, expiresAt: $expiresAt, updatedAt: $updatedAt, feedback: $feedback)';
+    return 'MyReportIncident(id: $id, status: $status, severity: $severity, district: $district, confirmCount: $confirmCount, denyCount: $denyCount, reportCount: $reportCount, expiresAt: $expiresAt, updatedAt: $updatedAt, feedback: $feedback, aiScore: $aiScore, aiVerified: $aiVerified)';
   }
 
   @override
@@ -271,12 +303,27 @@ class _$MyReportIncidentImpl implements _MyReportIncident {
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
             (identical(other.feedback, feedback) ||
-                other.feedback == feedback));
+                other.feedback == feedback) &&
+            (identical(other.aiScore, aiScore) || other.aiScore == aiScore) &&
+            (identical(other.aiVerified, aiVerified) ||
+                other.aiVerified == aiVerified));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, status, severity, district,
-      confirmCount, denyCount, reportCount, expiresAt, updatedAt, feedback);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      status,
+      severity,
+      district,
+      confirmCount,
+      denyCount,
+      reportCount,
+      expiresAt,
+      updatedAt,
+      feedback,
+      aiScore,
+      aiVerified);
 
   @JsonKey(ignore: true)
   @override
@@ -297,7 +344,9 @@ abstract class _MyReportIncident implements MyReportIncident {
       required final int reportCount,
       required final DateTime expiresAt,
       required final DateTime updatedAt,
-      final String? feedback}) = _$MyReportIncidentImpl;
+      final String? feedback,
+      final double? aiScore,
+      final bool? aiVerified}) = _$MyReportIncidentImpl;
 
   @override
   String get id;
@@ -319,6 +368,10 @@ abstract class _MyReportIncident implements MyReportIncident {
   DateTime get updatedAt;
   @override
   String? get feedback;
+  @override
+  double? get aiScore;
+  @override
+  bool? get aiVerified;
   @override
   @JsonKey(ignore: true)
   _$$MyReportIncidentImplCopyWith<_$MyReportIncidentImpl> get copyWith =>

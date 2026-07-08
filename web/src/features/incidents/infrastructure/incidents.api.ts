@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  IncidentEvidenceDTO,
   ListIncidentsQuery,
   ListIncidentsResult,
   PublicIncidentDetailDTO,
@@ -46,16 +47,33 @@ export function useIncidentDetail(id: string | undefined) {
   });
 }
 
+async function fetchIncidentEvidence(id: string): Promise<IncidentEvidenceDTO> {
+  const { data } = await apiClient.get<IncidentEvidenceDTO>(`/incidents/${id}/evidence/signed-urls`);
+  return data;
+}
+
+/**
+ * Resuelve la evidencia firmada del incidente. Las URLs firmadas expiran (5 min),
+ * así que no se cachean largo — refetch al montar. Requiere sesión autenticada.
+ */
+export function useIncidentEvidence(id: string | undefined) {
+  return useQuery({
+    queryKey: [...incidentsKeys.detail(id ?? ''), 'evidence'] as const,
+    queryFn: () => fetchIncidentEvidence(id!),
+    enabled: Boolean(id),
+    staleTime: 4 * 60_000, // < TTL de 5 min de la URL firmada
+    gcTime: 4 * 60_000,
+  });
+}
+
 export function useUpdateIncidentStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateStatusInput }) =>
       patchIncidentStatus(id, input),
-    onSuccess: (data) => {
+    onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: incidentsKeys.lists() });
-      qc.setQueryData(incidentsKeys.detail(data.id), (prev: PublicIncidentDetailDTO | undefined) =>
-        prev ? { ...prev, ...data } : prev,
-      );
+      qc.invalidateQueries({ queryKey: incidentsKeys.detail(id) });
     },
   });
 }

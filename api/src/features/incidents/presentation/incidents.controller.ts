@@ -11,15 +11,92 @@ import { getIncidentById } from '../domain/usecases/get-incident-by-id.usecase';
 import { confirmIncident } from '../domain/usecases/confirm-incident.usecase';
 import { updateIncidentStatus } from '../domain/usecases/update-incident-status.usecase';
 import { getMyReports } from '../domain/usecases/get-my-reports.usecase';
+import { getIncidentEvidence } from '../domain/usecases/get-incident-evidence.usecase';
 import { PrismaNotificationRepository } from '../../notifications/infrastructure/prisma-notification.repository';
+import { verifyReport } from '../infrastructure/ml.client';
+import { getSignedUrl } from '../../../core/config/firebase';
+import { analyzeImage } from '../infrastructure/glm.client';
 import { AppError } from '../../../core/errors/AppError';
 import { IncidentType, IncidentStatus } from '@prisma/client';
+import { getMessaging } from 'firebase-admin/messaging';
 const ZONE_CONFIRM_COOLDOWN = 30 * 60; // 30 minutos entre respuestas por zona
 
 const incidentRepo = new PrismaIncidentRepository(prisma);
 const reportRepo = new PrismaReportRepository(prisma);
 const notificationRepo = new PrismaNotificationRepository(prisma);
 const userLookup = new UserLookupService(prisma);
+
+/**
+ * Incrementa reputationScore del usuario usando Prisma atomic increment.
+ * Aplica floor en 0: si el score resultaría negativo, lo clampea a 0.
+ * Retorna el nuevo score.
+ */
+async function updateReputation(userId: string, delta: number): Promise<number> {
+  // Prisma no expone Math.max nativo — hacemos read-then-write sólo cuando delta es negativo
+  // para evitar que el score quede por debajo de 0. Para deltas positivos, increment directo.
+  if (delta >= 0) {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { reputationScore: { increment: delta } },
+      select: { reputationScore: true },
+    });
+    return updated.reputationScore;
+  }
+
+  // Para deltas negativos: necesitamos leer el score actual y clampear
+  const current = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { reputationScore: true },
+  });
+  const currentScore = current?.reputationScore ?? 0;
+  const newScore = Math.max(0, currentScore + delta);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { reputationScore: newScore },
+  });
+  return newScore;
+}
+
+/**
+ * Reputación (reputationScore) del votante por firebaseUid, para ponderar su voto.
+ * Fail-open: reputación media (100) si el usuario no existe aún.
+ */
+async function getVoterReputation(uid: string): Promise<number> {
+  const user = await prisma.user.findUnique({
+    where: { firebaseUid: uid },
+    select: { reputationScore: true },
+  });
+  return user?.reputationScore ?? 100;
+}
+
+/**
+ * Envía notificación push al usuario sobre su reputación.
+ * Fail-open: si no hay tokens o el envío falla, se logea y se continúa.
+ */
+async function sendFcmToUser(userId: string, title: string, body: string): Promise<void> {
+  const tokens = await prisma.deviceToken.findMany({
+    where: { userId },
+    select: { token: true },
+  });
+
+  if (tokens.length === 0) return;
+
+  const messaging = getMessaging();
+  await Promise.all(
+    tokens.map((t) =>
+      messaging
+        .send({
+          token: t.token,
+          notification: { title, body },
+          data: { type: 'reputation-update' },
+        })
+        .catch((err: unknown) =>
+          console.error(`[FCM] send failed for token ${t.token.slice(0, 8)}...:`, err),
+        ),
+    ),
+  );
+}
 
 export async function listIncidents(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -59,6 +136,35 @@ export async function getIncident(req: Request, res: Response, next: NextFunctio
   }
 }
 
+export async function getIncidentEvidenceUrls(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user?.uid) {
+      next(new AppError(401, 'No autenticado'));
+      return;
+    }
+
+    const isAuthority =
+      req.user.role === 'AUTHORITY' || req.user.role === 'ADMIN' || req.user.authority === true;
+
+    // El id interno solo se usa para el filtro de propiedad del ciudadano; nunca se expone.
+    const prismaUserId = isAuthority ? '' : (await userLookup.findOrCreate(req.user.uid)).id;
+
+    const evidence = await getIncidentEvidence(
+      req.params['id']!,
+      { prismaUserId, isAuthority },
+      { reportRepo, resolveSignedUrl: getSignedUrl },
+    );
+
+    res.json({ evidence });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function submitReport(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user?.uid) {
@@ -74,6 +180,8 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
       type: IncidentType;
       formData: Record<string, unknown>;
       mediaUrls: string[];
+      photoTakenAt?: string;
+      photoSource?: 'exif' | 'device_clock';
     };
 
     console.log(
@@ -89,8 +197,19 @@ export async function submitReport(req: Request, res: Response, next: NextFuncti
         type: body.type,
         formData: body.formData,
         mediaUrls: body.mediaUrls ?? [],
+        photoTakenAt: body.photoTakenAt ? new Date(body.photoTakenAt) : undefined,
+        photoSource: body.photoSource,
       },
-      { incidentRepo, reportRepo, redis },
+      {
+        incidentRepo,
+        reportRepo,
+        redis,
+        verifyReport,
+        updateReputation,
+        sendFcmToUser,
+        resolveSignedUrl: getSignedUrl,
+        analyzeImageForIncident: (url, type) => analyzeImage(url, type),
+      },
     );
 
     console.log(
@@ -140,7 +259,13 @@ export async function patchIncidentStatus(
     const { status, feedback } = req.body as { status: IncidentStatus; feedback?: string };
 
     const dto = await updateIncidentStatus(
-      { incidentId: req.params['id']!, status, feedback },
+      {
+        incidentId: req.params['id']!,
+        status,
+        feedback,
+        actorUid: req.user!.uid,
+        actorRole: req.user!.role ?? 'AUTHORITY',
+      },
       { incidentRepo, reportRepo, notificationRepo },
     );
 
@@ -208,11 +333,11 @@ export async function confirmOrDenyIncident(req: Request, res: Response, next: N
       return;
     }
 
-    const body = req.body as { vote: 'yes' | 'no' };
+    const body = req.body as { vote: 'yes' | 'no'; lat: number; lng: number };
 
     const dto = await confirmIncident(
-      { incidentId: req.params['id']!, uid: req.user.uid, vote: body.vote },
-      { incidentRepo, redis },
+      { incidentId: req.params['id']!, uid: req.user.uid, vote: body.vote, lat: body.lat, lng: body.lng },
+      { incidentRepo, redis, getVoterReputation },
     );
 
     res.json(dto);

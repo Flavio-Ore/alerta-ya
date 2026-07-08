@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
+import 'package:alertaya/core/domain/ai_verdict.dart';
 import 'package:alertaya/core/domain/enums.dart';
 import 'package:alertaya/features/my_reports/domain/entities/my_report_entity.dart';
 import 'package:alertaya/features/my_reports/presentation/bloc/my_reports_bloc.dart';
@@ -133,6 +134,15 @@ class _MyReportTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis),
                   ),
                 ],
+              ),
+              const SizedBox(height: 6),
+              // "Por qué" en lenguaje humano — nunca un score crudo.
+              // Never-blank: aiVerdictText() siempre devuelve un texto,
+              // incluso cuando aiScore/aiVerified aún no llegan (PR1c).
+              Text(
+                aiVerdictText(incident.aiScore, incident.aiVerified),
+                style: AppTextStyles.labelMd
+                    .copyWith(color: AppColors.onSurfaceVariant),
               ),
               if (incident.feedback != null &&
                   incident.feedback!.isNotEmpty) ...[

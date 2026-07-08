@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:injectable/injectable.dart';
 
+import 'package:alertaya/core/constants/app_constants.dart';
 import 'package:alertaya/core/errors/exceptions.dart';
 import 'package:alertaya/features/auth/data/models/user_model.dart';
 
@@ -19,7 +20,11 @@ abstract class FirebaseAuthDataSource {
 class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   FirebaseAuthDataSourceImpl(this._auth);
   final FirebaseAuth _auth;
-  final _googleSignIn = GoogleSignIn();
+  // serverClientId requerido por google_sign_in_android v6 (Credential Manager)
+  // para que el SDK emita idToken. Sin esto, idToken es null y Firebase rechaza.
+  final _googleSignIn = GoogleSignIn(
+    serverClientId: AppConstants.googleWebClientId,
+  );
 
   @override
   Stream<UserModel?> get authStateChanges => _auth

@@ -37,6 +37,12 @@ class PanicDeactivationRequested extends PanicEvent {
   final String pin;
 }
 
+// Tras el bloqueo por exceso de intentos, reabre el ingreso de PIN.
+// La UI lo dispara solo después del cooldown — no desactiva, solo permite reintentar.
+class PanicPinRetryRequested extends PanicEvent {
+  const PanicPinRetryRequested();
+}
+
 // ── Eventos internos — solo el BLoC los dispara ──────────────────────────────
 
 class _PanicAmplitudeUpdated extends PanicEvent {
