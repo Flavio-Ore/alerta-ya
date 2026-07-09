@@ -34,10 +34,12 @@ class MainActivity : FlutterActivity() {
                 "startPanic" -> {
                     val elapsed = call.argument<Int>("elapsedSeconds") ?: 0
                     val alarmSound = call.argument<Boolean>("alarmSound") ?: true
+                    val mode = call.argument<String>("mode") ?: if (alarmSound) "noise" else "silent"
                     val intent = Intent(this, PanicForegroundService::class.java).apply {
                         action = PanicForegroundService.ACTION_START
                         putExtra(PanicForegroundService.EXTRA_ELAPSED, elapsed.toLong())
                         putExtra(PanicForegroundService.EXTRA_ALARM_SOUND, alarmSound)
+                        putExtra(PanicForegroundService.EXTRA_MODE, mode)
                     }
                     startForegroundService(intent)
                     // Modo Silencioso: vibración corta como única confirmación de activación.

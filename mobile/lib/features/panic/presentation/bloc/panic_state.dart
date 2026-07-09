@@ -4,6 +4,20 @@ abstract class PanicState {
   const PanicState();
 }
 
+enum PanicMode {
+  silent,
+  noise;
+
+  bool get recordAudio => true;
+  bool get alarmSound => this == PanicMode.noise;
+
+  static PanicMode fromStorage(String? value) => switch (value) {
+        'silent' => PanicMode.silent,
+        'noise' => PanicMode.noise,
+        _ => PanicMode.noise,
+      };
+}
+
 class PanicIdle extends PanicState {
   const PanicIdle();
 }
@@ -18,10 +32,7 @@ class PanicActive extends PanicState {
     this.failedPinAttempts = 0,
     this.amplitude = 0.0,
     this.trustedContactName,
-    this.recordAudio = true,
-    this.alarmSound = true,
-    this.recordVideo = false,
-    this.currentVideoClip = 0,
+    this.mode = PanicMode.noise,
   });
 
   final PanicSessionEntity session;
@@ -29,11 +40,7 @@ class PanicActive extends PanicState {
   final double amplitude;
   final String? trustedContactName;
   // Snapshot de la elección del usuario al activar — no se actualiza durante la sesión.
-  final bool recordAudio;
-  final bool alarmSound;
-  final bool recordVideo;
-  // Clip de video actual (1-based). 0 = no se está grabando video.
-  final int currentVideoClip;
+  final PanicMode mode;
 
   bool get isPinLocked => failedPinAttempts >= AppConstants.panicPinMaxAttempts;
 
@@ -41,17 +48,13 @@ class PanicActive extends PanicState {
     PanicSessionEntity? session,
     int? failedPinAttempts,
     double? amplitude,
-    int? currentVideoClip,
   }) =>
       PanicActive(
         session: session ?? this.session,
         failedPinAttempts: failedPinAttempts ?? this.failedPinAttempts,
         amplitude: amplitude ?? this.amplitude,
         trustedContactName: trustedContactName,
-        recordAudio: recordAudio,
-        alarmSound: alarmSound,
-        recordVideo: recordVideo,
-        currentVideoClip: currentVideoClip ?? this.currentVideoClip,
+        mode: mode,
       );
 }
 

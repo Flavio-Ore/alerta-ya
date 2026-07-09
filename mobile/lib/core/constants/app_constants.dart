@@ -29,10 +29,6 @@ class AppConstants {
   // Espera tras bloquear el PIN antes de permitir reintentar. Frena fuerza bruta.
   static const int panicPinRetryCooldownSeconds = 30;
 
-  // Pánico — video (Modo Combinado)
-  static const int panicVideoClipMinutes = 2;
-  static const int panicMaxVideoClips = 10;
-
   // Geofencing — Lima Metropolitana
   static const double limaLatMin = -12.28;
   static const double limaLatMax = -11.77;
@@ -53,8 +49,7 @@ class AppConstants {
   // Device físico:    API_BASE_URL=http://<IP_LOCAL_DEL_HOST>:3000
   static String get apiBaseUrl =>
       dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:3000';
-  static String get wsUrl =>
-      dotenv.env['WS_URL'] ?? 'http://10.0.2.2:3000';
+  static String get wsUrl => dotenv.env['WS_URL'] ?? 'http://10.0.2.2:3000';
 
   // Google Sign-In — Web Client ID (client_type 3 en google-services.json).
   // Requerido por google_sign_in_android v6+ (Credential Manager API).

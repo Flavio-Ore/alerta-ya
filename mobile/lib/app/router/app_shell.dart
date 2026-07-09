@@ -78,7 +78,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   Future<bool> _onBackPressed() async {
-    // Si hay una sub-ruta activa dentro del branch (ej: /map/routes),
+    // Si hay una sub-ruta activa dentro del branch,
     // go_router la maneja antes de llegar acá — este callback solo se
     // dispara cuando estamos en la raíz de un branch.
 
@@ -114,13 +114,9 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     // BackButtonListener de go_router: se integra correctamente con
     // StatefulShellRoute y evita el bypass de PopScope en go_router 13+.
-    final keepBodyFixedDuringKeyboard =
-        widget.location.startsWith('/map/routes');
-
     return BackButtonListener(
       onBackButtonPressed: _onBackPressed,
       child: Scaffold(
-        resizeToAvoidBottomInset: !keepBodyFixedDuringKeyboard,
         body: widget.navigationShell,
         bottomNavigationBar: AlertaYaBottomNav(
           currentIndex: _toNavIndex(widget.navigationShell.currentIndex),

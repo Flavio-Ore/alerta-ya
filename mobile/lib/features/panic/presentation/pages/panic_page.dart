@@ -6,18 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_constants.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
-import 'package:alertaya/core/storage/secure_storage_service.dart';
 import 'package:alertaya/core/widgets/alertaya_button.dart';
 import 'package:alertaya/core/widgets/alertaya_card.dart';
 import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart';
-import 'package:alertaya/features/panic/data/services/video_recording_service.dart';
 import 'package:alertaya/features/panic/presentation/bloc/panic_bloc.dart';
 import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 
@@ -73,16 +70,24 @@ class _PanicPageState extends State<PanicPage> {
   }
 
   Future<void> _onSosTap() async {
+    await _requestPanicActivation(PanicMode.noise);
+  }
+
+  Future<void> _onModeSelected(PanicMode mode) async {
+    await _requestPanicActivation(mode);
+  }
+
+  Future<void> _requestPanicActivation(PanicMode mode) async {
     final hasSaved = await context.read<PanicBloc>().hasSavedPin();
     if (!mounted) return;
     if (hasSaved) {
-      await _activatePanic(null);
+      await _activatePanic(null, mode);
     } else {
-      await _showPinSetupSheet();
+      await _showPinSetupSheet(mode);
     }
   }
 
-  Future<void> _showPinSetupSheet() async {
+  Future<void> _showPinSetupSheet(PanicMode mode) async {
     final pin = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -96,21 +101,18 @@ class _PanicPageState extends State<PanicPage> {
     );
 
     if (pin != null && mounted) {
-      await _activatePanic(pin);
+      await _activatePanic(pin, mode);
     }
   }
 
-  Future<void> _activatePanic(String? pin) async {
+  Future<void> _activatePanic(String? pin, PanicMode mode) async {
     double lat = -12.0464;
     double lng = -77.0428;
     bool gpsUnavailable = false;
     bool gpsDeniedForever = false;
 
     try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
+      final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
         final position = await Geolocator.getCurrentPosition(
@@ -145,59 +147,13 @@ class _PanicPageState extends State<PanicPage> {
       );
     }
 
-    final micStatus = await Permission.microphone.request();
-    if (!micStatus.isGranted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('Se necesita permiso de micrófono para activar el pánico'),
-            backgroundColor: AppColors.severityCritical,
-          ),
-        );
-      }
-      return;
-    }
-
-    // Permiso de SMS — no bloqueante, el pánico funciona sin él.
-    await Permission.sms.request();
-
-    // Leer preferencia de video (Modo Combinado) desde SecureStorage.
-    final rawVideo =
-        await getIt<SecureStorageService>().read('panic_record_video');
-    bool recordVideo = rawVideo == 'true';
-
-    // Permiso de cámara solo si el usuario eligió Modo Combinado.
-    if (recordVideo) {
-      final camStatus = await Permission.camera.request();
-      if (!camStatus.isGranted) {
-        recordVideo = false;
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Permiso de cámara denegado - activando sin grabación de video.',
-              ),
-              backgroundColor: AppColors.secondary,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    }
-
     if (!mounted) return;
-    // Leer prefs actuales del ProfileBloc — defaults por seguridad si aún no cargó.
-    final profileState = context.read<ProfileBloc>().state;
-    final prefs = profileState is ProfileData ? profileState.preferences : null;
     context.read<PanicBloc>().add(
           PanicActivationRequested(
             lat: lat,
             lng: lng,
             pin: pin,
-            recordAudio: prefs?.panicRecordAudio ?? true,
-            alarmSound: prefs?.panicAlarmSound ?? true,
-            recordVideo: recordVideo,
+            mode: mode,
           ),
         );
   }
@@ -271,6 +227,7 @@ class _PanicPageState extends State<PanicPage> {
           }
           return _IdleView(
             onPanicTap: _onSosTap,
+            onModeSelected: _onModeSelected,
             onBack: () {
               if (context.canPop()) {
                 context.pop();
@@ -291,10 +248,12 @@ class _PanicPageState extends State<PanicPage> {
 class _IdleView extends StatelessWidget {
   const _IdleView({
     required this.onPanicTap,
+    required this.onModeSelected,
     required this.onBack,
     required this.onSettings,
   });
   final VoidCallback onPanicTap;
+  final ValueChanged<PanicMode> onModeSelected;
   final VoidCallback onBack;
   final VoidCallback onSettings;
 
@@ -346,6 +305,8 @@ class _IdleView extends StatelessWidget {
                     ),
                     const SizedBox(height: 32),
                     _PanicHeroButton(onTap: onPanicTap),
+                    const SizedBox(height: 20),
+                    _PanicModeOptions(onSelected: onModeSelected),
                     const SizedBox(height: 32),
                     const _ComingSoonHint(
                       text: 'o presiona el volumen 3 veces',
@@ -478,6 +439,88 @@ class _PanicHeroButtonState extends State<_PanicHeroButton> {
   }
 }
 
+class _PanicModeOptions extends StatelessWidget {
+  const _PanicModeOptions({required this.onSelected});
+
+  final ValueChanged<PanicMode> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _PanicModeCard(
+            icon: Icons.mic_off_outlined,
+            title: 'Modo Silencioso',
+            subtitle: 'Graba audio y GPS sin sirena',
+            onTap: () => onSelected(PanicMode.silent),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _PanicModeCard(
+            icon: Icons.campaign_outlined,
+            title: 'Modo con Alarma',
+            subtitle: 'Sirena, audio y GPS activos',
+            onTap: () => onSelected(PanicMode.noise),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PanicModeCard extends StatelessWidget {
+  const _PanicModeCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            children: [
+              Icon(icon, color: AppColors.secondary, size: 26),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.labelLg.copyWith(
+                  color: AppColors.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Anillo punteado decorativo ──────────────────────────────────────────────
 
 class _DashedCirclePainter extends CustomPainter {
@@ -537,48 +580,41 @@ class _PanicStatusPillsRow extends StatelessWidget {
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
         final prefs = state is ProfileData ? state.preferences : null;
-        final alarmOn = prefs?.panicAlarmSound ?? true;
-        return FutureBuilder<String?>(
-          future: getIt<SecureStorageService>().read('panic_record_video'),
-          builder: (context, snap) {
-            final recordVideo = snap.data == 'true';
-            final recordAudio = (prefs?.panicRecordAudio ?? true) && !recordVideo;
-            return Row(
-              children: [
-                Expanded(
-                  child: _PanicStatusPill(
-                    icon: recordVideo ? Icons.videocam : Icons.mic,
-                    label: recordVideo
-                        ? 'Grabar video'
-                        : (recordAudio ? 'Grabar audio' : 'Sin grabar'),
-                    iconColor: AppColors.severityCritical,
-                    enabled: recordVideo || recordAudio,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _PanicStatusPill(
-                    icon: alarmOn
-                        ? Icons.notifications_active_outlined
-                        : Icons.notifications_off_outlined,
-                    label: alarmOn ? 'Alarma sonora' : 'Alarma muda',
-                    iconColor: AppColors.secondary,
-                    enabled: alarmOn,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: _PanicStatusPill(
-                    icon: Icons.location_on,
-                    label: 'GPS en vivo',
-                    iconColor: AppColors.primary,
-                    enabled: true,
-                    locked: true,
-                  ),
-                ),
-              ],
-            );
-          },
+        final mode = (prefs?.panicAlarmSound ?? true)
+            ? PanicMode.noise
+            : PanicMode.silent;
+        return Row(
+          children: [
+            const Expanded(
+              child: _PanicStatusPill(
+                icon: Icons.mic,
+                label: 'Grabar audio',
+                iconColor: AppColors.severityCritical,
+                enabled: true,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _PanicStatusPill(
+                icon: mode.alarmSound
+                    ? Icons.notifications_active_outlined
+                    : Icons.notifications_off_outlined,
+                label: mode.alarmSound ? 'Alarma sonora' : 'Alarma muda',
+                iconColor: AppColors.secondary,
+                enabled: mode.alarmSound,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: _PanicStatusPill(
+                icon: Icons.location_on,
+                label: 'GPS en vivo',
+                iconColor: AppColors.primary,
+                enabled: true,
+                locked: true,
+              ),
+            ),
+          ],
         );
       },
     );
@@ -835,7 +871,8 @@ class _CallButton extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.phone, size: 16, color: AppColors.onSecondary),
+                  const Icon(Icons.phone,
+                      size: 16, color: AppColors.onSecondary),
                   const SizedBox(width: 6),
                   Text(
                     'LLAMAR',
@@ -861,9 +898,8 @@ class _ContactAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = name.trim().isEmpty
-        ? '?'
-        : name.trim().substring(0, 1).toUpperCase();
+    final initial =
+        name.trim().isEmpty ? '?' : name.trim().substring(0, 1).toUpperCase();
     return Container(
       width: size,
       height: size,
@@ -927,14 +963,6 @@ class _ActiveView extends StatelessWidget {
             Expanded(
               child: Stack(
                 children: [
-                  // Preview de cámara 1×1 (invisible) para anclar la textura
-                  // de CameraController mientras grabamos en Modo Combinado.
-                  if (state.recordVideo)
-                    const Positioned(
-                      top: 0,
-                      left: 0,
-                      child: _CameraPreviewAnchor(),
-                    ),
                   // Overlay rojo sutil arriba.
                   Positioned.fill(
                     child: IgnorePointer(
@@ -967,10 +995,7 @@ class _ActiveView extends StatelessWidget {
                           ),
                           child: Column(
                             children: [
-                              if (state.recordVideo) ...[
-                                const _VideoRecordingLabel(),
-                                const SizedBox(height: 16),
-                              ] else if (state.recordAudio) ...[
+                              if (state.mode.recordAudio) ...[
                                 const _AmplitudeVisualizer(),
                                 const SizedBox(height: 16),
                                 const _RecordingLabel(),
@@ -1003,21 +1028,14 @@ class _ActiveView extends StatelessWidget {
                           runSpacing: 8,
                           alignment: WrapAlignment.center,
                           children: [
-                            if (state.recordAudio) ...[
+                            if (state.mode.recordAudio) ...[
                               _StatusChip(
                                 label: 'Bloque $block/$maxBlocks · 10 min',
                               ),
                               const _StatusChip(label: 'AES-256'),
                             ],
-                            if (state.recordVideo) ...[
-                              _StatusChip(
-                                label:
-                                    'Clip ${state.currentVideoClip}/${AppConstants.panicMaxVideoClips} · 2 min',
-                              ),
-                              const _StatusChip(label: 'Video AES-256'),
-                            ],
                             const _StatusChip(label: 'GPS en vivo'),
-                            if (!state.alarmSound)
+                            if (!state.mode.alarmSound)
                               const _StatusChip(label: 'Sin alarma'),
                             const _StatusChip(label: 'Servidor OK'),
                           ],
@@ -1106,78 +1124,6 @@ class _ActivePanicBannerState extends State<_ActivePanicBanner>
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Ancla la textura de la cámara en el árbol de widgets (1×1 px invisible).
-/// Necesario para que Android no destruya la Surface durante el pánico activo.
-class _CameraPreviewAnchor extends StatelessWidget {
-  const _CameraPreviewAnchor();
-
-  @override
-  Widget build(BuildContext context) =>
-      getIt<VideoRecordingService>().buildPreview();
-}
-
-class _VideoRecordingLabel extends StatefulWidget {
-  const _VideoRecordingLabel();
-
-  @override
-  State<_VideoRecordingLabel> createState() => _VideoRecordingLabelState();
-}
-
-class _VideoRecordingLabelState extends State<_VideoRecordingLabel>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        FadeTransition(
-          opacity: Tween<double>(begin: 0.3, end: 1.0).animate(_ctrl),
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: AppColors.severityCritical,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        const Icon(
-          Icons.videocam,
-          color: AppColors.severityCritical,
-          size: 18,
-        ),
-        const SizedBox(width: 6),
-        Text(
-          'GRABANDO VIDEO',
-          style: AppTextStyles.labelMd.copyWith(
-            color: AppColors.severityCritical,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 3,
-          ),
-        ),
-      ],
     );
   }
 }

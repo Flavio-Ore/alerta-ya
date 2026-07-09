@@ -499,10 +499,6 @@ class _MapPageState extends State<MapPage> {
                 radiusMeters: _filterRadiusMeters,
                 onLocationSelected: _onLocationSelected,
                 onClearSearch: _clearSearch,
-                onRouteTap: () => context.push(
-                  '/map/routes',
-                  extra: LatLng(_userLat, _userLng),
-                ),
               ),
 
               // Confirm-request UI: ahora se muestra como bottom sheet desde el
@@ -551,7 +547,6 @@ class _SearchOverlay extends StatefulWidget {
     required this.radiusMeters,
     required this.onLocationSelected,
     required this.onClearSearch,
-    required this.onRouteTap,
   });
 
   final List<IncidentEntity> incidents;
@@ -561,7 +556,6 @@ class _SearchOverlay extends StatefulWidget {
   final double radiusMeters;
   final void Function(LatLng point, String label) onLocationSelected;
   final VoidCallback onClearSearch;
-  final VoidCallback onRouteTap;
 
   @override
   State<_SearchOverlay> createState() => _SearchOverlayState();
@@ -668,15 +662,6 @@ class _SearchOverlayState extends State<_SearchOverlay> {
                       SvgPicture.asset(
                         'assets/images/logo/alertaya_logo_horizontal.svg',
                         height: 28,
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.route_outlined,
-                            color: AppColors.primaryContainer),
-                        tooltip: 'Comparar rutas',
-                        onPressed: widget.onRouteTap,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
                       ),
                     ],
                   ),

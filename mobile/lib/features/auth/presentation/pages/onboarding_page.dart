@@ -1,9 +1,5 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
@@ -53,7 +49,6 @@ class OnboardingPage extends StatefulWidget {
 class _OnboardingPageState extends State<OnboardingPage> {
   final _controller = PageController();
   int _currentPage = 0;
-  bool _showingPermission = false;
 
   void _next() {
     if (_currentPage < _slides.length - 1) {
@@ -61,14 +56,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
-    } else {
-      setState(() => _showingPermission = true);
-    }
-  }
-
-  Future<void> _activateAndFinish() async {
-    if (!kIsWeb && Platform.isAndroid) {
-      await Permission.notification.request();
+      return;
     }
     _completeOnboarding();
   }
@@ -86,13 +74,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_showingPermission) {
-      return _NotificationPermissionStep(
-        onActivate: _activateAndFinish,
-        onSkip: _completeOnboarding,
-      );
-    }
-
     final slide = _slides[_currentPage];
     final isLast = _currentPage == _slides.length - 1;
 
@@ -120,8 +101,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                 decoration: const BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(32)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
                 ),
                 child: Column(
                   children: [
@@ -363,8 +343,8 @@ class _ReportIllustration extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerRight,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppColors.secondary,
                       borderRadius: BorderRadius.circular(8),
@@ -405,130 +385,6 @@ class _LineBar extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Paso final: solicitar permiso de notificaciones con contexto
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _NotificationPermissionStep extends StatelessWidget {
-  const _NotificationPermissionStep({
-    required this.onActivate,
-    required this.onSkip,
-  });
-
-  final VoidCallback onActivate;
-  final VoidCallback onSkip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surfaceContainerLow,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              flex: 45,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      ...List.generate(
-                        3,
-                        (i) => Container(
-                          width: 80.0 + i * 56,
-                          height: 80.0 + i * 56,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.secondary
-                                  .withValues(alpha: 0.35 - i * 0.1),
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 88,
-                        height: 88,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.notifications_active_rounded,
-                          color: AppColors.secondary,
-                          size: 44,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 55,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    const Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Activa las alertas',
-                            style: AppTextStyles.headlineLg,
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            'Te avisamos al instante cuando algo pasa en tu zona. Puedes desactivarlas cuando quieras.',
-                            style: AppTextStyles.bodyMd,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                    AlertaYaButton(
-                      label: 'Activar alertas',
-                      onPressed: onActivate,
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 48,
-                      child: TextButton(
-                        onPressed: onSkip,
-                        style: TextButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                        ),
-                        child: Text(
-                          'Ahora no',
-                          style: AppTextStyles.bodyMd
-                              .copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _AnonymousIllustration extends StatelessWidget {
   const _AnonymousIllustration();
 
@@ -565,8 +421,7 @@ class _AnonymousIllustration extends StatelessWidget {
           child: CircleAvatar(
             radius: 16,
             backgroundColor: AppColors.secondary,
-            child: Icon(Icons.lock_rounded,
-                color: AppColors.primary, size: 18),
+            child: Icon(Icons.lock_rounded, color: AppColors.primary, size: 18),
           ),
         ),
       ],

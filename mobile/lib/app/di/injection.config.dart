@@ -97,8 +97,6 @@ import 'package:alertaya/features/panic/data/services/sms_service.dart'
     as _i764;
 import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart'
     as _i732;
-import 'package:alertaya/features/panic/data/services/video_recording_service.dart'
-    as _i906;
 import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart'
     as _i519;
 import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart'
@@ -190,8 +188,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i238.NotificationRemoteDataSourceImpl(gh<_i361.Dio>()));
     gh.lazySingleton<_i42.AudioRecordingService>(
         () => _i42.AudioRecordingService(gh<_i142.SecureStorageService>()));
-    gh.lazySingleton<_i906.VideoRecordingService>(
-        () => _i906.VideoRecordingService(gh<_i142.SecureStorageService>()));
     gh.lazySingleton<_i732.TrustedContactService>(
         () => _i732.TrustedContactService(gh<_i142.SecureStorageService>()));
     gh.lazySingleton<_i444.RiskRemoteDataSource>(
@@ -312,7 +308,6 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i764.SmsService>(),
           gh<_i655.PanicLocationTracker>(),
           gh<_i519.PanicRepository>(),
-          gh<_i906.VideoRecordingService>(),
         ));
     gh.factory<_i250.MyReportsBloc>(() => _i250.MyReportsBloc(
           gh<_i56.GetMyReportsUseCase>(),

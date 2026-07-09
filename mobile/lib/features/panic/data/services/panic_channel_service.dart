@@ -29,11 +29,13 @@ class PanicChannelService {
   Future<void> startService(
     int elapsedSeconds, {
     bool alarmSound = true,
+    String modeName = 'noise',
   }) async {
     try {
       await _channel.invokeMethod('startPanic', {
         'elapsedSeconds': elapsedSeconds,
         'alarmSound': alarmSound,
+        'mode': modeName,
       });
     } on PlatformException catch (e) {
       // ignore: avoid_print
@@ -70,7 +72,8 @@ class PanicChannelService {
       await _channel.invokeMethod('openAccessibilitySettings');
     } on PlatformException catch (e) {
       // ignore: avoid_print
-      print('PanicChannelService.openAccessibilitySettings error: ${e.message}');
+      print(
+          'PanicChannelService.openAccessibilitySettings error: ${e.message}');
     }
   }
 

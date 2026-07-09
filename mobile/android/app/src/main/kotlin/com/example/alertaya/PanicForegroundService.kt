@@ -24,11 +24,13 @@ class PanicForegroundService : Service() {
         const val ACTION_STOP = "STOP_PANIC"
         const val EXTRA_ELAPSED = "elapsed_seconds"
         const val EXTRA_ALARM_SOUND = "alarm_sound"
+        const val EXTRA_MODE = "panic_mode"
     }
 
     private val handler = Handler(Looper.getMainLooper())
     private var elapsedSeconds = 0L
     private var alarmSoundActive = true
+    private var panicMode = "noise"
     private var mediaPlayer: MediaPlayer? = null
 
     private val tickRunnable = object : Runnable {
@@ -69,6 +71,7 @@ class PanicForegroundService : Service() {
                 try {
                     elapsedSeconds = intent.getLongExtra(EXTRA_ELAPSED, 0L)
                     alarmSoundActive = intent.getBooleanExtra(EXTRA_ALARM_SOUND, true)
+                    panicMode = intent.getStringExtra(EXTRA_MODE) ?: if (alarmSoundActive) "noise" else "silent"
                     handler.removeCallbacks(tickRunnable)
                     startForeground(NOTIFICATION_ID, buildNotification(elapsedSeconds))
                     handler.postDelayed(tickRunnable, 1000)
@@ -157,9 +160,9 @@ class PanicForegroundService : Service() {
         val ss = elapsedSeconds % 60
         val timeStr = "%02d:%02d:%02d".format(hh, mm, ss)
 
-        val (title, text) = when {
-            alarmSoundActive -> "🚨 ALARMA ACTIVA" to "Alertando · $timeStr · Toca para desactivar"
-            else             -> "🔴 EMERGENCIA SILENCIOSA" to "Grabando en segundo plano · $timeStr · Toca para desactivar"
+        val (title, text) = when (panicMode) {
+            "silent" -> "Modo silencioso activo" to "Grabando y enviando GPS · $timeStr · Toca para desactivar"
+            else     -> "Modo con alarma activo" to "Sirena, grabación y GPS · $timeStr · Toca para desactivar"
         }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)

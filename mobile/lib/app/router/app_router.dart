@@ -1,17 +1,17 @@
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
-
+import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/app/router/go_router_refresh_stream.dart';
+import 'package:alertaya/core/storage/secure_storage_service.dart';
 import 'package:alertaya/features/alerts/presentation/pages/alerts_page.dart';
 import 'package:alertaya/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:alertaya/features/auth/presentation/pages/login_page.dart';
 import 'package:alertaya/features/auth/presentation/pages/onboarding_page.dart';
+import 'package:alertaya/features/auth/presentation/pages/permissions_page.dart';
 import 'package:alertaya/features/auth/presentation/pages/splash_page.dart';
 import 'package:alertaya/features/incidents/presentation/pages/incident_detail_page.dart';
 import 'package:alertaya/features/map/presentation/pages/map_page.dart';
 import 'package:alertaya/features/panic/presentation/pages/panic_page.dart';
 import 'package:alertaya/features/panic/presentation/pages/panic_settings_page.dart';
-import 'package:alertaya/features/route/presentation/pages/route_comparator_page.dart';
 import 'package:alertaya/features/profile/presentation/pages/profile_page.dart';
 import 'package:alertaya/features/report/presentation/pages/dynamic_form_page.dart';
 import 'package:alertaya/features/report/presentation/pages/incident_type_page.dart';
@@ -37,6 +37,10 @@ GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginPage(),
+      ),
+      GoRoute(
+        path: '/permissions',
+        builder: (context, state) => const PermissionsPage(),
       ),
 
       // Pánico — fuera del shell: pantalla completa sin bottom nav
@@ -87,14 +91,6 @@ GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
                       incidentId: state.pathParameters['id']!,
                     ),
                   ),
-                  GoRoute(
-                    path: 'routes',
-                    builder: (context, state) {
-                      final origin = state.extra as LatLng? ??
-                          const LatLng(-12.0464, -77.0428);
-                      return RouteComparatorPage(origin: origin);
-                    },
-                  ),
                 ],
               ),
             ],
@@ -135,15 +131,30 @@ GoRouter createRouter(AuthBloc authBloc, GoRouterRefreshStream refreshStream) {
   );
 }
 
-String? _authGuard(GoRouterState state, AuthBloc authBloc) {
+Future<String?> _authGuard(GoRouterState state, AuthBloc authBloc) async {
   final location = state.matchedLocation;
   final authState = authBloc.state;
 
-  const protectedPrefixes = ['/map', '/alerts', '/risk', '/profile', '/panic'];
+  const protectedPrefixes = [
+    '/map',
+    '/alerts',
+    '/risk',
+    '/profile',
+    '/panic',
+    '/permissions',
+  ];
   final isProtected = protectedPrefixes.any((p) => location.startsWith(p));
-  final isAuthPage = location == '/login' || location == '/onboarding';
+  final isAuthPage = location == '/login' ||
+      location == '/onboarding' ||
+      location == '/permissions';
 
-  if (authState is AuthAuthenticated && isAuthPage) return '/map';
+  if (authState is AuthAuthenticated) {
+    final permissionsRequested =
+        await getIt<SecureStorageService>().read(permissionsRequestedKey);
+    final needsPermissions = permissionsRequested != 'true';
+    if (needsPermissions && location != '/permissions') return '/permissions';
+    if (!needsPermissions && isAuthPage) return '/map';
+  }
   if (authState is AuthUnauthenticated && isProtected) {
     return authState.isFirstLaunch ? '/onboarding' : '/login';
   }
@@ -155,4 +166,3 @@ String? _authGuard(GoRouterState state, AuthBloc authBloc) {
 
   return null;
 }
-

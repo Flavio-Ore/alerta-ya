@@ -18,56 +18,38 @@ import 'package:alertaya/features/profile/presentation/bloc/profile_bloc.dart';
 
 const _kCall105OnLock = 'panic_call_105_on_lock';
 const _kSendSms = 'panic_send_sms';
-const _kRecordVideo = 'panic_record_video';
+const _kPanicMode = 'panic_mode';
 const _kRecordAudio = 'panic_record_audio';
 const _kAlarmSound = 'panic_alarm_sound';
 const _kVolumeActivation = 'panic_volume_activation';
 
 // ─── Modo de emergencia ───────────────────────────────────────────────────────
 
-enum _PanicMode {
-  visible,
-  silencioso,
-  combinado;
-
-  /// Deriva el modo desde las preferencias almacenadas.
-  /// Requiere los tres valores porque Visible y Combinado tienen alarm=true.
-  static _PanicMode fromPrefs({
-    required bool alarm,
-    required bool record,
-    required bool video,
-  }) {
-    if (!alarm && record) return _PanicMode.silencioso;
-    if (alarm && video) return _PanicMode.combinado;
-    return _PanicMode.visible;
-  }
-
+extension _PanicModeSettings on PanicMode {
   String get label => switch (this) {
-        _PanicMode.visible => 'Visible',
-        _PanicMode.silencioso => 'Silencioso',
-        _PanicMode.combinado => 'Combinado',
+        PanicMode.silent => 'Modo Silencioso',
+        PanicMode.noise => 'Modo con Alarma',
       };
 
   String get description => switch (this) {
-        _PanicMode.visible =>
-          'Alarma sonora máxima. Para cuando quieras llamar la atención.',
-        _PanicMode.silencioso =>
-          'Sin alarma ni vibración. Grabación de audio cifrada. Discreción total.',
-        _PanicMode.combinado =>
-          'Alarma + grabación de video. Captura video del entorno como evidencia.',
+        PanicMode.silent =>
+          'Sin alarma sonora. Graba audio cifrado y envía GPS en vivo.',
+        PanicMode.noise =>
+          'Sirena máxima, grabación de audio cifrada y GPS en vivo.',
       };
 
   IconData get icon => switch (this) {
-        _PanicMode.visible => Icons.campaign_outlined,
-        _PanicMode.silencioso => Icons.visibility_off_outlined,
-        _PanicMode.combinado => Icons.videocam_outlined,
+        PanicMode.silent => Icons.mic_off_outlined,
+        PanicMode.noise => Icons.campaign_outlined,
       };
+}
 
-  // audio activo solo en Silencioso
-  bool get derivedAlarm => this != _PanicMode.silencioso;
-  bool get derivedRecord => this == _PanicMode.silencioso;
-  // video activo solo en Combinado
-  bool get derivedVideo => this == _PanicMode.combinado;
+PanicMode _panicModeFromPrefs({
+  required bool alarm,
+  required bool record,
+}) {
+  if (record && !alarm) return PanicMode.silent;
+  return PanicMode.noise;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -89,7 +71,6 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   bool _deletingAccount = false;
   bool _call105OnLock = true;
   bool _sendSms = true;
-  bool _recordVideo = false;
   bool _volumeActivation = true;
   bool _hasSavedPin = false;
   bool _accessibilityEnabled = false;
@@ -100,7 +81,6 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     _loadContact();
     _loadCall105();
     _loadSendSms();
-    _loadRecordVideo();
     _loadVolumeActivation();
     _loadSavedPin();
     _loadAccessibilityStatus();
@@ -126,11 +106,6 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   Future<void> _loadSendSms() async {
     final raw = await _storage.read(_kSendSms);
     if (mounted) setState(() => _sendSms = raw != 'false');
-  }
-
-  Future<void> _loadRecordVideo() async {
-    final raw = await _storage.read(_kRecordVideo);
-    if (mounted) setState(() => _recordVideo = raw == 'true');
   }
 
   Future<void> _loadVolumeActivation() async {
@@ -159,22 +134,21 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
     await _storage.write(_kSendSms, value ? 'true' : 'false');
   }
 
-  Future<void> _onModeSelected(_PanicMode mode, BuildContext context) async {
+  Future<void> _onModeSelected(PanicMode mode, BuildContext context) async {
     context.read<ProfileBloc>().add(
-          ProfilePanicRecordAudioToggled(enabled: mode.derivedRecord),
+          ProfilePanicRecordAudioToggled(enabled: mode.recordAudio),
         );
     context.read<ProfileBloc>().add(
-          ProfilePanicAlarmSoundToggled(enabled: mode.derivedAlarm),
+          ProfilePanicAlarmSoundToggled(enabled: mode.alarmSound),
         );
     // Escribir en SecureStorage para que la activación por botón de volumen
     // (que no tiene acceso al ProfileBloc) lea el modo correcto incluso si
     // el usuario nunca activó pánico antes.
     await Future.wait([
-      _storage.write(_kRecordAudio, mode.derivedRecord.toString()),
-      _storage.write(_kAlarmSound, mode.derivedAlarm.toString()),
-      _storage.write(_kRecordVideo, mode.derivedVideo.toString()),
+      _storage.write(_kPanicMode, mode.name),
+      _storage.write(_kRecordAudio, mode.recordAudio.toString()),
+      _storage.write(_kAlarmSound, mode.alarmSound.toString()),
     ]);
-    if (mounted) setState(() => _recordVideo = mode.derivedVideo);
   }
 
   Future<void> _deleteRecordings(BuildContext context) async {
@@ -275,206 +249,213 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
       listenWhen: (_, curr) => curr is PanicActivating,
       listener: (context, _) => context.go('/panic'),
       child: Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
-          onPressed: () => context.pop(),
+        backgroundColor: AppColors.surface,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon:
+                const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text('Configuración', style: AppTextStyles.titleLg),
         ),
-        title: const Text('Configuración', style: AppTextStyles.titleLg),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-        children: [
-          // ── 0. MODO DE EMERGENCIA ──────────────────────────────────────────
-          const _SectionHeader(
-            icon: Icons.emergency_outlined,
-            label: 'MODO DE EMERGENCIA',
-          ),
-          BlocBuilder<ProfileBloc, ProfileState>(
-            builder: (context, state) {
-              final prefs = state is ProfileData ? state.preferences : null;
-              final alarm = prefs?.panicAlarmSound ?? true;
-              final record = prefs?.panicRecordAudio ?? true;
-              final currentMode = _PanicMode.fromPrefs(
-                alarm: alarm,
-                record: record,
-                video: _recordVideo,
-              );
-              return Column(
-                children: [
-                  for (int i = 0; i < _PanicMode.values.length; i++) ...[
-                    _ModeCard(
-                      mode: _PanicMode.values[i],
-                      selected: currentMode == _PanicMode.values[i],
-                      onTap: prefs == null
-                          ? null
-                          : () {
-                              _onModeSelected(_PanicMode.values[i], context);
-                            },
-                    ),
-                    if (i < _PanicMode.values.length - 1)
-                      const SizedBox(height: 8),
-                  ],
-                ],
-              );
-            },
-          ),
-
-          // ── 1. SEGURIDAD PERSONAL ──────────────────────────────────────────
-          const _SectionHeader(
-            icon: Icons.shield_outlined,
-            label: 'SEGURIDAD PERSONAL',
-          ),
-          _SettingsGroup(
-            children: [
-              _SettingsItem(
-                icon: Icons.person_add_outlined,
-                title: 'Contacto de confianza',
-                subtitle: _currentContact == null
-                    ? 'Agregar contacto'
-                    : '${_currentContact!.name} · ${_maskPhone(_currentContact!.phone)}',
-                trailing: _currentContact == null
-                    ? const _ChevronRight()
-                    : const _Pill(
-                        label: 'Configurado',
-                        color: AppColors.secondary,
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+          children: [
+            // ── 0. MODO DE EMERGENCIA ──────────────────────────────────────────
+            const _SectionHeader(
+              icon: Icons.emergency_outlined,
+              label: 'MODO DE EMERGENCIA',
+            ),
+            BlocBuilder<ProfileBloc, ProfileState>(
+              builder: (context, state) {
+                final prefs = state is ProfileData ? state.preferences : null;
+                final alarm = prefs?.panicAlarmSound ?? true;
+                final record = prefs?.panicRecordAudio ?? true;
+                final currentMode = _panicModeFromPrefs(
+                  alarm: alarm,
+                  record: record,
+                );
+                return Column(
+                  children: [
+                    for (int i = 0; i < PanicMode.values.length; i++) ...[
+                      _ModeCard(
+                        mode: PanicMode.values[i],
+                        selected: currentMode == PanicMode.values[i],
+                        onTap: prefs == null
+                            ? null
+                            : () {
+                                _onModeSelected(PanicMode.values[i], context);
+                              },
                       ),
-                onTap: _showContactSheet,
-              ),
-              _SettingsItem(
-                icon: Icons.sms_outlined,
-                title: 'Enviar SMS al activar',
-                subtitle: _sendSms
-                    ? 'Notifica a tu contacto de confianza al activar'
-                    : 'No se enviará SMS automático',
-                trailing: Switch(
-                  value: _sendSms,
-                  onChanged: _toggleSendSms,
-                  activeThumbColor: AppColors.secondary,
-                ),
-              ),
-              _SettingsItem(
-                icon: Icons.pin_outlined,
-                title: 'PIN de pánico',
-                subtitle: _hasSavedPin
-                    ? 'PIN guardado · se usa en cada activación'
-                    : 'Sin PIN guardado · se pedirá al activar',
-                trailing: _hasSavedPin
-                    ? const _Pill(label: 'Configurado', color: AppColors.secondary)
-                    : const _Pill(label: 'Al activar', color: AppColors.onSurfaceVariant),
-                onTap: _showPinSetup,
-              ),
-              _SettingsItem(
-                icon: Icons.local_police_outlined,
-                title: 'Llamar al 105 si me bloquean el PIN',
-                subtitle: 'Sugerir llamada de emergencia tras 3 intentos',
-                trailing: Switch(
-                  value: _call105OnLock,
-                  onChanged: _toggleCall105,
-                  activeThumbColor: AppColors.secondary,
-                ),
-              ),
-              _SettingsItem(
-                icon: Icons.volume_up_outlined,
-                title: 'Activar con botón de volumen',
-                subtitle: _volumeActivation
-                    ? 'Presiona el volumen 3 veces en < 2 seg para activar'
-                    : 'Desactivado — solo el botón en pantalla activa el pánico',
-                trailing: Switch(
-                  value: _volumeActivation,
-                  onChanged: _toggleVolumeActivation,
-                  activeThumbColor: AppColors.secondary,
-                ),
-              ),
-              if (_volumeActivation && Platform.isAndroid)
-                _AccessibilityServiceTile(
-                  enabled: _accessibilityEnabled,
-                  onTap: () async {
-                    await _channelService.openAccessibilitySettings();
-                    // Re-verificar al volver de Settings del sistema
-                    await Future<void>.delayed(const Duration(seconds: 1));
-                    await _loadAccessibilityStatus();
-                  },
-                ),
-            ],
-          ),
+                      if (i < PanicMode.values.length - 1)
+                        const SizedBox(height: 8),
+                    ],
+                  ],
+                );
+              },
+            ),
 
-          // ── 2. GRABACIÓN Y PRIVACIDAD ──────────────────────────────────────
-          const _SectionHeader(
-            icon: Icons.mic_outlined,
-            label: 'GRABACIÓN Y PRIVACIDAD',
-          ),
-          _SettingsGroup(
-            children: [
-              const _SettingsItem(
-                icon: Icons.location_on_outlined,
-                title: 'GPS en vivo al panel',
-                subtitle: 'Siempre activo en cualquier modo — no se puede desactivar',
-                trailing: _Pill(
-                  label: 'Obligatorio',
-                  color: AppColors.primary,
-                ),
-              ),
-              const _SettingsItem(
-                icon: Icons.timer_outlined,
-                title: 'Límites de grabación',
-                subtitle: 'Audio: 60 min (6 bloques de 10 min) · Video: 20 min (10 clips de 2 min)',
-                trailing: _Pill(
-                  label: 'Por modo',
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-              const _SettingsItem(
-                icon: Icons.lock_outline,
-                title: 'Cifrado de grabaciones',
-                subtitle: 'Audio y video cifrados con AES-256 — nunca viajan sin cifrar',
-                trailing: _Pill(
-                  label: 'AES-256 ✓',
-                  color: AppColors.secondary,
-                ),
-              ),
-              _SettingsItem(
-                icon: Icons.delete_sweep_outlined,
-                title: 'Eliminar grabaciones anteriores',
-                subtitle: 'Borrar todos los archivos cifrados almacenados en este dispositivo',
-                isDestructive: true,
-                onTap: () => _deleteRecordings(context),
-              ),
-            ],
-          ),
-
-          // ── 3. CUENTA ──────────────────────────────────────────────────────
-          const _SectionHeader(
-            icon: Icons.account_circle_outlined,
-            label: 'CUENTA',
-          ),
-          _SettingsGroup(
-            children: [
-              _SettingsItem(
-                icon: Icons.delete_outline,
-                title: 'Eliminar cuenta',
-                subtitle: 'Esta acción es irreversible',
-                isDestructive: true,
-                trailing: _deletingAccount
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.severityCritical,
+            // ── 1. SEGURIDAD PERSONAL ──────────────────────────────────────────
+            const _SectionHeader(
+              icon: Icons.shield_outlined,
+              label: 'SEGURIDAD PERSONAL',
+            ),
+            _SettingsGroup(
+              children: [
+                _SettingsItem(
+                  icon: Icons.person_add_outlined,
+                  title: 'Contacto de confianza',
+                  subtitle: _currentContact == null
+                      ? 'Agregar contacto'
+                      : '${_currentContact!.name} · ${_maskPhone(_currentContact!.phone)}',
+                  trailing: _currentContact == null
+                      ? const _ChevronRight()
+                      : const _Pill(
+                          label: 'Configurado',
+                          color: AppColors.secondary,
                         ),
-                      )
-                    : const _ChevronRight(),
-                onTap: _deletingAccount ? null : () => _confirmDelete(context),
-              ),
-            ],
-          ),
-        ],
-      ),
+                  onTap: _showContactSheet,
+                ),
+                _SettingsItem(
+                  icon: Icons.sms_outlined,
+                  title: 'Enviar SMS al activar',
+                  subtitle: _sendSms
+                      ? 'Notifica a tu contacto de confianza al activar'
+                      : 'No se enviará SMS automático',
+                  trailing: Switch(
+                    value: _sendSms,
+                    onChanged: _toggleSendSms,
+                    activeThumbColor: AppColors.secondary,
+                  ),
+                ),
+                _SettingsItem(
+                  icon: Icons.pin_outlined,
+                  title: 'PIN de pánico',
+                  subtitle: _hasSavedPin
+                      ? 'PIN guardado · se usa en cada activación'
+                      : 'Sin PIN guardado · se pedirá al activar',
+                  trailing: _hasSavedPin
+                      ? const _Pill(
+                          label: 'Configurado', color: AppColors.secondary)
+                      : const _Pill(
+                          label: 'Al activar',
+                          color: AppColors.onSurfaceVariant),
+                  onTap: _showPinSetup,
+                ),
+                _SettingsItem(
+                  icon: Icons.local_police_outlined,
+                  title: 'Llamar al 105 si me bloquean el PIN',
+                  subtitle: 'Sugerir llamada de emergencia tras 3 intentos',
+                  trailing: Switch(
+                    value: _call105OnLock,
+                    onChanged: _toggleCall105,
+                    activeThumbColor: AppColors.secondary,
+                  ),
+                ),
+                _SettingsItem(
+                  icon: Icons.volume_up_outlined,
+                  title: 'Activar con botón de volumen',
+                  subtitle: _volumeActivation
+                      ? 'Presiona el volumen 3 veces en < 2 seg para activar'
+                      : 'Desactivado — solo el botón en pantalla activa el pánico',
+                  trailing: Switch(
+                    value: _volumeActivation,
+                    onChanged: _toggleVolumeActivation,
+                    activeThumbColor: AppColors.secondary,
+                  ),
+                ),
+                if (_volumeActivation && Platform.isAndroid)
+                  _AccessibilityServiceTile(
+                    enabled: _accessibilityEnabled,
+                    onTap: () async {
+                      await _channelService.openAccessibilitySettings();
+                      // Re-verificar al volver de Settings del sistema
+                      await Future<void>.delayed(const Duration(seconds: 1));
+                      await _loadAccessibilityStatus();
+                    },
+                  ),
+              ],
+            ),
+
+            // ── 2. GRABACIÓN Y PRIVACIDAD ──────────────────────────────────────
+            const _SectionHeader(
+              icon: Icons.mic_outlined,
+              label: 'GRABACIÓN Y PRIVACIDAD',
+            ),
+            _SettingsGroup(
+              children: [
+                const _SettingsItem(
+                  icon: Icons.location_on_outlined,
+                  title: 'GPS en vivo al panel',
+                  subtitle:
+                      'Siempre activo en cualquier modo — no se puede desactivar',
+                  trailing: _Pill(
+                    label: 'Obligatorio',
+                    color: AppColors.primary,
+                  ),
+                ),
+                const _SettingsItem(
+                  icon: Icons.timer_outlined,
+                  title: 'Límites de grabación',
+                  subtitle: 'Audio: 60 min (6 bloques de 10 min)',
+                  trailing: _Pill(
+                    label: 'Por modo',
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const _SettingsItem(
+                  icon: Icons.lock_outline,
+                  title: 'Cifrado de grabaciones',
+                  subtitle:
+                      'Audio cifrado con AES-256 — nunca viaja sin cifrar',
+                  trailing: _Pill(
+                    label: 'AES-256 ✓',
+                    color: AppColors.secondary,
+                  ),
+                ),
+                _SettingsItem(
+                  icon: Icons.delete_sweep_outlined,
+                  title: 'Eliminar grabaciones anteriores',
+                  subtitle:
+                      'Borrar todos los archivos cifrados almacenados en este dispositivo',
+                  isDestructive: true,
+                  onTap: () => _deleteRecordings(context),
+                ),
+              ],
+            ),
+
+            // ── 3. CUENTA ──────────────────────────────────────────────────────
+            const _SectionHeader(
+              icon: Icons.account_circle_outlined,
+              label: 'CUENTA',
+            ),
+            _SettingsGroup(
+              children: [
+                _SettingsItem(
+                  icon: Icons.delete_outline,
+                  title: 'Eliminar cuenta',
+                  subtitle: 'Esta acción es irreversible',
+                  isDestructive: true,
+                  trailing: _deletingAccount
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.severityCritical,
+                          ),
+                        )
+                      : const _ChevronRight(),
+                  onTap:
+                      _deletingAccount ? null : () => _confirmDelete(context),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -606,7 +587,7 @@ class _ModeCard extends StatelessWidget {
     this.onTap,
   });
 
-  final _PanicMode mode;
+  final PanicMode mode;
   final bool selected;
   final VoidCallback? onTap;
 
@@ -642,8 +623,9 @@ class _ModeCard extends StatelessWidget {
                     Text(
                       mode.label,
                       style: AppTextStyles.titleSm.copyWith(
-                        color:
-                            selected ? AppColors.secondary : AppColors.onSurface,
+                        color: selected
+                            ? AppColors.secondary
+                            : AppColors.onSurface,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -986,10 +968,9 @@ class _AccessibilityServiceTile extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                enabled
-                    ? Icons.accessibility_new
-                    : Icons.warning_amber_rounded,
-                color: enabled ? AppColors.secondary : AppColors.severityModerate,
+                enabled ? Icons.accessibility_new : Icons.warning_amber_rounded,
+                color:
+                    enabled ? AppColors.secondary : AppColors.severityModerate,
                 size: 22,
               ),
               const SizedBox(width: 14),

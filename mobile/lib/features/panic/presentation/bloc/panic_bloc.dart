@@ -15,7 +15,6 @@ import 'package:alertaya/features/panic/data/services/panic_location_tracker.dar
 import 'package:alertaya/features/panic/data/services/panic_upload_service.dart';
 import 'package:alertaya/features/panic/data/services/sms_service.dart';
 import 'package:alertaya/features/panic/data/services/trusted_contact_service.dart';
-import 'package:alertaya/features/panic/data/services/video_recording_service.dart';
 import 'package:alertaya/features/panic/domain/entities/panic_session_entity.dart';
 import 'package:alertaya/features/panic/domain/repositories/panic_repository.dart';
 import 'package:alertaya/features/panic/domain/usecases/activate_panic_usecase.dart';
@@ -31,9 +30,9 @@ const _kStartedAt = 'panic_started_at';
 const _kLat = 'panic_lat';
 const _kLng = 'panic_lng';
 const _kFailedAttempts = 'panic_failed_attempts';
+const _kPanicMode = 'panic_mode';
 const _kRecordAudio = 'panic_record_audio';
 const _kAlarmSound = 'panic_alarm_sound';
-const _kRecordVideo = 'panic_record_video';
 const _kSendSms = 'panic_send_sms';
 const _kVolumeActivation = 'panic_volume_activation';
 
@@ -50,7 +49,6 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     this._smsService,
     this._locationTracker,
     this._panicRepo,
-    this._videoService,
   ) : super(const PanicIdle()) {
     on<PanicInitialized>(_onInitialized);
     on<PanicActivationRequested>(_onActivationRequested);
@@ -59,7 +57,6 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     on<PanicSavedPinUpdated>(_onSavedPinUpdated);
     on<_PanicAmplitudeUpdated>(_onAmplitudeUpdated);
     on<_PanicBlockCompleted>(_onBlockCompleted);
-    on<_PanicVideoClipCompleted>(_onVideoClipCompleted);
     on<_PanicLocationTick>(_onLocationTick);
     on<_PanicVolumeActivated>(_onVolumeActivated);
     _volumeSub = _channelService.volumeTriggerStream
@@ -76,11 +73,9 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   final SmsService _smsService;
   final PanicLocationTracker _locationTracker;
   final PanicRepository _panicRepo;
-  final VideoRecordingService _videoService;
 
   StreamSubscription<double>? _amplitudeSub;
   StreamSubscription<String>? _blockSub;
-  StreamSubscription<String>? _videoClipSub;
   StreamSubscription<void>? _volumeSub;
 
   Future<void> _onInitialized(
@@ -106,26 +101,19 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     );
 
     final contact = await _contactService.getContact();
-    // Restaurar flags de la sesión activa
-    final recordAudio = (await _storage.read(_kRecordAudio)) != 'false';
-    final alarmSound = (await _storage.read(_kAlarmSound)) != 'false';
-    final recordVideo = (await _storage.read(_kRecordVideo)) == 'true';
+    // Restaurar modo de la sesión activa.
+    final mode = await _readStoredMode();
     emit(PanicActive(
       session: session,
       failedPinAttempts: failedAttempts,
       trustedContactName: contact?.name,
-      recordAudio: recordAudio,
-      alarmSound: alarmSound,
-      recordVideo: recordVideo,
-      currentVideoClip: recordVideo ? 1 : 0,
+      mode: mode,
     ));
     // Retomar grabación si la app se cerró con pánico activo
     await _startRecording(
       session.id,
       session.startedAt,
-      recordAudio: recordAudio,
-      alarmSound: alarmSound,
-      recordVideo: recordVideo,
+      mode: mode,
     );
   }
 
@@ -145,28 +133,24 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
         final contact = await _contactService.getContact();
         await Future.wait([
           _storage.write(_kSessionId, startResult.session.id),
-          _storage.write(_kStartedAt, startResult.session.startedAt.toIso8601String()),
+          _storage.write(
+              _kStartedAt, startResult.session.startedAt.toIso8601String()),
           _storage.write(_kLat, startResult.session.lat.toString()),
           _storage.write(_kLng, startResult.session.lng.toString()),
-          _storage.write(_kRecordAudio, event.recordAudio.toString()),
-          _storage.write(_kAlarmSound, event.alarmSound.toString()),
+          _writeStoredMode(event.mode),
           // Solo actualiza el PIN guardado si se provee uno nuevo.
-          if (event.pin != null) _storage.write(_kSavedPin, _hashPin(event.pin!)),
+          if (event.pin != null)
+            _storage.write(_kSavedPin, _hashPin(event.pin!)),
         ]);
         emit(PanicActive(
           session: startResult.session,
           trustedContactName: contact?.name,
-          recordAudio: event.recordAudio,
-          alarmSound: event.alarmSound,
-          recordVideo: event.recordVideo,
-          currentVideoClip: event.recordVideo ? 1 : 0,
+          mode: event.mode,
         ));
         await _startRecording(
           startResult.session.id,
           startResult.session.startedAt,
-          recordAudio: event.recordAudio,
-          alarmSound: event.alarmSound,
-          recordVideo: event.recordVideo,
+          mode: event.mode,
         );
         // Enviar SMS automático — respeta la preferencia del usuario.
         final sendSms = (await _storage.read(_kSendSms)) != 'false';
@@ -205,6 +189,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
           _kLat,
           _kLng,
           _kFailedAttempts,
+          _kPanicMode,
           _kRecordAudio,
           _kAlarmSound,
           // _kSavedPin se omite: persiste para la próxima activación
@@ -243,7 +228,8 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     final current = state as PanicActive;
 
     final blockIndex = current.session.currentBlock - 1;
-    debugPrint('[PanicBloc] Bloque completado: currentBlock=${current.session.currentBlock} blockIndex=$blockIndex');
+    debugPrint(
+        '[PanicBloc] Bloque completado: currentBlock=${current.session.currentBlock} blockIndex=$blockIndex');
     // Fire-and-forget: el bloque siguiente graba mientras este se sube
     unawaited(
       _uploadService
@@ -262,26 +248,6 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     ));
   }
 
-  void _onVideoClipCompleted(
-    _PanicVideoClipCompleted event,
-    Emitter<PanicState> emit,
-  ) {
-    if (state is! PanicActive) return;
-    final current = state as PanicActive;
-
-    final clipIndex = current.currentVideoClip - 1;
-    debugPrint('[PanicBloc] Clip de video completado: clip=$clipIndex');
-    unawaited(
-      _uploadService
-          .uploadVideoClip(event.filePath, current.session.id, clipIndex)
-          .catchError((dynamic e) {
-        debugPrint('[PanicBloc] Upload clip $clipIndex falló: $e');
-      }),
-    );
-
-    emit(current.copyWith(currentVideoClip: current.currentVideoClip + 1));
-  }
-
   Future<void> _onVolumeActivated(
     _PanicVolumeActivated event,
     Emitter<PanicState> emit,
@@ -290,9 +256,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     final enabled = await _storage.read(_kVolumeActivation);
     if (enabled == 'false') return;
 
-    final recordAudio = (await _storage.read(_kRecordAudio)) != 'false';
-    final alarmSound = (await _storage.read(_kAlarmSound)) != 'false';
-    final recordVideo = (await _storage.read(_kRecordVideo)) == 'true';
+    final mode = await _readStoredMode();
 
     Position? pos;
     try {
@@ -311,9 +275,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     add(PanicActivationRequested(
       lat: pos.latitude,
       lng: pos.longitude,
-      recordAudio: recordAudio,
-      alarmSound: alarmSound,
-      recordVideo: recordVideo,
+      mode: mode,
     ));
   }
 
@@ -339,12 +301,10 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     PanicSessionEntity session,
   ) async {
     if (contact == null || contact.phone.trim().isEmpty) return;
-    final mapsUrl =
-        'https://maps.google.com/?q=${session.lat},${session.lng}';
+    final mapsUrl = 'https://maps.google.com/?q=${session.lat},${session.lng}';
     // Mensaje enviado al contacto de confianza — no incluye identidad del
     // usuario para cumplir con SECURITY_RULES.md (no exponer datos personales)
-    const message =
-        '🚨 [AlertaYa] Se activó el botón de pánico de emergencia. '
+    const message = '🚨 [AlertaYa] Se activó el botón de pánico de emergencia. '
         'Por favor comunicate de inmediato.';
     await _smsService.send(phone: contact.phone, message: '$message\n$mapsUrl');
   }
@@ -352,12 +312,12 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   Future<void> _startRecording(
     String sessionId,
     DateTime startedAt, {
-    required bool recordAudio,
-    required bool alarmSound,
-    required bool recordVideo,
+    required PanicMode mode,
   }) async {
     // GPS y foreground service SIEMPRE corren — son obligatorios.
-    // La grabación y la alarma respetan los flags del usuario.
+    // La grabación y la alarma se derivan del modo del usuario.
+    final recordAudio = mode.recordAudio;
+    final alarmSound = mode.alarmSound;
     if (recordAudio) {
       await _audioService.start(sessionId);
       _amplitudeSub = _audioService.amplitudeStream.listen(
@@ -368,17 +328,11 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
       );
     }
 
-    if (recordVideo) {
-      await _videoService.start(sessionId);
-      _videoClipSub = _videoService.clipCompletedStream.listen(
-        (path) => add(_PanicVideoClipCompleted(path)),
-      );
-    }
-
     final initialElapsed = DateTime.now().difference(startedAt).inSeconds;
     await _channelService.startService(
       initialElapsed,
       alarmSound: alarmSound,
+      modeName: mode.name,
     );
     _locationTracker.start(
       sessionId,
@@ -390,20 +344,18 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     _locationTracker.stop();
     await _amplitudeSub?.cancel();
     await _blockSub?.cancel();
-    await _videoClipSub?.cancel();
     _amplitudeSub = null;
     _blockSub = null;
-    _videoClipSub = null;
 
     final finalAudioPaths = await _audioService.stop();
-    final finalVideoPaths = await _videoService.stop();
-    debugPrint('[PanicBloc] _stopRecording — audio: $finalAudioPaths video: $finalVideoPaths');
+    debugPrint('[PanicBloc] _stopRecording — audio: $finalAudioPaths');
 
     if (activeState != null) {
       // Subir bloque de audio parcial final
       if (finalAudioPaths.isNotEmpty) {
         final blockIndex = activeState.session.currentBlock - 1;
-        debugPrint('[PanicBloc] Subiendo bloque audio final — blockIndex=$blockIndex');
+        debugPrint(
+            '[PanicBloc] Subiendo bloque audio final — blockIndex=$blockIndex');
         try {
           await _uploadService
               .uploadBlock(
@@ -414,28 +366,31 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
           debugPrint('[PanicBloc] Upload bloque audio FALLÓ: $e');
         }
       }
-
-      // Subir clip de video parcial final
-      if (finalVideoPaths.isNotEmpty) {
-        final clipIndex = activeState.currentVideoClip - 1;
-        debugPrint('[PanicBloc] Subiendo clip video final — clipIndex=$clipIndex');
-        try {
-          await _uploadService
-              .uploadVideoClip(
-                  finalVideoPaths.first, activeState.session.id, clipIndex)
-              .timeout(const Duration(seconds: 30));
-          debugPrint('[PanicBloc] Upload clip video OK');
-        } catch (e) {
-          debugPrint('[PanicBloc] Upload clip video FALLÓ: $e');
-        }
-      }
     }
 
     await _channelService.stopService();
   }
 
-  Future<bool> hasSavedPin() async =>
-      (await _storage.read(_kSavedPin)) != null;
+  Future<bool> hasSavedPin() async => (await _storage.read(_kSavedPin)) != null;
+
+  Future<PanicMode> _readStoredMode() async {
+    final mode = await _storage.read(_kPanicMode);
+    if (mode != null) return PanicMode.fromStorage(mode);
+
+    // Migración suave desde preferencias locales antiguas.
+    final recordAudio = (await _storage.read(_kRecordAudio)) != 'false';
+    final alarmSound = (await _storage.read(_kAlarmSound)) != 'false';
+    if (recordAudio && !alarmSound) return PanicMode.silent;
+    return PanicMode.noise;
+  }
+
+  Future<void> _writeStoredMode(PanicMode mode) async {
+    await Future.wait([
+      _storage.write(_kPanicMode, mode.name),
+      _storage.write(_kRecordAudio, mode.recordAudio.toString()),
+      _storage.write(_kAlarmSound, mode.alarmSound.toString()),
+    ]);
+  }
 
   Future<void> _onSavedPinUpdated(
     PanicSavedPinUpdated event,
@@ -444,8 +399,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     await _storage.write(_kSavedPin, _hashPin(event.pin));
   }
 
-  String _hashPin(String pin) =>
-      sha256.convert(utf8.encode(pin)).toString();
+  String _hashPin(String pin) => sha256.convert(utf8.encode(pin)).toString();
 
   @override
   Future<void> close() async {
