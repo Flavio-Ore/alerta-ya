@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -799,6 +800,39 @@ class _ContactSetupSheetState extends State<_ContactSetupSheet> {
 
   bool get _isValid => _nameCtrl.text.trim().isNotEmpty;
 
+  Future<void> _pickFromContacts() async {
+    try {
+      final contact = await FlutterContacts.openExternalPick();
+      if (contact == null || !mounted) return;
+
+      final phone = contact.phones.isNotEmpty ? contact.phones.first.number : '';
+
+      setState(() {
+        _nameCtrl.text = contact.displayName;
+        _phoneCtrl.text = phone;
+      });
+
+      if (phone.isEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ese contacto no tiene un número de teléfono'),
+            backgroundColor: AppColors.severityModerate,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo abrir la agenda de contactos'),
+          backgroundColor: AppColors.severityCritical,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Future<void> _save() async {
     if (!_isValid || _saving) return;
     setState(() => _saving = true);
@@ -816,7 +850,7 @@ class _ContactSetupSheetState extends State<_ContactSetupSheet> {
   @override
   Widget build(BuildContext context) {
     final insets = MediaQuery.of(context).viewInsets;
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(24, 32, 24, 32 + insets.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -828,7 +862,24 @@ class _ContactSetupSheetState extends State<_ContactSetupSheet> {
             'Este contacto verá tu ubicación GPS durante una alarma activa y podrás llamarlo con un tap.',
             style: AppTextStyles.bodyMd,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _pickFromContacts,
+              icon: const Icon(Icons.contacts_outlined, size: 20),
+              label: const Text('Elegir desde contactos'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.secondary,
+                side: const BorderSide(color: AppColors.secondary),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           _ContactField(
             controller: _nameCtrl,
             label: 'Nombre',
@@ -892,6 +943,7 @@ class _ContactSetupSheetState extends State<_ContactSetupSheet> {
     );
   }
 }
+
 
 class _ContactField extends StatelessWidget {
   const _ContactField({

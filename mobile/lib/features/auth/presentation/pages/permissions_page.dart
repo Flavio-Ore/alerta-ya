@@ -55,6 +55,13 @@ class _PermissionsPageState extends State<PermissionsPage> {
           description:
               'Permite adjuntar evidencia visual al reportar incidentes.',
         ),
+        const _PermissionItem(
+          permission: Permission.contacts,
+          icon: Icons.contacts_outlined,
+          title: 'Contactos',
+          description:
+              'Elige tu contacto de confianza directamente desde tu agenda.',
+        ),
         if (!kIsWeb && Platform.isAndroid)
           const _PermissionItem(
             permission: Permission.notification,
