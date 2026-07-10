@@ -20,7 +20,6 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
 
     <!-- Red — requeridos para API/WebSocket y FCM -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -69,7 +68,7 @@
             android:value="2" />
         <service
             android:name=".PanicForegroundService"
-            android:foregroundServiceType="microphone|camera"
+            android:foregroundServiceType="microphone"
             android:exported="false"/>
 
         <service
