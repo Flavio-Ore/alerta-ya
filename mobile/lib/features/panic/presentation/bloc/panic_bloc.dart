@@ -254,7 +254,10 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   ) async {
     if (state is! PanicIdle) return;
     final enabled = await _storage.read(_kVolumeActivation);
-    if (enabled == 'false') return;
+    if (enabled != 'true') return;
+    // Defensa en profundidad: sin PIN guardado no hay forma de desactivar
+    // el pánico una vez activado — jamás debe dispararse por volumen.
+    if (!await hasSavedPin()) return;
 
     final mode = await _readStoredMode();
 

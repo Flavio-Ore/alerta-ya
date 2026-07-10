@@ -72,7 +72,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   bool _deletingAccount = false;
   bool _call105OnLock = true;
   bool _sendSms = true;
-  bool _volumeActivation = true;
+  bool _volumeActivation = false;
   bool _hasSavedPin = false;
   bool _accessibilityEnabled = false;
 
@@ -111,7 +111,7 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
 
   Future<void> _loadVolumeActivation() async {
     final raw = await _storage.read(_kVolumeActivation);
-    if (mounted) setState(() => _volumeActivation = raw != 'false');
+    if (mounted) setState(() => _volumeActivation = raw == 'true');
   }
 
   Future<void> _loadAccessibilityStatus() async {
@@ -121,6 +121,13 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   }
 
   Future<void> _toggleVolumeActivation(bool value) async {
+    // Sin PIN guardado no hay forma de desactivar el pánico, así que en vez
+    // de solo bloquear el switch, se abre directamente el sheet para
+    // configurarlo — el subtítulo del tile ya explica el motivo.
+    if (value && !_hasSavedPin) {
+      await _showPinSetup();
+      if (!_hasSavedPin) return; // el usuario canceló el sheet
+    }
     setState(() => _volumeActivation = value);
     await _storage.write(_kVolumeActivation, value ? 'true' : 'false');
   }
@@ -361,7 +368,9 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
                   title: 'Activar con botón de volumen',
                   subtitle: _volumeActivation
                       ? 'Presiona el volumen 3 veces en < 2 seg para activar'
-                      : 'Desactivado — solo el botón en pantalla activa el pánico',
+                      : _hasSavedPin
+                          ? 'Desactivado — solo el botón en pantalla activa el pánico'
+                          : 'Configura un PIN de pánico para poder activarlo',
                   trailing: Switch(
                     value: _volumeActivation,
                     onChanged: _toggleVolumeActivation,
