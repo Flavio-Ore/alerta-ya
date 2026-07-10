@@ -18,6 +18,8 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$ReportSubmitResult {
   bool get isPublished => throw _privateConstructorUsedError;
   IncidentEntity? get incident => throw _privateConstructorUsedError;
+
+  /// Puntos de reputación ganados/perdidos por este reporte (null si ML no corrió).
   int? get reputationDelta => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
@@ -131,16 +133,15 @@ class __$$ReportSubmitResultImplCopyWithImpl<$Res>
 /// @nodoc
 
 class _$ReportSubmitResultImpl implements _ReportSubmitResult {
-  const _$ReportSubmitResultImpl({
-    required this.isPublished,
-    this.incident,
-    this.reputationDelta,
-  });
+  const _$ReportSubmitResultImpl(
+      {required this.isPublished, this.incident, this.reputationDelta});
 
   @override
   final bool isPublished;
   @override
   final IncidentEntity? incident;
+
+  /// Puntos de reputación ganados/perdidos por este reporte (null si ML no corrió).
   @override
   final int? reputationDelta;
 
@@ -175,17 +176,18 @@ class _$ReportSubmitResultImpl implements _ReportSubmitResult {
 }
 
 abstract class _ReportSubmitResult implements ReportSubmitResult {
-  const factory _ReportSubmitResult({
-    required final bool isPublished,
-    final IncidentEntity? incident,
-    final int? reputationDelta,
-  }) = _$ReportSubmitResultImpl;
+  const factory _ReportSubmitResult(
+      {required final bool isPublished,
+      final IncidentEntity? incident,
+      final int? reputationDelta}) = _$ReportSubmitResultImpl;
 
   @override
   bool get isPublished;
   @override
   IncidentEntity? get incident;
   @override
+
+  /// Puntos de reputación ganados/perdidos por este reporte (null si ML no corrió).
   int? get reputationDelta;
   @override
   @JsonKey(ignore: true)
