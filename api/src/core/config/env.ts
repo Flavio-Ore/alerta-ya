@@ -19,6 +19,13 @@ const envSchema = z.object({
   GCS_BUCKET_NAME: z.string().optional(),
   GCP_PROJECT_ID: z.string().optional(),
 
+  // Cloud KMS — escrow de claves de cifrado de grabaciones de pánico
+  KMS_PROJECT_ID: z.string(),
+  KMS_LOCATION_ID: z.string().default('global'),
+  KMS_KEY_RING_ID: z.string().default('panic-escrow'),
+  KMS_KEY_ID: z.string().default('panic-escrow-key'),
+  KMS_KEY_VERSION: z.string().default('1'),
+
   // CORS
   WEB_URL: z.string().url().default('http://localhost:5173'),
 
