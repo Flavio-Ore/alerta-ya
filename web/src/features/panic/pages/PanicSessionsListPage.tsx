@@ -5,7 +5,7 @@ import { Headphones } from 'lucide-react';
 import { usePanicSessionsList } from '../infrastructure/panic.api';
 import { usePanicLiveUpdates } from '../infrastructure/panic.socket';
 import { formatRelativeTime, formatHHMM } from '../../incidents/presentation/utils/labels';
-import type { PanicSessionStatus } from '../../../core/api/types';
+import type { PanicSessionStatus, PanicSessionSummaryDTO } from '../../../core/api/types';
 
 const STATUS_OPTIONS: (PanicSessionStatus | 'ALL')[] = ['ALL', 'ACTIVE', 'DEACTIVATED', 'TIMEOUT'];
 
@@ -132,17 +132,23 @@ export default function PanicSessionsListPage() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button
-                      onClick={() =>
+                      onClick={() => {
+                        // Con la ruta sin registrar, el `state` de `navigate` cae al tipo
+                        // genérico `HistoryState` (vacío), así que un cast amplio en el
+                        // objeto seguiría aceptando cualquier propiedad ahí sin avisar.
+                        // Se tipa acá aparte para que un typo en `session` siga rompiendo
+                        // el build aunque el cast de abajo cubra `to`/`params`.
+                        const state: { session: PanicSessionSummaryDTO } = { session };
                         navigate({
-                          to: '/panic/$sessionId',
-                          params: { sessionId: session.id },
-                          state: { session },
                           // `/panic/$sessionId` aún no existe en el routeTree registrado
                           // (App.tsx) — lo agrega la Task 9 al wiring de rutas. El cast se
                           // puede quitar una vez esa ruta esté registrada; hasta entonces
                           // es necesario para que tsc no falle.
-                        } as never)
-                      }
+                          to: '/panic/$sessionId' as never,
+                          params: { sessionId: session.id } as never,
+                          state,
+                        } as never);
+                      }}
                       className="text-xs font-bold text-stitch-primary hover:text-white transition-colors tracking-wider"
                     >
                       VER DETALLE
