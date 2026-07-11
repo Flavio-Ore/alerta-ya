@@ -3,6 +3,7 @@ import type {
   ListPanicSessionsQuery,
   ListPanicSessionsResult,
   PanicSessionDTO,
+  PanicSessionSummaryDTO,
   ReleaseRecordingKeyResult,
 } from '../../../core/api/types';
 import { apiClient } from '../../../core/lib/axios';
@@ -11,6 +12,7 @@ export const panicKeys = {
   all: ['panic'] as const,
   activeSessions: () => ['panic', 'active'] as const,
   list: (q: ListPanicSessionsQuery) => ['panic', 'list', q] as const,
+  detail: (id: string) => ['panic', 'detail', id] as const,
 };
 
 async function fetchActivePanicSessions(): Promise<PanicSessionDTO[]> {
@@ -46,6 +48,24 @@ export function usePanicSessionsList(query: ListPanicSessionsQuery = {}) {
     queryKey: panicKeys.list(query),
     queryFn: () => fetchPanicSessions(query),
     staleTime: 15_000,
+  });
+}
+
+async function fetchPanicSessionById(id: string): Promise<PanicSessionSummaryDTO> {
+  const { data } = await apiClient.get<PanicSessionSummaryDTO>(`/panic/sessions/${id}`);
+  return data;
+}
+
+/**
+ * Sesión de pánico individual — usada como fallback en la página de detalle
+ * cuando no llegó por navegación desde la lista (ej. recarga de página o
+ * deep-link), evitando escanear el listado paginado buscando el id.
+ */
+export function usePanicSessionDetail(id: string | undefined) {
+  return useQuery({
+    queryKey: panicKeys.detail(id ?? ''),
+    queryFn: () => fetchPanicSessionById(id!),
+    enabled: Boolean(id),
   });
 }
 

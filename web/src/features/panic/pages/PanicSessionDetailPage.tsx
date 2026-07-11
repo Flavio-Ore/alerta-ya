@@ -1,7 +1,7 @@
 import { ArrowLeft, Clock, MapPin } from 'lucide-react';
 import { useParams, useNavigate, useRouterState } from '@tanstack/react-router';
 
-import { usePanicSessionsList } from '../infrastructure/panic.api';
+import { usePanicSessionDetail } from '../infrastructure/panic.api';
 import { RecordingPlayer } from '../components/RecordingPlayer';
 import { IncidentsMap } from '../../dashboard/components/IncidentsMap';
 import { formatRelativeTime, formatHHMM } from '../../incidents/presentation/utils/labels';
@@ -20,13 +20,12 @@ export default function PanicSessionDetailPage() {
   const navigate = useNavigate();
   const routerState = useRouterState({ select: (s) => s.location.state as { session?: PanicSessionSummaryDTO } });
 
-  // Fallback: si no llegó por navegación desde la lista (ej. recarga de página),
-  // busca la sesión en el listado paginado en memoria.
+  // Fallback: si no llegó por navegación desde la lista (ej. recarga de página
+  // o deep-link), pide la sesión puntual por id — sirve tanto para sesiones
+  // recientes como para cualquier sesión histórica.
   const needsFallback = !routerState?.session;
-  const { data, isLoading, isError } = usePanicSessionsList(
-    needsFallback ? { pageSize: 100 } : { pageSize: 1 },
-  );
-  const session = routerState?.session ?? data?.items.find((s) => s.id === sessionId);
+  const { data, isLoading, isError } = usePanicSessionDetail(needsFallback ? sessionId : undefined);
+  const session = routerState?.session ?? data;
 
   if (needsFallback && isLoading) {
     return (
