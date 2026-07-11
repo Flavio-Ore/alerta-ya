@@ -89,6 +89,8 @@ import 'package:alertaya/features/panic/data/repositories/panic_repository_impl.
     as _i432;
 import 'package:alertaya/features/panic/data/services/audio_recording_service.dart'
     as _i42;
+import 'package:alertaya/features/panic/data/services/escrow_key_submitter.dart'
+    as _i513;
 import 'package:alertaya/features/panic/data/services/panic_channel_service.dart'
     as _i419;
 import 'package:alertaya/features/panic/data/services/panic_location_tracker.dart'
@@ -189,8 +191,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i457.FirebaseStorageService(gh<_i457.FirebaseStorage>()));
     gh.lazySingleton<_i238.NotificationRemoteDataSource>(
         () => _i238.NotificationRemoteDataSourceImpl(gh<_i361.Dio>()));
-    gh.lazySingleton<_i42.AudioRecordingService>(
-        () => _i42.AudioRecordingService(gh<_i142.SecureStorageService>()));
     gh.lazySingleton<_i732.TrustedContactService>(
         () => _i732.TrustedContactService(gh<_i142.SecureStorageService>()));
     gh.lazySingleton<_i444.RiskRemoteDataSource>(
@@ -268,6 +268,8 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i635.SocketClient>(),
           gh<_i919.LocationService>(),
         ));
+    gh.factory<_i513.EscrowKeySubmitter>(
+        () => _i513.EscrowKeySubmitter(gh<_i132.EscrowRemoteDataSource>()));
     gh.factory<_i211.IsTutorialSeenUseCase>(
         () => _i211.IsTutorialSeenUseCase(gh<_i463.TutorialRepository>()));
     gh.factory<_i317.MarkTutorialSeenUseCase>(
@@ -291,23 +293,16 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i290.SignOutUseCase(gh<_i576.AuthRepository>()));
     gh.factory<_i141.SignUpWithEmailUseCase>(
         () => _i141.SignUpWithEmailUseCase(gh<_i576.AuthRepository>()));
-    gh.lazySingleton<_i776.PanicBloc>(() => _i776.PanicBloc(
-          gh<_i947.ActivatePanicUseCase>(),
-          gh<_i434.DeactivatePanicUseCase>(),
-          gh<_i142.SecureStorageService>(),
-          gh<_i42.AudioRecordingService>(),
-          gh<_i419.PanicChannelService>(),
-          gh<_i705.PanicUploadService>(),
-          gh<_i732.TrustedContactService>(),
-          gh<_i764.SmsService>(),
-          gh<_i655.PanicLocationTracker>(),
-          gh<_i519.PanicRepository>(),
-        ));
     gh.lazySingleton<_i658.ReportRepository>(() => _i1054.ReportRepositoryImpl(
           gh<_i35.ReportRemoteDataSource>(),
           gh<_i846.MediaUploadService>(),
           gh<_i59.FirebaseAuth>(),
         ));
+    gh.lazySingleton<_i42.AudioRecordingService>(
+        () => _i42.AudioRecordingService(
+              gh<_i142.SecureStorageService>(),
+              gh<_i513.EscrowKeySubmitter>(),
+            ));
     gh.factory<_i339.CancelReportUseCase>(
         () => _i339.CancelReportUseCase(gh<_i431.MyReportsRepository>()));
     gh.factory<_i56.GetMyReportsUseCase>(
@@ -342,6 +337,18 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i280.CreateReportUseCase(gh<_i658.ReportRepository>()));
     gh.factory<_i638.GetFormSchemaUseCase>(
         () => _i638.GetFormSchemaUseCase(gh<_i658.ReportRepository>()));
+    gh.lazySingleton<_i776.PanicBloc>(() => _i776.PanicBloc(
+          gh<_i947.ActivatePanicUseCase>(),
+          gh<_i434.DeactivatePanicUseCase>(),
+          gh<_i142.SecureStorageService>(),
+          gh<_i42.AudioRecordingService>(),
+          gh<_i419.PanicChannelService>(),
+          gh<_i705.PanicUploadService>(),
+          gh<_i732.TrustedContactService>(),
+          gh<_i764.SmsService>(),
+          gh<_i655.PanicLocationTracker>(),
+          gh<_i519.PanicRepository>(),
+        ));
     gh.lazySingleton<_i108.ReportBloc>(
         () => _i108.ReportBloc(gh<_i280.CreateReportUseCase>()));
     gh.factory<_i767.AlertsBloc>(() => _i767.AlertsBloc(

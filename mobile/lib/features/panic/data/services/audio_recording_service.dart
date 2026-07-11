@@ -10,6 +10,7 @@ import 'package:record/record.dart';
 import 'package:alertaya/core/constants/app_constants.dart';
 import 'package:alertaya/core/storage/secure_storage_service.dart';
 import 'package:alertaya/core/utils/encryption_util.dart';
+import 'package:alertaya/features/panic/data/services/escrow_key_submitter.dart';
 
 const _kEncryptionKey = 'panic_recording_key';
 
@@ -17,9 +18,10 @@ const _kEncryptionKey = 'panic_recording_key';
 /// Ciclo de vida: start() → N bloques automáticos → stop()
 @lazySingleton
 class AudioRecordingService {
-  AudioRecordingService(this._storage);
+  AudioRecordingService(this._storage, this._escrowSubmitter);
 
   final SecureStorageService _storage;
+  final EscrowKeySubmitter _escrowSubmitter;
   final _recorder = AudioRecorder();
 
   // Stream de amplitud para la UI — emite cada 100ms
@@ -36,6 +38,7 @@ class AudioRecordingService {
   int _blockNumber = 0;
   bool _isRecording = false;
   late Uint8List _encryptionKey;
+  bool _escrowConfirmed = false;
 
   bool get isRecording => _isRecording;
 
@@ -46,18 +49,15 @@ class AudioRecordingService {
     _sessionId = sessionId;
     _blockNumber = 0;
     _isRecording = true;
+    _escrowConfirmed = false;
 
-    // Generar o recuperar clave AES-256 de esta sesión
-    final stored = await _storage.read(_kEncryptionKey);
-    if (stored != null) {
-      _encryptionKey = Uint8List.fromList(base64Decode(stored));
-    } else {
-      _encryptionKey = EncryptionUtil.generateKey();
-      await _storage.write(
-        _kEncryptionKey,
-        base64Encode(_encryptionKey),
-      );
-    }
+    // Clave AES-256 nueva por sesión — nunca se reutiliza entre pánicos.
+    _encryptionKey = EncryptionUtil.generateKey();
+    await _storage.write(_kEncryptionKey, base64Encode(_encryptionKey));
+
+    // Escrow en paralelo: no bloquea el inicio de la grabación (emergencia
+    // primero), pero stop() no borra la clave hasta que esto confirme.
+    unawaited(_submitEscrowKey());
 
     await _startBlock();
 
@@ -74,7 +74,15 @@ class AudioRecordingService {
     );
   }
 
+  Future<void> _submitEscrowKey() async {
+    _escrowConfirmed = await _escrowSubmitter.submit(
+      sessionId: _sessionId!,
+      aesKey: _encryptionKey,
+    );
+  }
+
   /// Detiene la grabación, cifra el último bloque y limpia recursos.
+  /// Ya no borra la clave — eso queda para [confirmUploadsAndClearKey].
   Future<List<String>> stop() async {
     if (!_isRecording) return [];
     _isRecording = false;
@@ -85,13 +93,33 @@ class AudioRecordingService {
     _amplitudeTimer = null;
 
     final path = await _stopCurrentBlock();
-    await _storage.delete(_kEncryptionKey);
 
     _amplitudeController.add(0.0);
 
     final paths = <String>[];
     if (path != null) paths.add(path);
     return paths;
+  }
+
+  /// Se llama después de confirmar que todos los bloques de audio subieron.
+  /// Reintenta el escrow una vez más si aún no fue confirmado; solo borra
+  /// la clave local si el escrow terminó confirmado — si no, la clave
+  /// permanece en secure storage para un reintento en una futura sesión.
+  Future<void> confirmUploadsAndClearKey() async {
+    if (!_escrowConfirmed) {
+      _escrowConfirmed = await _escrowSubmitter.submit(
+        sessionId: _sessionId!,
+        aesKey: _encryptionKey,
+        attempts: 1,
+      );
+    }
+    if (_escrowConfirmed) {
+      await _storage.delete(_kEncryptionKey);
+    } else {
+      debugPrint(
+        '[AudioRecordingService] escrow NO confirmado — clave permanece en secure storage',
+      );
+    }
   }
 
   Future<void> dispose() async {
