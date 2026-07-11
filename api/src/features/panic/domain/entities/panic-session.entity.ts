@@ -21,3 +21,29 @@ export function toPanicDTO(session: PanicSession): PublicPanicSessionDTO {
     status: session.status,
   };
 }
+
+export interface PanicSessionSummaryDTO {
+  id: string;
+  lat: number;
+  lng: number;
+  startedAt: string;
+  endedAt: string | null;
+  status: PanicStatus;
+  deactivatedBy: string | null;
+  recordingBlocksCount: number;
+}
+
+export function toPanicSummaryDTO(
+  session: PanicSession & { _count: { recordingBlocks: number } },
+): PanicSessionSummaryDTO {
+  return {
+    id: session.id,
+    lat: session.lat,
+    lng: session.lng,
+    startedAt: session.startedAt.toISOString(),
+    endedAt: session.endedAt?.toISOString() ?? null,
+    status: session.status,
+    deactivatedBy: session.deactivatedBy,
+    recordingBlocksCount: session._count.recordingBlocks,
+  };
+}

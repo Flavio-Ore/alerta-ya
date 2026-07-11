@@ -1,6 +1,12 @@
 import { PrismaClient, PanicSession, PanicStatus } from '@prisma/client';
 
-import { PanicSessionRepository, CreatePanicSessionData } from '../domain/repositories/panic-session.repository';
+import {
+  PanicSessionRepository,
+  CreatePanicSessionData,
+  ListPanicSessionsQuery,
+  PaginatedPanicSessions,
+  PanicSessionWithCount,
+} from '../domain/repositories/panic-session.repository';
 
 export class PrismaPanicRepository implements PanicSessionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -31,6 +37,24 @@ export class PrismaPanicRepository implements PanicSessionRepository {
       where: { status: PanicStatus.ACTIVE, startedAt: { gte: cutoff } },
       orderBy: { startedAt: 'desc' },
     });
+  }
+
+  async findAllPaginated(query: ListPanicSessionsQuery): Promise<PaginatedPanicSessions> {
+    const where = query.status ? { status: query.status } : {};
+    const skip = (query.page - 1) * query.pageSize;
+
+    const [items, total] = await Promise.all([
+      this.prisma.panicSession.findMany({
+        where,
+        orderBy: { startedAt: 'desc' },
+        skip,
+        take: query.pageSize,
+        include: { _count: { select: { recordingBlocks: true } } },
+      }),
+      this.prisma.panicSession.count({ where }),
+    ]);
+
+    return { items: items as PanicSessionWithCount[], total };
   }
 
   async expireOldSessions(olderThanMinutes: number): Promise<number> {
