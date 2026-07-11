@@ -77,6 +77,7 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
   StreamSubscription<double>? _amplitudeSub;
   StreamSubscription<String>? _blockSub;
   StreamSubscription<void>? _volumeSub;
+  final List<Future<void>> _pendingUploads = [];
 
   Future<void> _onInitialized(
     PanicInitialized event,
@@ -230,14 +231,15 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
     final blockIndex = current.session.currentBlock - 1;
     debugPrint(
         '[PanicBloc] Bloque completado: currentBlock=${current.session.currentBlock} blockIndex=$blockIndex');
-    // Fire-and-forget: el bloque siguiente graba mientras este se sube
-    unawaited(
-      _uploadService
-          .uploadBlock(event.filePath, current.session.id, blockIndex)
-          .catchError((dynamic e) {
-        debugPrint('[PanicBloc] Upload bloque $blockIndex falló: $e');
-      }),
-    );
+    // Fire-and-forget para no bloquear la grabación del siguiente bloque,
+    // pero trackeado en _pendingUploads para poder esperarlo en stop().
+    final upload = _uploadService
+        .uploadBlock(event.filePath, current.session.id, blockIndex)
+        .catchError((dynamic e) {
+      debugPrint('[PanicBloc] Upload bloque $blockIndex falló: $e');
+    });
+    _pendingUploads.add(upload);
+    unawaited(upload);
 
     final updatedPaths = [...current.session.recordingPaths, event.filePath];
     emit(current.copyWith(
@@ -369,6 +371,18 @@ class PanicBloc extends Bloc<PanicEvent, PanicState> {
           debugPrint('[PanicBloc] Upload bloque audio FALLÓ: $e');
         }
       }
+
+      // Espera los bloques intermedios que quedaron subiendo en background
+      // ANTES de dejar que se confirme/limpie la clave — sin esto, un bloque
+      // que todavía no terminó de subir se queda huérfano sin clave asociada.
+      try {
+        await Future.wait(_pendingUploads).timeout(const Duration(seconds: 30));
+      } catch (e) {
+        debugPrint('[PanicBloc] Espera de uploads pendientes falló: $e');
+      }
+      _pendingUploads.clear();
+
+      await _audioService.confirmUploadsAndClearKey();
     }
 
     await _channelService.stopService();

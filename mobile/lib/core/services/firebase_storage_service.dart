@@ -44,10 +44,11 @@ class FirebaseStorageService {
     return urls;
   }
 
-  /// Sube un bloque de audio cifrado (AES-256) del pánico.
+  /// Sube un bloque de audio cifrado (AES-256-GCM) del pánico.
   /// Los bloques se guardan en: panic/{sessionId}/audio/block_{index}.bin
-  /// Fire-and-forget: no lanza si el archivo no existe.
-  Future<void> uploadPanicBlock(
+  /// Devuelve el path gs:// del bloque subido, o null si el archivo local
+  /// no existía (no lanza — mismo comportamiento fire-and-forget de antes).
+  Future<String?> uploadPanicBlock(
     String filePath,
     String sessionId,
     int blockIndex,
@@ -57,16 +58,16 @@ class FirebaseStorageService {
     if (stat.type == FileSystemEntityType.notFound) {
       debugPrint(
           '[FirebaseStorage] SKIP bloque — archivo no existe: $filePath');
-      return;
+      return null;
     }
     final ref = _storage.ref('panic/$sessionId/audio/block_$blockIndex.bin');
     await ref.putFile(
       file,
       SettableMetadata(contentType: 'application/octet-stream'),
     );
-    debugPrint(
-      '[FirebaseStorage] bloque OK → panic/$sessionId/audio/block_$blockIndex.bin',
-    );
+    final gsPath = 'gs://${ref.bucket}/${ref.fullPath}';
+    debugPrint('[FirebaseStorage] bloque OK → $gsPath');
+    return gsPath;
   }
 
   String _extensionFor(XFile file) {

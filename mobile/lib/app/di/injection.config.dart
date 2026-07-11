@@ -227,8 +227,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i901.ProfileBloc(gh<_i554.MeRemoteDataSource>()));
     gh.lazySingleton<_i846.MediaUploadService>(
         () => _i846.MediaUploadService(gh<_i457.FirebaseStorageService>()));
-    gh.lazySingleton<_i705.PanicUploadService>(
-        () => _i705.PanicUploadService(gh<_i457.FirebaseStorageService>()));
     gh.lazySingleton<_i431.MyReportsRepository>(
         () => _i97.MyReportsRepositoryImpl(
               gh<_i750.MyReportsRemoteDataSource>(),
@@ -270,6 +268,10 @@ extension GetItInjectableX on _i174.GetIt {
         ));
     gh.factory<_i513.EscrowKeySubmitter>(
         () => _i513.EscrowKeySubmitter(gh<_i132.EscrowRemoteDataSource>()));
+    gh.lazySingleton<_i705.PanicUploadService>(() => _i705.PanicUploadService(
+          gh<_i457.FirebaseStorageService>(),
+          gh<_i132.EscrowRemoteDataSource>(),
+        ));
     gh.factory<_i211.IsTutorialSeenUseCase>(
         () => _i211.IsTutorialSeenUseCase(gh<_i463.TutorialRepository>()));
     gh.factory<_i317.MarkTutorialSeenUseCase>(
