@@ -86,6 +86,8 @@ dependencies:
   # Utilidades
   uuid: ^4.0.0
   url_launcher: ^6.2.5
+  pointycastle: ^3.9.1
+  basic_utils: ^5.7.0
 
 dev_dependencies:
   flutter_test:
