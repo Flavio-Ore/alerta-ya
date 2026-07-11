@@ -144,15 +144,58 @@ model PanicSession {
   userId        String
   startedAt     DateTime    @default(now())
   endedAt       DateTime?
-  recordingUrls String[]    // GCS URLs — cifradas AES-256
+  recordingUrls String[]    // GCS URLs — cifradas AES-256 (legacy, ver RecordingBlock)
   lat           Float
   lng           Float
   status        PanicStatus @default(ACTIVE)
   deactivatedBy String?     // "pin" | "timeout"
   user          User        @relation(fields: [userId], references: [id])
   locationPoints PanicLocationPoint[]
+  escrowKey      PanicSessionKey?
+  recordingBlocks RecordingBlock[]
 
   @@map("panic_sessions")
+}
+
+// Clave AES-256 de la sesión, envuelta con la pública RSA-OAEP-256 de Cloud KMS.
+// El backend nunca guarda ni ve la clave en claro — solo este ciphertext.
+model PanicSessionKey {
+  id             String   @id @default(uuid())
+  panicSessionId String   @unique
+  panicSession   PanicSession @relation(fields: [panicSessionId], references: [id], onDelete: Cascade)
+  wrappedKey     Bytes
+  kmsKeyName     String
+  kmsKeyVersion  String
+  algorithm      String
+  createdAt      DateTime @default(now())
+
+  @@map("panic_session_keys")
+}
+
+// Bloque de audio cifrado subido a Storage — reemplaza recordingUrls (nunca poblado).
+model RecordingBlock {
+  id             String   @id @default(uuid())
+  panicSessionId String
+  panicSession   PanicSession @relation(fields: [panicSessionId], references: [id], onDelete: Cascade)
+  blockIndex     Int
+  storagePath    String        // gs://bucket/path — no URL pública
+  uploadedAt     DateTime @default(now())
+
+  @@unique([panicSessionId, blockIndex])
+  @@map("recording_blocks")
+}
+
+// Bitácora inmutable de cada intento de recuperar la clave de una sesión.
+model KeyAccessAudit {
+  id             String   @id @default(uuid())
+  panicSessionId String
+  requestedById  String
+  requestedAt    DateTime @default(now())
+  ipAddress      String?
+  result         String        // "SUCCESS" | "DENIED" | "ERROR"
+
+  @@index([panicSessionId, requestedAt])
+  @@map("key_access_audits")
 }
 
 model PanicLocationPoint {
