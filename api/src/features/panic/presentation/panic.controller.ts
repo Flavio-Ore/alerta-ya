@@ -16,6 +16,7 @@ import { registerRecordingBlock } from '../domain/usecases/register-recording-bl
 import { releaseRecordingKey } from '../domain/usecases/release-recording-key.usecase';
 import { AppError } from '../../../core/errors/AppError';
 import { eventBus, PanicEvents } from '../../../core/events/event-bus';
+import { toPanicSummaryDTO } from '../domain/entities/panic-session.entity';
 
 const panicRepo = new PrismaPanicRepository(prisma);
 const userLookup = new UserLookupService(prisma);
@@ -116,6 +117,28 @@ export async function getActivePanicSessions(
         startedAt: s.startedAt.toISOString(),
       })),
     );
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getPanicSessionsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const hasAuthorityRole = req.user?.role === 'AUTHORITY' || req.user?.role === 'ADMIN';
+    const hasLegacyAuthority = req.user?.authority === true;
+    if (!hasAuthorityRole && !hasLegacyAuthority) {
+      next(new AppError(403, 'Acceso restringido a autoridades'));
+      return;
+    }
+
+    const query = req.query as unknown as { page: number; pageSize: number; status?: 'ACTIVE' | 'DEACTIVATED' | 'TIMEOUT' };
+    const { items, total } = await panicRepo.findAllPaginated(query);
+
+    res.json({ items: items.map(toPanicSummaryDTO), total });
   } catch (err) {
     next(err);
   }

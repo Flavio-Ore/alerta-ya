@@ -12,12 +12,17 @@ vi.mock('../../../../core/config/prisma', () => ({
 
 vi.mock('firebase-admin/auth', () => ({
   getAuth: vi.fn(() => ({
-    verifyIdToken: vi.fn().mockResolvedValue({ uid: 'test-uid' }),
+    verifyIdToken: vi.fn().mockImplementation(async (token: string) => {
+      if (token === 'authority-token') return { uid: 'authority-uid', role: 'AUTHORITY' };
+      return { uid: 'test-uid' };
+    }),
   })),
 }));
 
 vi.mock('../../infrastructure/prisma-panic.repository', () => ({
-  PrismaPanicRepository: vi.fn().mockImplementation(() => ({})),
+  PrismaPanicRepository: vi.fn().mockImplementation(() => ({
+    findAllPaginated: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  })),
 }));
 vi.mock('../../infrastructure/prisma-escrow-key.repository', () => ({
   PrismaEscrowKeyRepository: vi.fn().mockImplementation(() => ({})),
@@ -163,5 +168,43 @@ describe('DELETE /panic/sessions/:id', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('DEACTIVATED');
+  });
+});
+
+describe('GET /panic/sessions', () => {
+  it('GIVEN sin token WHEN GET THEN 401', async () => {
+    const res = await request(app).get('/panic/sessions');
+    expect(res.status).toBe(401);
+  });
+
+  it('GIVEN ciudadano sin rol de autoridad WHEN GET THEN 403', async () => {
+    const res = await request(app)
+      .get('/panic/sessions')
+      .set('Authorization', 'Bearer citizen-token');
+    expect(res.status).toBe(403);
+  });
+
+  it('GIVEN autoridad WHEN GET sin query THEN 200 con items y total, page/pageSize por defecto', async () => {
+    const res = await request(app)
+      .get('/panic/sessions')
+      .set('Authorization', 'Bearer authority-token');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('items');
+    expect(res.body).toHaveProperty('total');
+  });
+
+  it('GIVEN status inválido WHEN GET THEN 400', async () => {
+    const res = await request(app)
+      .get('/panic/sessions?status=NOT_A_STATUS')
+      .set('Authorization', 'Bearer authority-token');
+    expect(res.status).toBe(400);
+  });
+
+  it('GIVEN page/pageSize válidos WHEN GET THEN 200', async () => {
+    const res = await request(app)
+      .get('/panic/sessions?page=2&pageSize=10')
+      .set('Authorization', 'Bearer authority-token');
+    expect(res.status).toBe(200);
   });
 });

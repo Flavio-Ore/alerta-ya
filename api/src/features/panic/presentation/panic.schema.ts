@@ -26,3 +26,9 @@ export const registerBlockSchema = z.object({
   blockIndex: z.number().int().min(0),
   storagePath: z.string().startsWith('gs://'),
 });
+
+export const listSessionsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  status: z.enum(['ACTIVE', 'DEACTIVATED', 'TIMEOUT']).optional(),
+});

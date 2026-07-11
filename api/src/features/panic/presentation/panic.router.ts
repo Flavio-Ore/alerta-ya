@@ -8,6 +8,7 @@ import {
   updateLocationSchema,
   escrowKeySchema,
   registerBlockSchema,
+  listSessionsQuerySchema,
 } from './panic.schema';
 import {
   startPanicSession,
@@ -18,12 +19,19 @@ import {
   submitEscrowKeyHandler,
   registerBlockHandler,
   releaseRecordingKeyHandler,
+  getPanicSessionsHandler,
 } from './panic.controller';
 
 const router = Router();
 
 // Autoridades autenticadas ven sesiones activas — solo coordenadas, sin PII
 router.get('/sessions/active', authMiddleware, getActivePanicSessions);
+router.get(
+  '/sessions',
+  authMiddleware,
+  validate(listSessionsQuerySchema, 'query'),
+  getPanicSessionsHandler,
+);
 router.post('/sessions', authMiddleware, validate(startPanicSchema), startPanicSession);
 router.delete('/sessions/:id', authMiddleware, validate(stopPanicParamsSchema, 'params'), stopPanicSession);
 router.patch(
