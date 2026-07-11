@@ -116,6 +116,12 @@ export function RecordingPlayer({ sessionId, recordingBlocksCount }: Props) {
     return (
       <div className="flex items-center gap-2 text-xs text-ay-critical">
         <AlertCircle size={14} /> {state.message}
+        <button
+          onClick={() => setState({ phase: 'idle' })}
+          className="underline font-black uppercase tracking-widest hover:no-underline"
+        >
+          Reintentar
+        </button>
       </div>
     );
   }
