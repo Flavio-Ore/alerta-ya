@@ -20,6 +20,7 @@ import {
   registerBlockHandler,
   releaseRecordingKeyHandler,
   getPanicSessionsHandler,
+  getPanicSessionDetailHandler,
 } from './panic.controller';
 
 const router = Router();
@@ -65,6 +66,15 @@ router.post(
   authMiddleware,
   validate(stopPanicParamsSchema, 'params'),
   releaseRecordingKeyHandler,
+);
+// Registrado al final de las rutas /sessions/:id/... para no arriesgar shadowing
+// de sub-rutas más específicas (aunque Express matchea segmentos exactos y
+// '/sessions/:id' no matchearía '/sessions/:id/location' de todos modos).
+router.get(
+  '/sessions/:id',
+  authMiddleware,
+  validate(stopPanicParamsSchema, 'params'),
+  getPanicSessionDetailHandler,
 );
 
 export { router as panicRouter };

@@ -144,6 +144,31 @@ export async function getPanicSessionsHandler(
   }
 }
 
+export async function getPanicSessionDetailHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const hasAuthorityRole = req.user?.role === 'AUTHORITY' || req.user?.role === 'ADMIN';
+    const hasLegacyAuthority = req.user?.authority === true;
+    if (!hasAuthorityRole && !hasLegacyAuthority) {
+      next(new AppError(403, 'Acceso restringido a autoridades'));
+      return;
+    }
+
+    const session = await panicRepo.findByIdWithCount(req.params['id']!);
+    if (!session) {
+      next(new AppError(404, 'Sesión no encontrada'));
+      return;
+    }
+
+    res.json(toPanicSummaryDTO(session));
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getEscrowPublicKeyHandler(
   _req: Request,
   res: Response,

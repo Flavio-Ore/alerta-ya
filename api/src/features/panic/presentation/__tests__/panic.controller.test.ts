@@ -22,6 +22,7 @@ vi.mock('firebase-admin/auth', () => ({
 vi.mock('../../infrastructure/prisma-panic.repository', () => ({
   PrismaPanicRepository: vi.fn().mockImplementation(() => ({
     findAllPaginated: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    findByIdWithCount: vi.fn().mockResolvedValue(null),
   })),
 }));
 vi.mock('../../infrastructure/prisma-escrow-key.repository', () => ({
@@ -65,6 +66,10 @@ vi.mock('../../domain/usecases/stop-panic.usecase', () => ({
 }));
 
 const { panicRouter } = await import('../panic.router');
+const { PrismaPanicRepository } = await import('../../infrastructure/prisma-panic.repository');
+const mockPanicRepoInstance = vi.mocked(PrismaPanicRepository).mock.results[0]!.value as {
+  findByIdWithCount: ReturnType<typeof vi.fn>;
+};
 
 const app = express();
 app.use(express.json());
@@ -206,5 +211,60 @@ describe('GET /panic/sessions', () => {
       .get('/panic/sessions?page=2&pageSize=10')
       .set('Authorization', 'Bearer authority-token');
     expect(res.status).toBe(200);
+  });
+});
+
+describe('GET /panic/sessions/:id', () => {
+  const sessionId = '11111111-1111-1111-1111-111111111111';
+
+  it('GIVEN sin token WHEN GET THEN 401', async () => {
+    const res = await request(app).get(`/panic/sessions/${sessionId}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('GIVEN ciudadano sin rol de autoridad WHEN GET THEN 403', async () => {
+    const res = await request(app)
+      .get(`/panic/sessions/${sessionId}`)
+      .set('Authorization', 'Bearer citizen-token');
+    expect(res.status).toBe(403);
+  });
+
+  it('GIVEN sesión no encontrada WHEN GET THEN 404', async () => {
+    mockPanicRepoInstance.findByIdWithCount.mockResolvedValueOnce(null);
+
+    const res = await request(app)
+      .get(`/panic/sessions/${sessionId}`)
+      .set('Authorization', 'Bearer authority-token');
+
+    expect(res.status).toBe(404);
+  });
+
+  it('GIVEN sesión encontrada WHEN GET con autoridad THEN 200 con el shape de PanicSessionSummaryDTO', async () => {
+    mockPanicRepoInstance.findByIdWithCount.mockResolvedValueOnce({
+      id: sessionId,
+      lat: -12.1167,
+      lng: -77.0372,
+      startedAt: new Date('2026-07-01T10:00:00.000Z'),
+      endedAt: new Date('2026-07-01T10:30:00.000Z'),
+      status: 'DEACTIVATED',
+      deactivatedBy: 'pin',
+      _count: { recordingBlocks: 3 },
+    });
+
+    const res = await request(app)
+      .get(`/panic/sessions/${sessionId}`)
+      .set('Authorization', 'Bearer authority-token');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      id: sessionId,
+      lat: -12.1167,
+      lng: -77.0372,
+      startedAt: '2026-07-01T10:00:00.000Z',
+      endedAt: '2026-07-01T10:30:00.000Z',
+      status: 'DEACTIVATED',
+      deactivatedBy: 'pin',
+      recordingBlocksCount: 3,
+    });
   });
 });

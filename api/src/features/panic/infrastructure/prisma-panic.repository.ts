@@ -70,6 +70,14 @@ export class PrismaPanicRepository implements PanicSessionRepository {
     return this.prisma.panicSession.findUnique({ where: { id } });
   }
 
+  async findByIdWithCount(id: string): Promise<PanicSessionWithCount | null> {
+    const session = await this.prisma.panicSession.findUnique({
+      where: { id },
+      include: { _count: { select: { recordingBlocks: true } } },
+    });
+    return session as PanicSessionWithCount | null;
+  }
+
   async deactivate(id: string, method: 'pin' | 'timeout'): Promise<PanicSession> {
     return this.prisma.panicSession.update({
       where: { id },

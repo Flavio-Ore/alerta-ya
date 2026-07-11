@@ -7,6 +7,7 @@ function makePrismaMock(findManyResult: unknown[], count: number) {
     panicSession: {
       findMany: vi.fn().mockResolvedValue(findManyResult),
       count: vi.fn().mockResolvedValue(count),
+      findUnique: vi.fn(),
     },
   };
 }
@@ -70,5 +71,29 @@ describe('PrismaPanicRepository.findAllPaginated', () => {
 
     expect(result.total).toBe(42);
     expect(result.items).toEqual([session]);
+  });
+});
+
+describe('PrismaPanicRepository.findByIdWithCount', () => {
+  it('THEN pide findUnique con include _count.recordingBlocks', async () => {
+    const prisma = makePrismaMock([], 0);
+    const repo = new PrismaPanicRepository(prisma as never);
+
+    await repo.findByIdWithCount('ses-1');
+
+    expect(prisma.panicSession.findUnique).toHaveBeenCalledWith({
+      where: { id: 'ses-1' },
+      include: { _count: { select: { recordingBlocks: true } } },
+    });
+  });
+
+  it('GIVEN sesión inexistente THEN devuelve null', async () => {
+    const prisma = makePrismaMock([], 0);
+    prisma.panicSession.findUnique.mockResolvedValue(null);
+    const repo = new PrismaPanicRepository(prisma as never);
+
+    const result = await repo.findByIdWithCount('ses-404');
+
+    expect(result).toBeNull();
   });
 });
