@@ -49,10 +49,7 @@ export default function PanicSessionDetailPage() {
   return (
     <div className="flex-1 overflow-auto p-4 md:p-8 space-y-6 bg-stitch-surface">
       <button
-        // `/panic` aún no existe en el routeTree registrado (App.tsx) — lo agrega
-        // la Task 8 al wiring de rutas. El cast se puede quitar una vez esa ruta
-        // esté registrada; hasta entonces es necesario para que tsc no falle.
-        onClick={() => navigate({ to: '/panic' as never })}
+        onClick={() => navigate({ to: '/panic' })}
         className="flex items-center gap-2 text-xs text-ay-text-secondary hover:text-white transition-colors"
       >
         <ArrowLeft size={14} /> Volver al listado

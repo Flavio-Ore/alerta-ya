@@ -5,6 +5,7 @@ interface NavItem {
   to:
     | "/dashboard"
     | "/incidents"
+    | "/panic"
     | "/predictions"
     | "/statistics"
     | "/export"
@@ -16,6 +17,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", label: "Mapa en Vivo", icon: "map" },
   { to: "/incidents", label: "Incidentes", icon: "assignment_late" },
+  { to: "/panic", label: "Pánico", icon: "sos" },
   // Oculto hasta Fase 2b: la predicción real requiere datos propios con hora
   // (flywheel). Hoy solo hay riesgo histórico, que vive en Estadísticas.
   // { to: "/predictions", label: "Predicciones IA", icon: "psychology" },

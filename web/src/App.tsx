@@ -16,7 +16,10 @@ import DashboardPage from "./features/dashboard/pages/DashboardPage";
 import ExportPage from "./features/export/pages/ExportPage";
 import IncidentDetailPage from "./features/incidents/pages/IncidentDetailPage";
 import IncidentsListPage from "./features/incidents/pages/IncidentsListPage";
+import PanicSessionsListPage from "./features/panic/pages/PanicSessionsListPage";
+import PanicSessionDetailPage from "./features/panic/pages/PanicSessionDetailPage";
 import PredictionsPage from "./features/predictions/pages/PredictionsPage";
+import type { PanicSessionSummaryDTO } from "./core/api/types";
 import StatisticsPage from "./features/statistics/pages/StatisticsPage";
 
 function isAuthorized() {
@@ -113,6 +116,18 @@ const incidentDetailRoute = createRoute({
   component: IncidentDetailPage,
 });
 
+const panicSessionsRoute = createRoute({
+  getParentRoute: () => authLayoutRoute,
+  path: "/panic",
+  component: PanicSessionsListPage,
+});
+
+const panicSessionDetailRoute = createRoute({
+  getParentRoute: () => authLayoutRoute,
+  path: "/panic/$sessionId",
+  component: PanicSessionDetailPage,
+});
+
 const predictionsRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: "/predictions",
@@ -149,6 +164,8 @@ const routeTree = rootRoute.addChildren([
     dashboardRoute,
     incidentsRoute,
     incidentDetailRoute,
+    panicSessionsRoute,
+    panicSessionDetailRoute,
     predictionsRoute,
     statisticsRoute,
     exportRoute,
@@ -164,6 +181,15 @@ const router = createRouter({
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
+  }
+}
+
+// Estado tipado para la navegación programática de la sección Pánico:
+// PanicSessionsListPage pasa la sesión completa via `state` al navegar a
+// `/panic/$sessionId`, evitando un refetch inmediato en el detalle.
+declare module "@tanstack/history" {
+  interface HistoryState {
+    session?: PanicSessionSummaryDTO;
   }
 }
 
