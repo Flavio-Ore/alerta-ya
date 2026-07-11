@@ -2,15 +2,26 @@ import { Request, Response, NextFunction } from 'express';
 
 import { prisma } from '../../../core/config/prisma';
 import { PrismaPanicRepository } from '../infrastructure/prisma-panic.repository';
+import { PrismaEscrowKeyRepository } from '../infrastructure/prisma-escrow-key.repository';
+import { PrismaRecordingBlockRepository } from '../infrastructure/prisma-recording-block.repository';
+import { PrismaKeyAccessAuditRepository } from '../infrastructure/prisma-key-access-audit.repository';
 import { UserLookupService } from '../../incidents/infrastructure/user-lookup.service';
 import { startPanic } from '../domain/usecases/start-panic.usecase';
 import { stopPanic } from '../domain/usecases/stop-panic.usecase';
 import { updatePanicLocation } from '../domain/usecases/update-panic-location.usecase';
+import { getEscrowPublicKey, unwrapEscrowKey } from '../../../core/config/kms';
+import { getSignedUrl } from '../../../core/config/firebase';
+import { storeEscrowKey } from '../domain/usecases/store-escrow-key.usecase';
+import { registerRecordingBlock } from '../domain/usecases/register-recording-block.usecase';
+import { releaseRecordingKey } from '../domain/usecases/release-recording-key.usecase';
 import { AppError } from '../../../core/errors/AppError';
 import { eventBus, PanicEvents } from '../../../core/events/event-bus';
 
 const panicRepo = new PrismaPanicRepository(prisma);
 const userLookup = new UserLookupService(prisma);
+const escrowKeyRepo = new PrismaEscrowKeyRepository(prisma);
+const recordingBlockRepo = new PrismaRecordingBlockRepository(prisma);
+const keyAccessAuditRepo = new PrismaKeyAccessAuditRepository(prisma);
 
 export async function startPanicSession(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -105,6 +116,100 @@ export async function getActivePanicSessions(
         startedAt: s.startedAt.toISOString(),
       })),
     );
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getEscrowPublicKeyHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { publicKeyPem, keyVersion } = await getEscrowPublicKey();
+    res.json({ publicKeyPem, kmsKeyVersion: keyVersion });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function submitEscrowKeyHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user?.uid) {
+      next(new AppError(401, 'No autenticado'));
+      return;
+    }
+    const body = req.body as { wrappedKey: string; kmsKeyVersion: string; algorithm: string };
+    await storeEscrowKey(
+      { panicSessionId: req.params['id']!, uid: req.user.uid, ...body },
+      {
+        panicRepo,
+        escrowRepo: escrowKeyRepo,
+        getUserId: async (uid) => (await userLookup.findOrCreate(uid)).id,
+      },
+    );
+    res.status(201).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function registerBlockHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user?.uid) {
+      next(new AppError(401, 'No autenticado'));
+      return;
+    }
+    const body = req.body as { blockIndex: number; storagePath: string };
+    await registerRecordingBlock(
+      { panicSessionId: req.params['id']!, uid: req.user.uid, ...body },
+      {
+        panicRepo,
+        blockRepo: recordingBlockRepo,
+        getUserId: async (uid) => (await userLookup.findOrCreate(uid)).id,
+      },
+    );
+    res.status(201).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function releaseRecordingKeyHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user?.uid) {
+      next(new AppError(401, 'No autenticado'));
+      return;
+    }
+    const requester = await userLookup.findOrCreate(req.user.uid);
+    const result = await releaseRecordingKey(
+      {
+        panicSessionId: req.params['id']!,
+        requestedById: requester.id,
+        ipAddress: req.ip ?? null,
+      },
+      {
+        escrowRepo: escrowKeyRepo,
+        blockRepo: recordingBlockRepo,
+        auditRepo: keyAccessAuditRepo,
+        unwrapKey: unwrapEscrowKey,
+        getSignedUrl,
+      },
+    );
+    res.json(result);
   } catch (err) {
     next(err);
   }

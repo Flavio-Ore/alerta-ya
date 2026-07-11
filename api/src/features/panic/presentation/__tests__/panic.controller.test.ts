@@ -19,6 +19,22 @@ vi.mock('firebase-admin/auth', () => ({
 vi.mock('../../infrastructure/prisma-panic.repository', () => ({
   PrismaPanicRepository: vi.fn().mockImplementation(() => ({})),
 }));
+vi.mock('../../infrastructure/prisma-escrow-key.repository', () => ({
+  PrismaEscrowKeyRepository: vi.fn().mockImplementation(() => ({})),
+}));
+vi.mock('../../infrastructure/prisma-recording-block.repository', () => ({
+  PrismaRecordingBlockRepository: vi.fn().mockImplementation(() => ({})),
+}));
+vi.mock('../../infrastructure/prisma-key-access-audit.repository', () => ({
+  PrismaKeyAccessAuditRepository: vi.fn().mockImplementation(() => ({})),
+}));
+vi.mock('../../../../core/config/kms', () => ({
+  getEscrowPublicKey: vi.fn(),
+  unwrapEscrowKey: vi.fn(),
+}));
+vi.mock('../../../../core/config/firebase', () => ({
+  getSignedUrl: vi.fn(),
+}));
 
 vi.mock('../../../incidents/infrastructure/user-lookup.service', () => ({
   UserLookupService: vi.fn().mockImplementation(() => ({

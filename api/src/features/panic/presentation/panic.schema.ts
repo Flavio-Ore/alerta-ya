@@ -15,3 +15,14 @@ export const updateLocationSchema = z.object({
 });
 
 export type StartPanicInput = z.infer<typeof startPanicSchema>;
+
+export const escrowKeySchema = z.object({
+  wrappedKey: z.string().min(1),
+  kmsKeyVersion: z.string().min(1),
+  algorithm: z.literal('RSA_OAEP_256'),
+});
+
+export const registerBlockSchema = z.object({
+  blockIndex: z.number().int().min(0),
+  storagePath: z.string().startsWith('gs://'),
+});

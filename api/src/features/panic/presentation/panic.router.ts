@@ -1,13 +1,24 @@
 import { Router } from 'express';
 
 import { authMiddleware } from '../../../core/middleware/auth.middleware';
+import { authorityMiddleware } from '../../../core/middleware/authority.middleware';
 import { validate } from '../../../core/middleware/validate.middleware';
-import { startPanicSchema, stopPanicParamsSchema, updateLocationSchema } from './panic.schema';
+import {
+  startPanicSchema,
+  stopPanicParamsSchema,
+  updateLocationSchema,
+  escrowKeySchema,
+  registerBlockSchema,
+} from './panic.schema';
 import {
   startPanicSession,
   stopPanicSession,
   getActivePanicSessions,
   updatePanicLocationHandler,
+  getEscrowPublicKeyHandler,
+  submitEscrowKeyHandler,
+  registerBlockHandler,
+  releaseRecordingKeyHandler,
 } from './panic.controller';
 
 const router = Router();
@@ -22,6 +33,29 @@ router.patch(
   validate(stopPanicParamsSchema, 'params'),
   validate(updateLocationSchema),
   updatePanicLocationHandler,
+);
+
+router.get('/escrow/public-key', authMiddleware, getEscrowPublicKeyHandler);
+router.post(
+  '/sessions/:id/escrow-key',
+  authMiddleware,
+  validate(stopPanicParamsSchema, 'params'),
+  validate(escrowKeySchema),
+  submitEscrowKeyHandler,
+);
+router.post(
+  '/sessions/:id/blocks',
+  authMiddleware,
+  validate(stopPanicParamsSchema, 'params'),
+  validate(registerBlockSchema),
+  registerBlockHandler,
+);
+router.post(
+  '/sessions/:id/recordings/access',
+  authMiddleware,
+  authorityMiddleware,
+  validate(stopPanicParamsSchema, 'params'),
+  releaseRecordingKeyHandler,
 );
 
 export { router as panicRouter };
