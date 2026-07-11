@@ -81,6 +81,8 @@ import 'package:alertaya/features/my_reports/domain/usecases/watch_my_reports_us
     as _i972;
 import 'package:alertaya/features/my_reports/presentation/bloc/my_reports_bloc.dart'
     as _i250;
+import 'package:alertaya/features/panic/data/datasources/escrow_remote_datasource.dart'
+    as _i132;
 import 'package:alertaya/features/panic/data/datasources/panic_remote_datasource.dart'
     as _i973;
 import 'package:alertaya/features/panic/data/repositories/panic_repository_impl.dart'
@@ -212,6 +214,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i614.TutorialLocalDataSourceImpl());
     gh.lazySingleton<_i35.ReportRemoteDataSource>(
         () => _i35.ReportRemoteDataSourceImpl(gh<_i361.Dio>()));
+    gh.lazySingleton<_i132.EscrowRemoteDataSource>(
+        () => _i132.EscrowRemoteDataSourceImpl(gh<_i361.Dio>()));
     gh.lazySingleton<_i857.NetworkInfo>(
         () => _i857.NetworkInfoImpl(gh<_i895.Connectivity>()));
     gh.lazySingleton<_i512.IncidentRepository>(
