@@ -158,3 +158,5 @@ temp/
 # AI tooling docs — local only
 CLAUDE.md
 AGENTS.md
+docs/superpowers/
+.superpowers/
