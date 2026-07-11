@@ -145,3 +145,45 @@ export interface EvidenceItemDTO {
 export interface IncidentEvidenceDTO {
   evidence: EvidenceItemDTO[];
 }
+
+export type PanicSessionStatus = 'ACTIVE' | 'DEACTIVATED' | 'TIMEOUT';
+
+/**
+ * Resumen de sesión de pánico (activa o histórica) — GET /panic/sessions.
+ * NUNCA contiene userId, nombre ni datos personales del ciudadano.
+ */
+export interface PanicSessionSummaryDTO {
+  id: string;
+  lat: number;
+  lng: number;
+  startedAt: string; // ISO
+  endedAt: string | null; // ISO
+  status: PanicSessionStatus;
+  deactivatedBy: string | null;
+  recordingBlocksCount: number;
+}
+
+export interface ListPanicSessionsQuery {
+  page?: number;
+  pageSize?: number;
+  status?: PanicSessionStatus;
+}
+
+export interface ListPanicSessionsResult {
+  items: PanicSessionSummaryDTO[];
+  total: number;
+}
+
+/**
+ * Respuesta de POST /panic/sessions/:id/recordings/access.
+ * `aesKey` NUNCA debe persistirse — solo vive en memoria del hook que la usa.
+ */
+export interface ReleasedRecordingBlockDTO {
+  index: number;
+  url: string;
+}
+
+export interface ReleaseRecordingKeyResult {
+  aesKey: string; // base64
+  blocks: ReleasedRecordingBlockDTO[];
+}
