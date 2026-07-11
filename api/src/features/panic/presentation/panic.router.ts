@@ -1,7 +1,6 @@
 import { Router } from 'express';
 
 import { authMiddleware } from '../../../core/middleware/auth.middleware';
-import { authorityMiddleware } from '../../../core/middleware/authority.middleware';
 import { validate } from '../../../core/middleware/validate.middleware';
 import {
   startPanicSchema,
@@ -50,10 +49,12 @@ router.post(
   validate(registerBlockSchema),
   registerBlockHandler,
 );
+// El check de rol de autoridad se hace dentro de releaseRecordingKeyHandler
+// (no con authorityMiddleware) porque un intento denegado debe quedar
+// registrado en KeyAccessAudit antes de responder 403.
 router.post(
   '/sessions/:id/recordings/access',
   authMiddleware,
-  authorityMiddleware,
   validate(stopPanicParamsSchema, 'params'),
   releaseRecordingKeyHandler,
 );

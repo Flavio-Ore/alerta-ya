@@ -17,9 +17,21 @@ export async function getEscrowPublicKey(): Promise<{ publicKeyPem: string; keyV
   return { publicKeyPem: publicKey.pem, keyVersion: version };
 }
 
-export async function unwrapEscrowKey(wrappedKey: Buffer, keyVersion: string): Promise<Buffer> {
+/**
+ * Desenvuelve una clave de escrow usando el recurso KMS con el que fue
+ * envuelta originalmente (kmsKeyName + kmsKeyVersion guardados en DB), NO el
+ * reconstruido desde las env vars actuales. Si el key ring o el proyecto KMS
+ * rotan después del escrow, reconstruir desde env produciría un resource name
+ * distinto al usado para envolver la clave y el unwrap fallaría en silencio
+ * contra la clave equivocada.
+ */
+export async function unwrapEscrowKey(
+  wrappedKey: Buffer,
+  kmsKeyName: string,
+  kmsKeyVersion: string,
+): Promise<Buffer> {
   const [result] = await client.asymmetricDecrypt({
-    name: keyVersionName(keyVersion),
+    name: `${kmsKeyName}/cryptoKeyVersions/${kmsKeyVersion}`,
     ciphertext: wrappedKey,
   });
   if (!result.plaintext) {

@@ -7,6 +7,7 @@ export interface StoreEscrowKeyData {
 
 export interface StoredEscrowKey {
   wrappedKey: Buffer;
+  kmsKeyName: string;
   kmsKeyVersion: string;
 }
 

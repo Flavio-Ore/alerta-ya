@@ -31,6 +31,7 @@ describe('releaseRecordingKey', () => {
   it('GIVEN escrow y bloques existentes WHEN se llama THEN devuelve la clave y las URLs, y audita SUCCESS', async () => {
     mockEscrowRepo.findBySessionId.mockResolvedValue({
       wrappedKey: Buffer.from('wrapped'),
+      kmsKeyName: 'projects/p/locations/global/keyRings/r/cryptoKeys/k',
       kmsKeyVersion: '1',
     });
     mockBlockRepo.findBySessionId.mockResolvedValue([
@@ -42,6 +43,11 @@ describe('releaseRecordingKey', () => {
 
     const result = await releaseRecordingKey(baseInput, deps);
 
+    expect(unwrapKey).toHaveBeenCalledWith(
+      Buffer.from('wrapped'),
+      'projects/p/locations/global/keyRings/r/cryptoKeys/k',
+      '1',
+    );
     expect(result.aesKey).toBe(Buffer.from('clave-aes').toString('base64'));
     expect(result.blocks).toEqual([
       { index: 0, url: 'https://signed/gs://bucket/block_0.bin' },
@@ -70,6 +76,7 @@ describe('releaseRecordingKey', () => {
   it('GIVEN bloques sin URL firmable WHEN se llama THEN los omite del resultado', async () => {
     mockEscrowRepo.findBySessionId.mockResolvedValue({
       wrappedKey: Buffer.from('wrapped'),
+      kmsKeyName: 'projects/p/locations/global/keyRings/r/cryptoKeys/k',
       kmsKeyVersion: '1',
     });
     mockBlockRepo.findBySessionId.mockResolvedValue([

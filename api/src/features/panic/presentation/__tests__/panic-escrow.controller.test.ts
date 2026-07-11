@@ -26,8 +26,9 @@ vi.mock('../../infrastructure/prisma-escrow-key.repository', () => ({
 vi.mock('../../infrastructure/prisma-recording-block.repository', () => ({
   PrismaRecordingBlockRepository: vi.fn().mockImplementation(() => ({})),
 }));
+const auditCreateMock = vi.fn().mockResolvedValue(undefined);
 vi.mock('../../infrastructure/prisma-key-access-audit.repository', () => ({
-  PrismaKeyAccessAuditRepository: vi.fn().mockImplementation(() => ({})),
+  PrismaKeyAccessAuditRepository: vi.fn().mockImplementation(() => ({ create: auditCreateMock })),
 }));
 vi.mock('../../../incidents/infrastructure/user-lookup.service', () => ({
   UserLookupService: vi.fn().mockImplementation(() => ({
@@ -130,5 +131,21 @@ describe('POST /panic/sessions/:id/recordings/access', () => {
       .set('Authorization', 'Bearer citizen-token');
 
     expect(res.status).toBe(403);
+  });
+
+  it('audita DENIED cuando un ciudadano sin rol de autoridad intenta acceder', async () => {
+    auditCreateMock.mockClear();
+
+    const res = await request(app)
+      .post('/panic/sessions/11111111-1111-1111-1111-111111111111/recordings/access')
+      .set('Authorization', 'Bearer citizen-token');
+
+    expect(res.status).toBe(403);
+    expect(auditCreateMock).toHaveBeenCalledWith({
+      panicSessionId: '11111111-1111-1111-1111-111111111111',
+      requestedById: 'user-id',
+      ipAddress: expect.anything(),
+      result: 'DENIED',
+    });
   });
 });

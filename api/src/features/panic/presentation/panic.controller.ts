@@ -195,6 +195,20 @@ export async function releaseRecordingKeyHandler(
       return;
     }
     const requester = await userLookup.findOrCreate(req.user.uid);
+
+    const hasAuthorityRole = req.user.role === 'AUTHORITY' || req.user.role === 'ADMIN';
+    const hasLegacyAuthority = req.user.authority === true;
+    if (!hasAuthorityRole && !hasLegacyAuthority) {
+      await keyAccessAuditRepo.create({
+        panicSessionId: req.params['id']!,
+        requestedById: requester.id,
+        ipAddress: req.ip ?? null,
+        result: 'DENIED',
+      });
+      next(new AppError(403, 'Acceso restringido a autoridades'));
+      return;
+    }
+
     const result = await releaseRecordingKey(
       {
         panicSessionId: req.params['id']!,

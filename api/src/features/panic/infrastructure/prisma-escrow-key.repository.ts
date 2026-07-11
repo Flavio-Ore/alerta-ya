@@ -25,6 +25,10 @@ export class PrismaEscrowKeyRepository implements EscrowKeyRepository {
   async findBySessionId(panicSessionId: string): Promise<StoredEscrowKey | null> {
     const row = await this.prisma.panicSessionKey.findUnique({ where: { panicSessionId } });
     if (!row) return null;
-    return { wrappedKey: Buffer.from(row.wrappedKey), kmsKeyVersion: row.kmsKeyVersion };
+    return {
+      wrappedKey: Buffer.from(row.wrappedKey),
+      kmsKeyName: row.kmsKeyName,
+      kmsKeyVersion: row.kmsKeyVersion,
+    };
   }
 }

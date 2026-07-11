@@ -13,7 +13,7 @@ export interface ReleaseRecordingKeyDeps {
   escrowRepo: EscrowKeyRepository;
   blockRepo: RecordingBlockRepository;
   auditRepo: KeyAccessAuditRepository;
-  unwrapKey: (wrappedKey: Buffer, keyVersion: string) => Promise<Buffer>;
+  unwrapKey: (wrappedKey: Buffer, kmsKeyName: string, kmsKeyVersion: string) => Promise<Buffer>;
   getSignedUrl: (storagePath: string) => Promise<string | null>;
 }
 
@@ -37,7 +37,7 @@ export async function releaseRecordingKey(
       throw new AppError(404, 'No hay clave de escrow para esta sesión');
     }
 
-    const aesKeyBuffer = await deps.unwrapKey(escrow.wrappedKey, escrow.kmsKeyVersion);
+    const aesKeyBuffer = await deps.unwrapKey(escrow.wrappedKey, escrow.kmsKeyName, escrow.kmsKeyVersion);
     const storedBlocks = await deps.blockRepo.findBySessionId(input.panicSessionId);
 
     const blocks: ReleasedBlock[] = [];

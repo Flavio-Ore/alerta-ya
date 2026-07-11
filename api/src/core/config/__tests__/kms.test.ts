@@ -47,15 +47,17 @@ describe('kms', () => {
     await expect(getEscrowPublicKey()).rejects.toThrow();
   });
 
-  it('unwrapEscrowKey devuelve el buffer plaintext', async () => {
+  it('unwrapEscrowKey devuelve el buffer plaintext usando el kmsKeyName guardado, no el reconstruido desde env', async () => {
     asymmetricDecryptMock.mockResolvedValue([{ plaintext: Buffer.from('clave-secreta') }]);
     const { unwrapEscrowKey } = await import('../kms');
 
-    const result = await unwrapEscrowKey(Buffer.from('wrapped'), '1');
+    const storedKeyName =
+      'projects/otro-project/locations/global/keyRings/otro-ring/cryptoKeys/otra-key';
+    const result = await unwrapEscrowKey(Buffer.from('wrapped'), storedKeyName, '1');
 
     expect(result.toString()).toBe('clave-secreta');
     expect(asymmetricDecryptMock).toHaveBeenCalledWith({
-      name: 'projects/test-project/locations/global/keyRings/panic-escrow/cryptoKeys/panic-escrow-key/cryptoKeyVersions/1',
+      name: 'projects/otro-project/locations/global/keyRings/otro-ring/cryptoKeys/otra-key/cryptoKeyVersions/1',
       ciphertext: Buffer.from('wrapped'),
     });
   });
@@ -64,6 +66,8 @@ describe('kms', () => {
     asymmetricDecryptMock.mockResolvedValue([{ plaintext: null }]);
     const { unwrapEscrowKey } = await import('../kms');
 
-    await expect(unwrapEscrowKey(Buffer.from('wrapped'), '1')).rejects.toThrow();
+    const storedKeyName =
+      'projects/test-project/locations/global/keyRings/panic-escrow/cryptoKeys/panic-escrow-key';
+    await expect(unwrapEscrowKey(Buffer.from('wrapped'), storedKeyName, '1')).rejects.toThrow();
   });
 });
