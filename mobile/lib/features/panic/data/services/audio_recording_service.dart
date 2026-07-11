@@ -10,6 +10,7 @@ import 'package:record/record.dart';
 import 'package:alertaya/core/constants/app_constants.dart';
 import 'package:alertaya/core/storage/secure_storage_service.dart';
 import 'package:alertaya/core/utils/encryption_util.dart';
+import 'package:alertaya/features/panic/data/services/escrow_confirmation_guard.dart';
 import 'package:alertaya/features/panic/data/services/escrow_key_submitter.dart';
 
 const _kEncryptionKey = 'panic_recording_key';
@@ -38,7 +39,7 @@ class AudioRecordingService {
   int _blockNumber = 0;
   bool _isRecording = false;
   late Uint8List _encryptionKey;
-  bool _escrowConfirmed = false;
+  final _escrowGuard = EscrowConfirmationGuard();
 
   bool get isRecording => _isRecording;
 
@@ -49,7 +50,10 @@ class AudioRecordingService {
     _sessionId = sessionId;
     _blockNumber = 0;
     _isRecording = true;
-    _escrowConfirmed = false;
+    // resetFor invalida cualquier tarea de escrow huérfana de una sesión
+    // anterior: si esa tarea resuelve más tarde, su resultado ya no podrá
+    // marcar como confirmada la clave de ESTA sesión.
+    _escrowGuard.resetFor(sessionId);
 
     // Clave AES-256 nueva por sesión — nunca se reutiliza entre pánicos.
     _encryptionKey = EncryptionUtil.generateKey();
@@ -57,7 +61,7 @@ class AudioRecordingService {
 
     // Escrow en paralelo: no bloquea el inicio de la grabación (emergencia
     // primero), pero stop() no borra la clave hasta que esto confirme.
-    unawaited(_submitEscrowKey());
+    unawaited(_submitEscrowKey(sessionId));
 
     await _startBlock();
 
@@ -74,10 +78,13 @@ class AudioRecordingService {
     );
   }
 
-  Future<void> _submitEscrowKey() async {
-    _escrowConfirmed = await _escrowSubmitter.submit(
-      sessionId: _sessionId!,
-      aesKey: _encryptionKey,
+  /// Lanza el envío de escrow para [sessionId], capturado como parámetro
+  /// (no releído de [_sessionId] al resolver) para que el guard pueda
+  /// detectar si sigue siendo la sesión activa cuando la tarea termine.
+  Future<void> _submitEscrowKey(String sessionId) {
+    return _escrowGuard.submit(
+      sessionId,
+      () => _escrowSubmitter.submit(sessionId: sessionId, aesKey: _encryptionKey),
     );
   }
 
@@ -106,14 +113,21 @@ class AudioRecordingService {
   /// la clave local si el escrow terminó confirmado — si no, la clave
   /// permanece en secure storage para un reintento en una futura sesión.
   Future<void> confirmUploadsAndClearKey() async {
-    if (!_escrowConfirmed) {
-      _escrowConfirmed = await _escrowSubmitter.submit(
-        sessionId: _sessionId!,
-        aesKey: _encryptionKey,
-        attempts: 1,
+    final sessionId = _sessionId!;
+    if (!_escrowGuard.confirmed) {
+      // Si el envío en segundo plano lanzado por start() todavía está en
+      // curso para ESTA sesión, el guard reutiliza esa misma tarea en vez
+      // de disparar una llamada de red duplicada al backend de escrow.
+      await _escrowGuard.submit(
+        sessionId,
+        () => _escrowSubmitter.submit(
+          sessionId: sessionId,
+          aesKey: _encryptionKey,
+          attempts: 1,
+        ),
       );
     }
-    if (_escrowConfirmed) {
+    if (_escrowGuard.confirmed) {
       await _storage.delete(_kEncryptionKey);
     } else {
       debugPrint(
