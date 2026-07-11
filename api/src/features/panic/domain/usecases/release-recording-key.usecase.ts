@@ -57,12 +57,16 @@ export async function releaseRecordingKey(
 
     return { aesKey: aesKeyBuffer.toString('base64'), blocks };
   } catch (err) {
-    await deps.auditRepo.create({
-      panicSessionId: input.panicSessionId,
-      requestedById: input.requestedById,
-      ipAddress: input.ipAddress,
-      result: 'ERROR',
-    });
+    try {
+      await deps.auditRepo.create({
+        panicSessionId: input.panicSessionId,
+        requestedById: input.requestedById,
+        ipAddress: input.ipAddress,
+        result: 'ERROR',
+      });
+    } catch (auditErr) {
+      console.error('[releaseRecordingKey] fallo al escribir el audit log de ERROR', auditErr);
+    }
     throw err;
   }
 }

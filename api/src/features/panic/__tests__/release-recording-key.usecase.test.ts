@@ -82,4 +82,13 @@ describe('releaseRecordingKey', () => {
 
     expect(result.blocks).toEqual([]);
   });
+
+  it('GIVEN falla auditRepo.create en el catch block THEN aún propaga el error original, no el error del audit', async () => {
+    mockEscrowRepo.findBySessionId.mockResolvedValue(null);
+    const originalError = new AppError(404, 'No hay clave de escrow para esta sesión');
+    const auditError = new Error('DB unreachable during audit');
+    mockAuditRepo.create.mockRejectedValue(auditError);
+
+    await expect(releaseRecordingKey(baseInput, deps)).rejects.toThrow(originalError);
+  });
 });
