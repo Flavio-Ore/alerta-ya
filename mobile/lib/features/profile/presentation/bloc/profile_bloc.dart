@@ -24,14 +24,18 @@ class ProfileAlertRadiusChanged extends ProfileEvent {
   final int meters;
 }
 
-class ProfilePanicRecordAudioToggled extends ProfileEvent {
-  const ProfilePanicRecordAudioToggled({required this.enabled});
-  final bool enabled;
-}
-
-class ProfilePanicAlarmSoundToggled extends ProfileEvent {
-  const ProfilePanicAlarmSoundToggled({required this.enabled});
-  final bool enabled;
+/// Un solo evento para las dos flags del modo de emergencia — deben viajar
+/// juntas en un único PATCH. Despacharlas como dos eventos separados corría
+/// dos requests concurrentes que competían por el mismo `emit`, y el que
+/// resolvía último podía pisar el cambio recién aplicado por el otro con un
+/// valor desactualizado del campo que no le correspondía.
+class ProfilePanicModeChanged extends ProfileEvent {
+  const ProfilePanicModeChanged({
+    required this.recordAudio,
+    required this.alarmSound,
+  });
+  final bool recordAudio;
+  final bool alarmSound;
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -67,8 +71,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<ProfileLoaded>(_onLoaded);
     on<ProfileMuteToggled>(_onMuteToggled);
     on<ProfileAlertRadiusChanged>(_onAlertRadiusChanged);
-    on<ProfilePanicRecordAudioToggled>(_onPanicRecordAudioToggled);
-    on<ProfilePanicAlarmSoundToggled>(_onPanicAlarmSoundToggled);
+    on<ProfilePanicModeChanged>(_onPanicModeChanged);
   }
 
   final MeRemoteDataSource _dataSource;
@@ -132,41 +135,23 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     }
   }
 
-  Future<void> _onPanicRecordAudioToggled(
-      ProfilePanicRecordAudioToggled event, Emitter<ProfileState> emit) async {
+  Future<void> _onPanicModeChanged(
+      ProfilePanicModeChanged event, Emitter<ProfileState> emit) async {
     final current = state;
     if (current is! ProfileData) return;
 
     emit(ProfileData(
       profile: current.profile,
-      preferences:
-          current.preferences.copyWith(panicRecordAudio: event.enabled),
+      preferences: current.preferences.copyWith(
+        panicRecordAudio: event.recordAudio,
+        panicAlarmSound: event.alarmSound,
+      ),
     ));
 
     try {
       final updated = await _dataSource.updatePreferences(
-        panicRecordAudio: event.enabled,
-      );
-      emit(ProfileData(profile: current.profile, preferences: updated));
-    } catch (_) {
-      emit(current);
-    }
-  }
-
-  Future<void> _onPanicAlarmSoundToggled(
-      ProfilePanicAlarmSoundToggled event, Emitter<ProfileState> emit) async {
-    final current = state;
-    if (current is! ProfileData) return;
-
-    emit(ProfileData(
-      profile: current.profile,
-      preferences:
-          current.preferences.copyWith(panicAlarmSound: event.enabled),
-    ));
-
-    try {
-      final updated = await _dataSource.updatePreferences(
-        panicAlarmSound: event.enabled,
+        panicRecordAudio: event.recordAudio,
+        panicAlarmSound: event.alarmSound,
       );
       emit(ProfileData(profile: current.profile, preferences: updated));
     } catch (_) {

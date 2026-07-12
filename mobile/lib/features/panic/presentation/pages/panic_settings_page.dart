@@ -143,11 +143,13 @@ class _PanicSettingsPageState extends State<PanicSettingsPage> {
   }
 
   Future<void> _onModeSelected(PanicMode mode, BuildContext context) async {
+    // Un solo evento con las dos flags — evita la carrera de dos PATCH
+    // concurrentes pisándose entre sí (ver comentario en ProfilePanicModeChanged).
     context.read<ProfileBloc>().add(
-          ProfilePanicRecordAudioToggled(enabled: mode.recordAudio),
-        );
-    context.read<ProfileBloc>().add(
-          ProfilePanicAlarmSoundToggled(enabled: mode.alarmSound),
+          ProfilePanicModeChanged(
+            recordAudio: mode.recordAudio,
+            alarmSound: mode.alarmSound,
+          ),
         );
     // Escribir en SecureStorage para que la activación por botón de volumen
     // (que no tiene acceso al ProfileBloc) lea el modo correcto incluso si

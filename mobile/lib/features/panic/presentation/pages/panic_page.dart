@@ -70,7 +70,16 @@ class _PanicPageState extends State<PanicPage> {
   }
 
   Future<void> _onSosTap() async {
-    await _requestPanicActivation(PanicMode.noise);
+    await _requestPanicActivation(_configuredMode());
+  }
+
+  /// El botón SOS debe respetar el modo elegido en Ajustes, no forzar alarma
+  /// siempre — mismo criterio que usa `_PanicStatusPillsRow` para mostrar el
+  /// estado en esta misma pantalla.
+  PanicMode _configuredMode() {
+    final profileState = context.read<ProfileBloc>().state;
+    final prefs = profileState is ProfileData ? profileState.preferences : null;
+    return (prefs?.panicAlarmSound ?? true) ? PanicMode.noise : PanicMode.silent;
   }
 
   Future<void> _onModeSelected(PanicMode mode) async {
