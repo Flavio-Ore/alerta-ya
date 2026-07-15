@@ -49,7 +49,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --region "$REGION" \
   --allow-unauthenticated \
   --add-cloudsql-instances="alertaya-1b963:us-central1:alertaya-db" \
-  --set-env-vars="NODE_ENV=production,DATABASE_URL=postgresql://postgres:superadmin-integrador-2@localhost/alertaya_prod?host=/cloudsql/alertaya-1b963:us-central1:alertaya-db,JWT_SECRET=placeholder_secret_key_minimum_32_characters_long"
+  --set-env-vars="NODE_ENV=production,DATABASE_URL=postgresql://postgres:superadmin-integrador-2@localhost/alertaya_prod?host=/cloudsql/alertaya-1b963:us-central1:alertaya-db,JWT_SECRET=placeholder_secret_key_minimum_32_characters_long,ML_SERVICE_URL=https://alertaya-ml-562740646244.us-central1.run.app"
 
 echo "✅ API successfully deployed!"
 echo "Please configure the remaining database and secret variables in the Cloud Run Console or via command line:"
