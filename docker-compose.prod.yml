@@ -77,6 +77,15 @@ services:
     depends_on:
       - api
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: alertaya-tunnel
+    restart: always
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    depends_on:
+      - api
+      - web
+
 volumes:
   postgres_data:
   redis_data:
