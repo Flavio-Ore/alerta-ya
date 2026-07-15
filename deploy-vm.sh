@@ -33,8 +33,7 @@ if [ ! -f api/.env ]; then
   cat << EOF > api/.env
 NODE_ENV=production
 PORT=3000
-DATABASE_URL=postgresql://alertaya:alertaya@postgres:5432/alertaya_prod
-REDIS_URL=redis://redis:6379
+DATABASE_URL=postgresql://postgres:superadmin-integrador-2@localhost/alertaya_prod?host=/cloudsql/alertaya-1b963:us-central1:alertaya-db
 JWT_SECRET=production-secret-key-change-this-to-something-secure-min-32-chars
 JOB_SECRET=production-job-secret-change-this-min-16-chars
 KMS_PROJECT_ID=alertaya-1b963
