@@ -32,11 +32,20 @@ if [ -z "$PROJECT_ID" ]; then
   exit 1
 fi
 
-echo "Deploying service '$SERVICE_NAME' in project '$PROJECT_ID' region '$REGION'..."
+IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/${SERVICE_NAME}:latest"
 
-# Deploy to Cloud Run using source directory deployment (which builds using Cloud Build)
+echo "Configuring Docker authentication for Artifact Registry..."
+gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+echo "Building Docker image locally in Cloud Shell..."
+docker build -t "$IMAGE_TAG" ./api
+
+echo "Pushing Docker image to Artifact Registry..."
+docker push "$IMAGE_TAG"
+
+echo "Deploying container to Cloud Run..."
 gcloud run deploy "$SERVICE_NAME" \
-  --source ./api \
+  --image "$IMAGE_TAG" \
   --region "$REGION" \
   --allow-unauthenticated \
   --set-env-vars="NODE_ENV=production"
