@@ -39,7 +39,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --source ./api \
   --region "$REGION" \
   --allow-unauthenticated \
-  --set-env-vars="NODE_ENV=production,PORT=3000"
+  --set-env-vars="NODE_ENV=production"
 
 echo "✅ API successfully deployed!"
 echo "Please configure the remaining database and secret variables in the Cloud Run Console or via command line:"
