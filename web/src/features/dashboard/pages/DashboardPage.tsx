@@ -18,20 +18,9 @@ import type {
   IncidentType,
 } from "../../../core/api/types";
 import {
-  FilterSelect,
   TYPE_OPTIONS,
   SEVERITY_OPTIONS,
-  DISTRICT_OPTIONS,
 } from "../../../core/components/ui/FilterSelect";
-
-function filterTypeLabel(value: (typeof TYPE_OPTIONS)[number]): string {
-  return value === "ALL"
-    ? "Todos los tipos"
-    : incidentTypeLabel[value as IncidentType];
-}
-function filterSeverityLabel(value: (typeof SEVERITY_OPTIONS)[number]): string {
-  return value === "ALL" ? "Severidad" : severityLabel[value as Severity];
-}
 
 const SEVERITY_BAR: Record<Severity, string> = {
   CRITICAL: "border-stitch-error",
@@ -193,12 +182,7 @@ export default function DashboardPage() {
     districtFilter !== "ALL" ||
     searchQuery !== "";
 
-  function clearFilters() {
-    setTypeFilter("ALL");
-    setSeverityFilter("ALL");
-    setDistrictFilter("ALL");
-    setSearchQuery("");
-  }
+
 
   // Métricas live-scoped: cuentan lo que necesita acción AHORA, no el histórico.
   const stats = useMemo(() => {

@@ -16,7 +16,7 @@ function base64ToBytes(base64: string): Uint8Array {
  */
 export async function importAesKey(base64Key: string): Promise<CryptoKey> {
   const rawKey = base64ToBytes(base64Key);
-  return crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['decrypt']);
+  return crypto.subtle.importKey('raw', rawKey as any, 'AES-GCM', false, ['decrypt']);
 }
 
 /**
@@ -42,5 +42,5 @@ export async function decryptBlock(
   iv: Uint8Array,
   ciphertext: Uint8Array,
 ): Promise<ArrayBuffer> {
-  return crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv as any }, key, ciphertext as any);
 }

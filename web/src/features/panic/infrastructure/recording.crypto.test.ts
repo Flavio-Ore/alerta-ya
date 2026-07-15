@@ -6,7 +6,7 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 async function encryptFixture(plaintext: string, rawKey: Uint8Array) {
-  const key = await crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['encrypt']);
+  const key = await crypto.subtle.importKey('raw', rawKey as any, 'AES-GCM', false, ['encrypt']);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
