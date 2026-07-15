@@ -89,7 +89,7 @@ export async function evaluateThreshold(
   // Severidad inicial MODERATE; las flags del propio reporte la pueden subir
   // a CRITICAL. Útil para demos y QA — NO usar en producción.
   if (process.env.DEMO_MODE === "true") {
-    let severity = Severity.MODERATE;
+    let severity: Severity = Severity.MODERATE;
     let alertPolice = false;
     if (flags.weapon) severity = Severity.CRITICAL;
     if (flags.injured) {

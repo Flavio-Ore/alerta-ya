@@ -1,6 +1,5 @@
 import Redis from 'ioredis';
 
-import { PublicIncidentDTO } from '../../../incidents/domain/entities/incident.entity';
 import { PrismaDeviceTokenRepository } from '../../../auth/infrastructure/prisma-device-token.repository';
 import { PrismaNotificationRepository } from '../../infrastructure/prisma-notification.repository';
 import { sendIncidentPush } from '../../infrastructure/fcm.service';
