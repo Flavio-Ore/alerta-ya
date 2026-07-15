@@ -11,16 +11,16 @@ const envSchema = z.object({
   REDIS_URL: z.string().default('redis://localhost:6379'),
 
   // Firebase Admin
-  FIREBASE_PROJECT_ID: z.string(),
-  FIREBASE_CLIENT_EMAIL: z.string().email(),
-  FIREBASE_PRIVATE_KEY: z.string(),
+  FIREBASE_PROJECT_ID: z.string().optional(),
+  FIREBASE_CLIENT_EMAIL: z.string().email().optional(),
+  FIREBASE_PRIVATE_KEY: z.string().optional(),
 
   // Google Cloud Storage
   GCS_BUCKET_NAME: z.string().optional(),
   GCP_PROJECT_ID: z.string().optional(),
 
   // Cloud KMS — escrow de claves de cifrado de grabaciones de pánico
-  KMS_PROJECT_ID: z.string(),
+  KMS_PROJECT_ID: z.string().optional(),
   KMS_LOCATION_ID: z.string().default('global'),
   KMS_KEY_RING_ID: z.string().default('panic-escrow'),
   KMS_KEY_ID: z.string().default('panic-escrow-key'),

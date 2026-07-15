@@ -5,7 +5,11 @@ import { env } from './env';
 const client = new KeyManagementServiceClient();
 
 function keyVersionName(version: string): string {
-  return `projects/${env.KMS_PROJECT_ID}/locations/${env.KMS_LOCATION_ID}/keyRings/${env.KMS_KEY_RING_ID}/cryptoKeys/${env.KMS_KEY_ID}/cryptoKeyVersions/${version}`;
+  const projectId = env.KMS_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+  if (!projectId) {
+    throw new Error('KMS_PROJECT_ID is not configured and GCP project ID could not be detected.');
+  }
+  return `projects/${projectId}/locations/${env.KMS_LOCATION_ID}/keyRings/${env.KMS_KEY_RING_ID}/cryptoKeys/${env.KMS_KEY_ID}/cryptoKeyVersions/${version}`;
 }
 
 export async function getEscrowPublicKey(): Promise<{ publicKeyPem: string; keyVersion: string }> {

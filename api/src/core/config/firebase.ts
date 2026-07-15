@@ -6,14 +6,24 @@ import { env } from './env';
 export function initFirebase(): void {
   if (getApps().length > 0) return;
 
-  initializeApp({
-    credential: cert({
-      projectId: env.FIREBASE_PROJECT_ID,
-      clientEmail: env.FIREBASE_CLIENT_EMAIL,
-      privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    }),
-    ...(env.FIREBASE_STORAGE_BUCKET ? { storageBucket: env.FIREBASE_STORAGE_BUCKET } : {}),
-  });
+  const storageBucket = env.FIREBASE_STORAGE_BUCKET || undefined;
+
+  if (env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY && env.FIREBASE_PROJECT_ID) {
+    initializeApp({
+      credential: cert({
+        projectId: env.FIREBASE_PROJECT_ID,
+        clientEmail: env.FIREBASE_CLIENT_EMAIL,
+        privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      }),
+      ...(storageBucket ? { storageBucket } : {}),
+    });
+  } else {
+    // GCP/ADC (Application Default Credentials) environment
+    initializeApp({
+      ...(env.FIREBASE_PROJECT_ID ? { projectId: env.FIREBASE_PROJECT_ID } : {}),
+      ...(storageBucket ? { storageBucket } : {}),
+    });
+  }
 }
 
 const SIGNED_URL_TTL_MS = 5 * 60 * 1000;
