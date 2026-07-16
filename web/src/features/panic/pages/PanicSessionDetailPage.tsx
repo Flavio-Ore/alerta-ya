@@ -78,6 +78,7 @@ export default function PanicSessionDetailPage() {
         <div className="lg:col-span-2 h-64 rounded-xl overflow-hidden relative">
           <IncidentsMap
             incidents={NO_INCIDENTS}
+            panicSessions={[session]}
             theme="light"
             center={[session.lat, session.lng]}
             zoom={15}

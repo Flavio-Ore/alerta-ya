@@ -142,6 +142,18 @@ function isEffectivelyActive(i: PublicIncidentDTO, now: number): boolean {
 }
 
 /**
+ * Visible en el mapa/lista en vivo: incidente ABIERTO (ACTIVE o IN_ATTENTION)
+ * y no vencido. EN ATENCIÓN sigue siendo una situación en curso, así que se
+ * pinta; CERRADO se oculta. Distinto de isEffectivelyActive, que cuenta solo
+ * lo "sin atender" para las métricas.
+ * ponytail: mantiene el chequeo de expiración para ambos; si un IN_ATTENTION
+ * con expiresAt pasado no aparece, mover el filtro de vencimiento a solo ACTIVE.
+ */
+function isVisibleOnLiveMap(i: PublicIncidentDTO, now: number): boolean {
+  return i.status !== "CLOSED" && new Date(i.expiresAt).getTime() > now;
+}
+
+/**
  * Score de triage: severidad × frescura × validación social.
  * Lo severo + reciente + confirmado flota arriba; un crítico de 48 días se hunde.
  * recency: decae ~50% por día (1d≈0.5, 2d≈0.33, 48d≈0.02).
@@ -201,7 +213,7 @@ export default function DashboardPage() {
   const filteredIncidents = useMemo(() => {
     const now = Date.now();
     const items = (data?.items ?? []).filter((i) =>
-      isEffectivelyActive(i, now),
+      isVisibleOnLiveMap(i, now),
     );
     const filtered = items.filter((i) => {
       if (typeFilter !== "ALL" && i.type !== typeFilter) return false;
