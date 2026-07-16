@@ -32,6 +32,7 @@ from .features.verification.presentation.router import router as verification_ro
 # /ml/verify — verificación de coherencia de reportes (ECOD + Isolation Forest)
 app.include_router(verification_router, prefix="/ml", tags=["verification"])
 
-# TODO(features): montar router de predicción cuando esté el serving espacial
-# from .features.prediction.presentation.router import router as prediction_router
-# app.include_router(prediction_router, prefix="/predict", tags=["prediction"])
+from .features.prediction.presentation.router import router as prediction_router
+
+# /predict/risk — predicción de riesgo (XGBoost Poisson, conteo esperado → 0-100)
+app.include_router(prediction_router, prefix="/predict", tags=["prediction"])
