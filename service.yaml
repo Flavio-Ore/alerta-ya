@@ -37,6 +37,10 @@ spec:
           value: https://alertaya-web-562740646244.us-central1.run.app
         - name: REDIS_URL
           value: redis://localhost:6379
+        - name: KMS_PROJECT_ID
+          value: alertaya-1b963
+        - name: FIREBASE_STORAGE_BUCKET
+          value: alertaya-1b963.firebasestorage.app
         resources:
           limits:
             memory: 512Mi
