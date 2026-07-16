@@ -45,11 +45,13 @@ class AppConstants {
   static const double fabSize = 56;
 
   // Red — se lee en runtime desde .env (flutter_dotenv).
-  // Emulador Android: API_BASE_URL=http://10.0.2.2:3000
-  // Device físico:    API_BASE_URL=http://<IP_LOCAL_DEL_HOST>:3000
-  static String get apiBaseUrl =>
-      dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:3000';
-  static String get wsUrl => dotenv.env['WS_URL'] ?? 'http://10.0.2.2:3000';
+  // Fallback apunta a producción (Cloud Run): si el .env no carga, la app
+  // release debe seguir funcionando en vez de intentar un host de dev.
+  // Para desarrollo local, sobreescribir API_BASE_URL/WS_URL en mobile/.env.
+  static const String _prodApiUrl =
+      'https://alertaya-api-562740646244.us-central1.run.app';
+  static String get apiBaseUrl => dotenv.env['API_BASE_URL'] ?? _prodApiUrl;
+  static String get wsUrl => dotenv.env['WS_URL'] ?? _prodApiUrl;
 
   // Google Sign-In — Web Client ID (client_type 3 en google-services.json).
   // Requerido por google_sign_in_android v6+ (Credential Manager API).
