@@ -37,6 +37,11 @@ spec:
           value: https://alertaya-web-562740646244.us-central1.run.app
         - name: REDIS_URL
           value: redis://localhost:6379
+        - name: GLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: alertaya-glm-api-key
+              key: latest
         resources:
           limits:
             memory: 512Mi
