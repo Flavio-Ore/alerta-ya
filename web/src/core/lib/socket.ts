@@ -28,6 +28,7 @@ export async function getSocket(): Promise<Socket> {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
+      transports: ['websocket'],
     });
 
     if (import.meta.env.DEV) {
