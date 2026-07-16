@@ -24,4 +24,18 @@ class LocationService {
       return null;
     }
   }
+
+  /// Stream de posición en vivo: emite cada vez que el usuario se mueve
+  /// [distanceFilterMeters] metros. Asume que el permiso ya fue concedido
+  /// (llamar tras [currentLatLng]); Geolocator igual falla-open si no lo hay.
+  Stream<({double lat, double lng})> positionStream({
+    int distanceFilterMeters = 25,
+  }) {
+    return Geolocator.getPositionStream(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: distanceFilterMeters,
+      ),
+    ).map((pos) => (lat: pos.latitude, lng: pos.longitude));
+  }
 }

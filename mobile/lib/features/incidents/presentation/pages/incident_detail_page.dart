@@ -103,6 +103,7 @@ class IncidentDetailSheetBody extends StatelessWidget {
           }
           return _DetailContent(
             detail: state.selectedDetail!,
+            canVote: state.detailWithinVoteRange,
             scrollController: scrollController,
           );
         }
@@ -117,9 +118,14 @@ class IncidentDetailSheetBody extends StatelessWidget {
 class _DetailContent extends StatelessWidget {
   const _DetailContent({
     required this.detail,
+    required this.canVote,
     required this.scrollController,
   });
   final IncidentDetailEntity detail;
+
+  /// Solo se muestra la CTA de confirmación si el usuario está cerca (ver
+  /// IncidentsBloc._isWithinVoteRange). Votar de lejos no aporta a la comunidad.
+  final bool canVote;
   final ScrollController scrollController;
 
   SeverityLevel _toSeverityLevel(Severity s) => switch (s) {
@@ -379,11 +385,12 @@ class _DetailContent extends StatelessWidget {
           ),
         ],
 
+        // ── CTA: confirmación ciudadana — solo si el usuario está cerca.
+        // Votar de lejos no ayuda a la comunidad y el backend igual lo rechaza.
+        if (canVote) ...[
         const SizedBox(height: 24),
         const Divider(height: 1, color: AppColors.mapOutline),
         const SizedBox(height: 16),
-
-        // ── CTA: confirmación ciudadana
         Text(
           '¿Sigue ocurriendo?',
           style: AppTextStyles.titleLg.copyWith(color: AppColors.mapOnSurface),
@@ -440,6 +447,7 @@ class _DetailContent extends StatelessWidget {
             ),
           ],
         ),
+        ],
       ],
     );
   }

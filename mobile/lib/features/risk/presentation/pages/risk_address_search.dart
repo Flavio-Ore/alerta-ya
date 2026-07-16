@@ -15,11 +15,15 @@ class RiskAddressSearch extends StatefulWidget {
     required this.userLat,
     required this.userLng,
     required this.onAddressSelected,
+    required this.onUseCurrentLocation,
   });
 
   final double userLat;
   final double userLng;
   final ValueChanged<PhotonSuggestion> onAddressSelected;
+
+  /// Vuelve a la ubicación actual del usuario (limpia la búsqueda activa).
+  final VoidCallback onUseCurrentLocation;
 
   @override
   State<RiskAddressSearch> createState() => _RiskAddressSearchState();
@@ -94,6 +98,20 @@ class _RiskAddressSearchState extends State<RiskAddressSearch> {
     widget.onAddressSelected(suggestion);
   }
 
+  /// Limpia la búsqueda y vuelve al riesgo de la ubicación actual.
+  void _reset() {
+    _debounce?.cancel();
+    _controller.clear();
+    setState(() {
+      _suggestions = [];
+      _noResults = false;
+      _networkError = false;
+      _searching = false;
+    });
+    FocusScope.of(context).unfocus();
+    widget.onUseCurrentLocation();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -128,12 +146,35 @@ class _RiskAddressSearchState extends State<RiskAddressSearch> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
+                else if (_controller.text.isNotEmpty)
+                  InkResponse(
+                    onTap: _reset,
+                    radius: 20,
+                    child: const Icon(
+                      Icons.close,
+                      color: AppColors.onSurfaceVariant,
+                      size: 20,
+                    ),
+                  )
                 else
                   const Icon(
                     Icons.search,
                     color: AppColors.onSurfaceVariant,
                     size: 20,
                   ),
+                const SizedBox(width: 4),
+                Container(width: 1, height: 20, color: AppColors.outlineVariant),
+                const SizedBox(width: 4),
+                // Volver al riesgo de mi ubicación actual.
+                InkResponse(
+                  onTap: _reset,
+                  radius: 20,
+                  child: const Icon(
+                    Icons.my_location,
+                    color: AppColors.secondary,
+                    size: 20,
+                  ),
+                ),
               ],
             ),
           ),

@@ -71,6 +71,12 @@ class _RiskDashboardPageState extends State<RiskDashboardPage> {
     _riskBloc.add(RiskRequested(lat: suggestion.lat, lng: suggestion.lng));
   }
 
+  /// Descarta la dirección buscada y recalcula el riesgo de la ubicación actual.
+  void _useCurrentLocation() {
+    setState(() => _activeAddress = null);
+    _loadRisk();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
@@ -86,6 +92,7 @@ class _RiskDashboardPageState extends State<RiskDashboardPage> {
                   userLat: _userLat,
                   userLng: _userLng,
                   onAddressSelected: _onSuggestionSelected,
+                  onUseCurrentLocation: _useCurrentLocation,
                 ),
               ),
               Expanded(

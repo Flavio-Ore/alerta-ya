@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'package:alertaya/core/realtime/socket_client.dart';
 import 'package:alertaya/core/services/location_service.dart';
@@ -48,6 +49,10 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
   final ConfirmZoneUseCase _confirmZone;
   final SocketClient _socketClient;
   final LocationService _location;
+
+  // Debe coincidir con VOTE_PROXIMITY_RADIUS_METERS del backend (vote-policy.ts).
+  // El servidor rechaza (403) votos fuera de este radio; gateamos la UI igual.
+  static const double _voteRadiusMeters = 400.0;
 
   late final StreamSubscription<IncidentEntity> _newSub;
   late final StreamSubscription<IncidentEntity> _updatedSub;
@@ -126,16 +131,36 @@ class IncidentsBloc extends Bloc<IncidentsEvent, IncidentsState> {
     // muestre data stale del marker anterior mientras carga el nuevo.
     emit(current.copyWith(clearDetail: true, detailLoading: true));
     final result = await _getDetail(event.id);
-    result.fold(
-      (f) {
+    await result.fold(
+      (f) async {
         debugPrint('[IncidentsBloc] ⚠ getDetail(${event.id}) FAILED: $f');
         emit(current.copyWith(clearDetail: true, detailLoading: false));
       },
-      (detail) {
+      (detail) async {
         debugPrint('[IncidentsBloc] ✓ detail recibido id=${detail.id} type=${detail.type} severity=${detail.severity}');
-        emit(current.copyWith(selectedDetail: detail, detailLoading: false));
+        // Gate de proximidad para la CTA de voto: solo si el usuario está cerca.
+        final withinRange = await _isWithinVoteRange(detail.lat, detail.lng);
+        emit(current.copyWith(
+          selectedDetail: detail,
+          detailLoading: false,
+          detailWithinVoteRange: withinRange,
+        ));
       },
     );
+  }
+
+  /// True si la ubicación actual del usuario está dentro del radio de voto del
+  /// incidente. Sin ubicación (permiso denegado) → false: no se puede votar.
+  Future<bool> _isWithinVoteRange(double incidentLat, double incidentLng) async {
+    final pos = await _location.currentLatLng();
+    if (pos == null) return false;
+    const distance = Distance();
+    final meters = distance.as(
+      LengthUnit.Meter,
+      LatLng(pos.lat, pos.lng),
+      LatLng(incidentLat, incidentLng),
+    );
+    return meters <= _voteRadiusMeters;
   }
 
   Future<void> _onConfirmSubmitted(

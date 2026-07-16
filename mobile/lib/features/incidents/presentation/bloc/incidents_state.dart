@@ -17,18 +17,25 @@ class IncidentsLoaded extends IncidentsState {
     required this.incidents,
     this.selectedDetail,
     this.detailLoading = false,
+    this.detailWithinVoteRange = false,
     this.pendingConfirmRequest,
   });
 
   final List<IncidentEntity> incidents;
   final IncidentDetailEntity? selectedDetail;
   final bool detailLoading;
+
+  /// Si el usuario está dentro del radio de voto del incidente abierto en el
+  /// detalle. Gatea la CTA "¿Sigue ocurriendo?" — votar de lejos no tiene
+  /// sentido y el backend igual lo rechaza (403).
+  final bool detailWithinVoteRange;
   final ConfirmRequestEvent? pendingConfirmRequest;
 
   IncidentsLoaded copyWith({
     List<IncidentEntity>? incidents,
     IncidentDetailEntity? selectedDetail,
     bool? detailLoading,
+    bool? detailWithinVoteRange,
     ConfirmRequestEvent? pendingConfirmRequest,
     bool clearDetail = false,
     bool clearConfirmRequest = false,
@@ -38,6 +45,8 @@ class IncidentsLoaded extends IncidentsState {
         selectedDetail:
             clearDetail ? null : (selectedDetail ?? this.selectedDetail),
         detailLoading: detailLoading ?? this.detailLoading,
+        detailWithinVoteRange:
+            clearDetail ? false : (detailWithinVoteRange ?? this.detailWithinVoteRange),
         pendingConfirmRequest: clearConfirmRequest
             ? null
             : (pendingConfirmRequest ?? this.pendingConfirmRequest),

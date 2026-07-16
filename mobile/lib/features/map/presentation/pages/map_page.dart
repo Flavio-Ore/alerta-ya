@@ -12,6 +12,7 @@ import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/features/tutorial/presentation/keys/tutorial_keys.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/services/fcm_service.dart';
+import 'package:alertaya/core/services/location_service.dart';
 import 'package:alertaya/core/services/photon_service.dart';
 import 'package:alertaya/core/domain/enums.dart';
 import 'package:alertaya/core/realtime/socket_client.dart';
@@ -37,6 +38,7 @@ class _MapPageState extends State<MapPage> {
   static const double _nearbyConfirmRadiusMeters = 500.0;
 
   late final MapController _mapController;
+  StreamSubscription<({double lat, double lng})>? _positionSub;
 
   double _userLat = _defaultLat;
   double _userLng = _defaultLng;
@@ -64,6 +66,7 @@ class _MapPageState extends State<MapPage> {
 
   @override
   void dispose() {
+    _positionSub?.cancel();
     _mapController.dispose();
     super.dispose();
   }
@@ -81,6 +84,22 @@ class _MapPageState extends State<MapPage> {
     unawaited(getIt<FcmService>().updateLocation(lat: lat, lng: lng));
     if (!mounted) return;
     context.read<IncidentsBloc>().add(const IncidentsStarted());
+    _startLocationUpdates();
+  }
+
+  /// Sigue la ubicación en vivo mientras el usuario se mueve — así el punto azul,
+  /// el radio de zona y la detección de incidentes cercanos dejan de quedar
+  /// congelados hasta reiniciar la app. No mueve la cámara (respeta el paneo
+  /// manual); solo actualiza la posición de referencia.
+  void _startLocationUpdates() {
+    _positionSub?.cancel();
+    _positionSub = getIt<LocationService>().positionStream().listen((pos) {
+      if (!mounted) return;
+      setState(() {
+        _userLat = pos.lat;
+        _userLng = pos.lng;
+      });
+    });
   }
 
   Future<({double lat, double lng})> _resolvePosition() async {
