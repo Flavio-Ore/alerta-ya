@@ -85,11 +85,22 @@ if (env.NODE_ENV !== "production") {
 }
 
 // Routers
-app.get("/health", (_req, res) => {
+app.get("/health", async (_req, res) => {
+  let redisStatus = "disconnected";
+  try {
+    const pong = await redis.ping();
+    if (pong === "PONG") {
+      redisStatus = "connected";
+    }
+  } catch (err: any) {
+    redisStatus = `error: ${err.message}`;
+  }
+
   res.json({
     status: "ok",
     service: "alertaya-api",
     timestamp: new Date().toISOString(),
+    redis: redisStatus,
   });
 });
 
