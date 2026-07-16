@@ -17,11 +17,20 @@ spec:
         - name: NODE_ENV
           value: production
         - name: DATABASE_URL
-          value: postgresql://postgres:superadmin-integrador-2@35.188.153.115:5432/alertaya_prod
+          valueFrom:
+            secretKeyRef:
+              name: alertaya-db-url
+              key: latest
         - name: JWT_SECRET
-          value: super-secure-jwt-secret-key-of-at-least-32-characters
+          valueFrom:
+            secretKeyRef:
+              name: alertaya-jwt-secret
+              key: latest
         - name: JOB_SECRET
-          value: super-secure-job-secret-16-chars
+          valueFrom:
+            secretKeyRef:
+              name: alertaya-job-secret
+              key: latest
         - name: ML_SERVICE_URL
           value: https://alertaya-ml-562740646244.us-central1.run.app
         - name: WEB_URL

@@ -34,7 +34,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-web:latest']
 
-  # 5. Deploy ML Service to Cloud Run
+  # 5. Deploy ML Service to Cloud Run (referencing Database URL from Secret Manager)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
@@ -44,7 +44,8 @@ steps:
       - '--image=us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-ml:latest'
       - '--region=us-central1'
       - '--allow-unauthenticated'
-      - '--set-env-vars=ENVIRONMENT=production,DATABASE_URL=postgresql://postgres:superadmin-integrador-2@35.188.153.115:5432/alertaya_prod'
+      - '--set-env-vars=ENVIRONMENT=production'
+      - '--set-secrets=DATABASE_URL=alertaya-db-url:latest'
 
   # 6. Deploy API Service (applying sidecar service.yaml config)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
