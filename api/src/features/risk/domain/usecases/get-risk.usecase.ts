@@ -14,8 +14,10 @@ export interface RiskDTO {
   riskScore: number | null; // null si no hay datos (fail-open)
   level: RiskLevel | 'unknown';
   topType: string | null;
+  topSeverity: string | null;
   confidence: Confidence | 'none';
   badHours: number[];
+  safestHours: number[]; // vacío si el distrito no tiene señal horaria
   nearbyTiles: NearbyTile[];
 }
 
@@ -84,8 +86,10 @@ export function getRisk(
       riskScore: null,
       level: 'unknown',
       topType: null,
+      topSeverity: null,
       confidence: 'none',
       badHours: [],
+      safestHours: [],
       nearbyTiles: nearby,
     };
   }
@@ -97,8 +101,10 @@ export function getRisk(
     riskScore: stat.score,
     level: stat.level,
     topType: stat.topType,
+    topSeverity: stat.topSeverity,
     confidence: stat.confidence,
     badHours: dr.badHours,
+    safestHours: dr.safestHours,
     nearbyTiles: nearby,
   };
 }

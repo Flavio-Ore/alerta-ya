@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/constants/app_colors.dart';
 import 'package:alertaya/core/constants/app_text_styles.dart';
+import 'package:alertaya/core/domain/enums.dart';
 import 'package:alertaya/core/services/photon_service.dart';
 import 'package:alertaya/features/risk/domain/entities/risk_info.dart';
 import 'package:alertaya/features/risk/presentation/bloc/risk_bloc.dart';
@@ -198,6 +199,10 @@ class _RiskLoadedView extends StatelessWidget {
         _BadHoursChart(info: info),
         const SizedBox(height: 20),
         _TopTypeCard(info: info),
+        if (info.hasSafeHours) ...[
+          const SizedBox(height: 12),
+          _SafestHoursCard(info: info),
+        ],
       ],
     );
   }
@@ -479,9 +484,36 @@ class _BadHoursChart extends StatelessWidget {
   }
 }
 
-class _TopTypeCard extends StatelessWidget {
-  const _TopTypeCard({required this.info});
-  final RiskInfo info;
+/// Traduce el valor crudo del API a etiqueta en español. Lookup tolerante: si el
+/// backend agrega un tipo/severidad nuevo, muestra el valor crudo en vez de
+/// lanzar (IncidentType.fromValue usa firstWhere, que revienta si no matchea).
+String _typeLabel(String? value) {
+  if (value == null) return 'Sin datos suficientes';
+  final match = IncidentType.values.where((e) => e.value == value);
+  return match.isEmpty ? value : match.first.label;
+}
+
+String _severityLabel(String? value) {
+  if (value == null) return 'Sin datos suficientes';
+  final match = Severity.values.where((e) => e.value == value);
+  return match.isEmpty ? value : match.first.label;
+}
+
+/// Card genérica de métrica — mismo contenedor para todas las de esta pantalla.
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+    this.hint,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String value;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
@@ -492,29 +524,76 @@ class _TopTypeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.report_outlined, color: AppColors.secondary),
+          Icon(icon, color: iconColor),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tipo más frecuente',
+                  label,
                   style: AppTextStyles.labelMd
                       .copyWith(color: AppColors.onSurfaceVariant),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  info.topType ?? 'Sin datos suficientes',
+                  value,
                   style: AppTextStyles.titleSm
                       .copyWith(color: AppColors.onSurface),
                 ),
+                if (hint != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    hint!,
+                    style: AppTextStyles.bodySm
+                        .copyWith(color: AppColors.onSurfaceVariant),
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TopTypeCard extends StatelessWidget {
+  const _TopTypeCard({required this.info});
+  final RiskInfo info;
+
+  @override
+  Widget build(BuildContext context) {
+    return _MetricCard(
+      icon: Icons.report_outlined,
+      iconColor: AppColors.secondary,
+      label: 'Tipo más frecuente',
+      value: _typeLabel(info.topType),
+      hint: info.topSeverity != null
+          ? 'Severidad predominante: ${_severityLabel(info.topSeverity)}'
+          : null,
+    );
+  }
+}
+
+/// Recomendación de horario. Solo se construye si el motor emitió horas seguras
+/// — ver RiskInfo.hasSafeHours. Sin señal horaria no se recomienda nada.
+class _SafestHoursCard extends StatelessWidget {
+  const _SafestHoursCard({required this.info});
+  final RiskInfo info;
+
+  @override
+  Widget build(BuildContext context) {
+    final hours = [...info.safestHours]..sort();
+    final label = hours.map((h) => '${h}h').join(' · ');
+    return _MetricCard(
+      icon: Icons.schedule_outlined,
+      iconColor: AppColors.severityLow,
+      label: 'Horas más seguras',
+      value: label,
+      hint: 'Menos incidentes registrados en esta zona.',
     );
   }
 }

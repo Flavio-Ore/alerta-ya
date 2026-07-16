@@ -16,6 +16,7 @@ export interface HourStat {
   score: number; // 0-100
   level: RiskLevel;
   topType: string | null; // tipo más frecuente esa hora (null si sin datos)
+  topSeverity: string | null; // severidad predominante esa hora (null si sin datos)
   count: number; // nº de incidentes seed en ese distrito×hora
   confidence: Confidence;
 }
@@ -24,6 +25,12 @@ export interface DistrictRisk {
   displayName: string;
   hourly: HourStat[]; // 24 entradas, índice = hora 0-23
   badHours: number[]; // top-3 horas más riesgosas
+  /**
+   * Top-3 horas con menos incidentes. VACÍO si ninguna hora alcanza confianza
+   * 'high': sin señal horaria, "la hora más segura" sería ruido presentado como
+   * consejo — y este motor degrada antes que inventar.
+   */
+  safestHours: number[];
 }
 
 export interface RiskArtifact {
@@ -34,6 +41,7 @@ export interface RiskArtifact {
 interface HourBucket {
   count: number;
   byType: Record<string, number>;
+  bySeverity: Record<string, number>;
 }
 
 const N_SPARSE = 5; // umbral de confianza (spec: N=5)
@@ -74,11 +82,12 @@ export function buildDistrictHourly(seed: SeedIncident[]): Record<string, HourBu
     const hour = new Date(inc.createdAt).getHours();
     if (Number.isNaN(hour)) continue;
     if (!out[nd]) {
-      out[nd] = Array.from({ length: 24 }, () => ({ count: 0, byType: {} }));
+      out[nd] = Array.from({ length: 24 }, () => ({ count: 0, byType: {}, bySeverity: {} }));
     }
     const bucket = out[nd]![hour]!;
     bucket.count += 1;
     bucket.byType[inc.type] = (bucket.byType[inc.type] ?? 0) + 1;
+    bucket.bySeverity[inc.severity] = (bucket.bySeverity[inc.severity] ?? 0) + 1;
   }
   return out;
 }
@@ -126,34 +135,45 @@ export function computeRiskArtifact(tiles: DatacrimTile[], seed: SeedIncident[])
 
   for (const nd of districtKeys) {
     const base = byDistrict[nd] ?? global;
-    const buckets = hourly[nd] ?? Array.from({ length: 24 }, () => ({ count: 0, byType: {} }));
+    const buckets =
+      hourly[nd] ?? Array.from({ length: 24 }, () => ({ count: 0, byType: {}, bySeverity: {} }));
     const districtTotal = buckets.reduce((a, b) => a + b.count, 0);
     const meanHourCount = districtTotal / 24;
 
-    // topType a nivel distrito (fallback para horas de baja confianza)
+    // topType/topSeverity a nivel distrito (fallback para horas de baja confianza)
     const districtByType: Record<string, number> = {};
-    for (const b of buckets) for (const [t, c] of Object.entries(b.byType)) districtByType[t] = (districtByType[t] ?? 0) + c;
+    const districtBySeverity: Record<string, number> = {};
+    for (const b of buckets) {
+      for (const [t, c] of Object.entries(b.byType)) districtByType[t] = (districtByType[t] ?? 0) + c;
+      for (const [s, c] of Object.entries(b.bySeverity))
+        districtBySeverity[s] = (districtBySeverity[s] ?? 0) + c;
+    }
     const districtTopType = argmaxType(districtByType);
+    const districtTopSeverity = argmaxType(districtBySeverity);
 
     const hourlyStats: HourStat[] = buckets.map((b): HourStat => {
       let factor = 1;
       let confidence: Confidence;
       let topType: string | null;
+      let topSeverity: string | null;
 
       if (b.count >= N_SPARSE && meanHourCount > 0) {
         factor = clamp(0.5 + 0.5 * (b.count / meanHourCount), 0.5, 1.5);
         confidence = 'high';
         topType = argmaxType(b.byType);
+        topSeverity = argmaxType(b.bySeverity);
       } else if (districtTotal >= N_SPARSE) {
         confidence = 'medium';
         topType = districtTopType;
+        topSeverity = districtTopSeverity;
       } else {
         confidence = 'low';
         topType = null;
+        topSeverity = null;
       }
 
       const score = Math.round(clamp(base * factor, 0, 100));
-      return { score, level: levelFor(score), topType, count: b.count, confidence };
+      return { score, level: levelFor(score), topType, topSeverity, count: b.count, confidence };
     });
 
     const badHours = buckets
@@ -163,10 +183,24 @@ export function computeRiskArtifact(tiles: DatacrimTile[], seed: SeedIncident[])
       .slice(0, 3)
       .map((x) => x.h);
 
+    // Solo nombramos "hora más segura" si alguna hora alcanzó confianza 'high'.
+    // Sin eso el distrito no tiene forma horaria conocida: los conteos bajos son
+    // AUSENCIA DE EVIDENCIA (nadie reportó), no evidencia de ausencia (no pasa
+    // nada). Decir "andá a las 4am" con esa base es peor que no decir nada.
+    const hasHourlySignal = hourlyStats.some((s) => s.confidence === 'high');
+    const safestHours = hasHourlySignal
+      ? buckets
+          .map((b, h) => ({ h, count: b.count }))
+          .sort((a, b) => a.count - b.count || a.h - b.h)
+          .slice(0, 3)
+          .map((x) => x.h)
+      : [];
+
     districts[nd] = {
       displayName: displayNames[nd] ?? nd,
       hourly: hourlyStats,
       badHours,
+      safestHours,
     };
   }
 

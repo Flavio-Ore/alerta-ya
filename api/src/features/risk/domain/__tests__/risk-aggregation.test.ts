@@ -8,9 +8,14 @@ import {
 } from '../risk-aggregation';
 import { SeedIncident } from '../../infrastructure/seed-loader';
 
-function inc(district: string, hour: number, type = 'ROBBERY'): SeedIncident {
+function inc(
+  district: string,
+  hour: number,
+  type = 'ROBBERY',
+  severity = 'LOW',
+): SeedIncident {
   const hh = String(hour).padStart(2, '0');
-  return { type, severity: 'LOW', district, lat: -12.1, lng: -77.0, createdAt: `2026-06-24T${hh}:30:00` };
+  return { type, severity, district, lat: -12.1, lng: -77.0, createdAt: `2026-06-24T${hh}:30:00` };
 }
 function tile(district: string, risk: number): DatacrimTile {
   return { lat: -12.1, lng: -77.0, risk, district };
@@ -89,5 +94,48 @@ describe('computeRiskArtifact', () => {
     expect(Object.keys(art.districts).sort()).toEqual(['BARRANCO', 'MED', 'SPARSE']);
     // districts with no seed data still exist with low confidence (spatial-only)
     expect(art.districts['BARRANCO']!.hourly[0]!.confidence).toBe('low');
+  });
+
+  it('safestHours: ranks the least active hours when the district HAS an hourly signal', () => {
+    const seed = [
+      ...Array.from({ length: 6 }, () => inc('Barranco', 22)), // hora pico → 'high'
+      ...Array.from({ length: 3 }, () => inc('Barranco', 20)),
+      inc('Barranco', 8),
+    ];
+    const art = computeRiskArtifact(tiles, seed);
+    // 0,1,2 no tienen incidentes y empatan en 0 → desempate por hora asc.
+    expect(art.districts['BARRANCO']!.safestHours).toEqual([0, 1, 2]);
+  });
+
+  it('safestHours is EMPTY without a high-confidence hour (absence of evidence ≠ safe)', () => {
+    // 4 incidentes: el distrito nunca llega a 'high' en ninguna hora.
+    const seed = Array.from({ length: 4 }, () => inc('Barranco', 22));
+    const art = computeRiskArtifact(tiles, seed);
+    expect(art.districts['BARRANCO']!.hourly.some((h) => h.confidence === 'high')).toBe(false);
+    expect(art.districts['BARRANCO']!.safestHours).toEqual([]);
+  });
+
+  it('topSeverity follows the SAME confidence ladder as topType', () => {
+    const seed = [
+      ...Array.from({ length: 5 }, () => inc('Barranco', 22, 'ROBBERY', 'CRITICAL')),
+      inc('Barranco', 22, 'ROBBERY', 'LOW'),
+      inc('Barranco', 3, 'ROBBERY', 'LOW'),
+    ];
+    const art = computeRiskArtifact(tiles, seed);
+    const d = art.districts['BARRANCO']!;
+    // hora 22: 6 incidentes → 'high' → severidad de ESA hora
+    expect(d.hourly[22]!.confidence).toBe('high');
+    expect(d.hourly[22]!.topSeverity).toBe('CRITICAL');
+    // hora 3: 1 incidente pero el distrito tiene >=5 → 'medium' → fallback distrital
+    expect(d.hourly[3]!.confidence).toBe('medium');
+    expect(d.hourly[3]!.topSeverity).toBe('CRITICAL');
+    // hora sin datos → 'medium' (distrito tiene señal) → fallback, nunca null acá
+    expect(d.hourly[12]!.topSeverity).toBe('CRITICAL');
+  });
+
+  it('topSeverity is null when the district is too sparse to claim anything', () => {
+    const art = computeRiskArtifact(tiles, [inc('Sparse', 22, 'ROBBERY', 'CRITICAL')]);
+    expect(art.districts['SPARSE']!.hourly[22]!.confidence).toBe('low');
+    expect(art.districts['SPARSE']!.hourly[22]!.topSeverity).toBeNull();
   });
 });

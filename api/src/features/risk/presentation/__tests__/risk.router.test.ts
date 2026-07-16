@@ -1,6 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+
+// El controller importa el singleton de prisma, que hace $connect() al cargar el
+// módulo y process.exit(1) si falla. Sin este mock, importar el router mataría el
+// proceso de test. Tabla vacía → el artefacto vivo degrada al seed, que es
+// exactamente lo que estos tests ejercitan.
+vi.mock('../../../../core/config/prisma', () => ({
+  prisma: {
+    incident: {
+      aggregate: async () => ({ _count: { _all: 0 }, _max: { createdAt: null } }),
+      findMany: async () => [],
+    },
+  },
+}));
 
 import { riskRouter } from '../risk.router';
 import { errorHandlerMiddleware } from '../../../../core/middleware/errorHandler.middleware';

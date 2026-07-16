@@ -16,9 +16,11 @@ void main() {
     hour: 21,
     riskScore: 72,
     level: 'high',
-    topType: 'robbery',
-    confidence: 'district-hour',
+    topType: 'ROBBERY',
+    topSeverity: 'CRITICAL',
+    confidence: 'high',
     badHours: [20, 21, 22],
+    safestHours: [4, 5, 6],
     nearbyTiles: [],
   );
 

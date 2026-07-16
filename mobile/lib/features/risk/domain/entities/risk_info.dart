@@ -29,8 +29,10 @@ class RiskInfo {
     required this.riskScore,
     required this.level,
     required this.topType,
+    required this.topSeverity,
     required this.confidence,
     required this.badHours,
+    required this.safestHours,
     required this.nearbyTiles,
   });
 
@@ -40,8 +42,13 @@ class RiskInfo {
         riskScore: (json['riskScore'] as num?)?.toInt(),
         level: json['level'] as String,
         topType: json['topType'] as String?,
+        topSeverity: json['topSeverity'] as String?,
         confidence: json['confidence'] as String,
         badHours: (json['badHours'] as List<dynamic>)
+            .map((h) => h as int)
+            .toList(),
+        // Ausente si el API es una versión previa al campo: degradar, no romper.
+        safestHours: (json['safestHours'] as List<dynamic>? ?? <dynamic>[])
             .map((h) => h as int)
             .toList(),
         nearbyTiles: (json['nearbyTiles'] as List<dynamic>)
@@ -55,9 +62,17 @@ class RiskInfo {
   final int? riskScore;
   final String level;
   final String? topType;
+  final String? topSeverity;
   final String confidence;
   final List<int> badHours;
+
+  /// Horas con menos incidentes. Vacío cuando el distrito no tiene señal
+  /// horaria: sin evidencia no se recomienda un horario.
+  final List<int> safestHours;
   final List<RiskTile> nearbyTiles;
 
   bool get hasData => level != 'unknown' && riskScore != null;
+
+  /// Solo hay recomendación de horario si el motor emitió horas seguras.
+  bool get hasSafeHours => safestHours.isNotEmpty;
 }

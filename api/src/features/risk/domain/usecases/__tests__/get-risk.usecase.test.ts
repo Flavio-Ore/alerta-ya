@@ -8,14 +8,29 @@ const LAT = -12.06;
 const LNG = -77.03; // dentro de Lima
 
 function hourStat(score: number, over: Partial<HourStat> = {}): HourStat {
-  return { score, level: 'high', topType: 'ROBBERY', count: 6, confidence: 'high', ...over };
+  return {
+    score,
+    level: 'high',
+    topType: 'ROBBERY',
+    topSeverity: 'CRITICAL',
+    count: 6,
+    confidence: 'high',
+    ...over,
+  };
 }
 
 function artifactAt(key: string): RiskArtifact {
-  const hourly = Array.from({ length: 24 }, (_, h) => hourStat(h === 10 ? 80 : 20, h === 10 ? {} : { level: 'low', confidence: 'low', topType: null, count: 0 }));
+  const hourly = Array.from({ length: 24 }, (_, h) =>
+    hourStat(
+      h === 10 ? 80 : 20,
+      h === 10 ? {} : { level: 'low', confidence: 'low', topType: null, topSeverity: null, count: 0 },
+    ),
+  );
   return {
     tiles: [{ lat: LAT, lng: LNG, risk: 55, district: key }],
-    districts: { [key]: { displayName: 'Zona X', hourly, badHours: [10] } },
+    districts: {
+      [key]: { displayName: 'Zona X', hourly, badHours: [10], safestHours: [0, 1, 2] },
+    },
   };
 }
 
@@ -48,8 +63,29 @@ describe('getRisk', () => {
   it('DTO is anonymous — exposes only aggregate fields, no reporter identity', () => {
     const key = normalizeDistrict(getDistrict(LAT, LNG));
     const dto = getRisk(LAT, LNG, 10, artifactAt(key));
+    // topSeverity y safestHours son agregados (argmax de una distribución e
+    // índices de hora) — no exponen identidad ni reportes individuales.
     expect(Object.keys(dto).sort()).toEqual(
-      ['badHours', 'confidence', 'district', 'hour', 'level', 'nearbyTiles', 'riskScore', 'topType'].sort(),
+      [
+        'badHours',
+        'confidence',
+        'district',
+        'hour',
+        'level',
+        'nearbyTiles',
+        'riskScore',
+        'safestHours',
+        'topSeverity',
+        'topType',
+      ].sort(),
     );
+  });
+
+  it('safestHours is EMPTY when the district has no high-confidence hour', () => {
+    const key = normalizeDistrict(getDistrict(LAT, LNG));
+    const art = artifactAt(key);
+    art.districts[key]!.safestHours = [];
+    const dto = getRisk(LAT, LNG, 10, art);
+    expect(dto.safestHours).toEqual([]);
   });
 });
