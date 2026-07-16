@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:alertaya/app/di/injection.dart';
 import 'package:alertaya/core/services/photon_service.dart';
 import 'package:alertaya/features/risk/domain/entities/risk_info.dart';
+import 'package:alertaya/features/risk/domain/entities/risk_prediction.dart';
 import 'package:alertaya/features/risk/domain/repositories/risk_repository.dart';
 import 'package:alertaya/features/risk/presentation/bloc/risk_bloc.dart';
 import 'package:alertaya/features/risk/presentation/pages/risk_address_search.dart';
@@ -35,6 +36,13 @@ void main() {
           lng: any(named: 'lng'),
           hour: any(named: 'hour'),
         )).thenAnswer((_) async => riskInfo);
+    when(() => repository.getPrediction(
+          lat: any(named: 'lat'),
+          lng: any(named: 'lng'),
+          hour: any(named: 'hour'),
+          dayOfWeek: any(named: 'dayOfWeek'),
+        )).thenAnswer((_) async =>
+        const RiskPrediction(available: false, hour: 21, dayOfWeek: 0));
     getIt.registerLazySingleton<RiskBloc>(() => RiskBloc(repository));
   });
 

@@ -10,6 +10,7 @@ import 'package:alertaya/core/constants/app_text_styles.dart';
 import 'package:alertaya/core/domain/enums.dart';
 import 'package:alertaya/core/services/photon_service.dart';
 import 'package:alertaya/features/risk/domain/entities/risk_info.dart';
+import 'package:alertaya/features/risk/domain/entities/risk_prediction.dart';
 import 'package:alertaya/features/risk/presentation/bloc/risk_bloc.dart';
 import 'package:alertaya/features/risk/presentation/pages/risk_address_search.dart';
 
@@ -96,6 +97,8 @@ class _RiskDashboardPageState extends State<RiskDashboardPage> {
                     if (state is RiskLoaded) {
                       return _RiskLoadedView(
                         info: state.info,
+                        todayPrediction: state.todayPrediction,
+                        tomorrowPrediction: state.tomorrowPrediction,
                         activeAddress: _activeAddress,
                       );
                     }
@@ -177,12 +180,23 @@ class _ErrorState extends StatelessWidget {
 }
 
 class _RiskLoadedView extends StatelessWidget {
-  const _RiskLoadedView({required this.info, this.activeAddress});
+  const _RiskLoadedView({
+    required this.info,
+    this.todayPrediction,
+    this.tomorrowPrediction,
+    this.activeAddress,
+  });
   final RiskInfo info;
+  final RiskPrediction? todayPrediction;
+  final RiskPrediction? tomorrowPrediction;
   final String? activeAddress;
 
   @override
   Widget build(BuildContext context) {
+    final today = todayPrediction;
+    final tomorrow = tomorrowPrediction;
+    final showPrediction = (today?.available ?? false) || (tomorrow?.available ?? false);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
@@ -202,6 +216,10 @@ class _RiskLoadedView extends StatelessWidget {
         if (info.hasSafeHours) ...[
           const SizedBox(height: 12),
           _SafestHoursCard(info: info),
+        ],
+        if (showPrediction) ...[
+          const SizedBox(height: 20),
+          _MlPredictionCard(today: today, tomorrow: tomorrow),
         ],
       ],
     );
@@ -574,6 +592,88 @@ class _TopTypeCard extends StatelessWidget {
       hint: info.topSeverity != null
           ? 'Severidad predominante: ${_severityLabel(info.topSeverity)}'
           : null,
+    );
+  }
+}
+
+/// Predicción del modelo ML (XGBoost). A diferencia del resto de la pantalla
+/// (motor determinístico), esta distingue el día de semana: muestra hoy y mañana.
+class _MlPredictionCard extends StatelessWidget {
+  const _MlPredictionCard({this.today, this.tomorrow});
+
+  final RiskPrediction? today;
+  final RiskPrediction? tomorrow;
+
+  static const List<String> _dayNames = [
+    'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo',
+  ];
+
+  Color _colorFor(int score) {
+    if (score >= 67) return AppColors.severityCritical;
+    if (score >= 34) return AppColors.severityModerate;
+    return AppColors.severityLow;
+  }
+
+  Widget _row(String label, RiskPrediction? p) {
+    final available = p?.available ?? false;
+    final score = p?.riskScore;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.onSurface),
+            ),
+          ),
+          if (available && score != null) ...[
+            Text(
+              '$score/100',
+              style: AppTextStyles.titleSm.copyWith(color: _colorFor(score)),
+            ),
+          ] else
+            Text(
+              'No disponible',
+              style: AppTextStyles.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_graph_outlined, color: AppColors.secondary),
+              const SizedBox(width: 12),
+              Text(
+                'Predicción del modelo (IA)',
+                style: AppTextStyles.titleSm.copyWith(color: AppColors.onSurface),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Estimación por día de semana a esta hora.',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          if (today != null) _row('Hoy · ${_dayNames[today!.dayOfWeek]}', today),
+          if (tomorrow != null)
+            _row('Mañana · ${_dayNames[tomorrow!.dayOfWeek]}', tomorrow),
+        ],
+      ),
     );
   }
 }

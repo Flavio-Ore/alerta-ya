@@ -13,8 +13,24 @@ class RiskLoading extends RiskState {
 }
 
 class RiskLoaded extends RiskState {
-  const RiskLoaded(this.info);
+  const RiskLoaded(this.info, {this.todayPrediction, this.tomorrowPrediction});
+
   final RiskInfo info;
+
+  /// Predicción ML para hoy y mañana. null mientras no se resolvieron; una
+  /// predicción con available=false si el ML service no respondió.
+  final RiskPrediction? todayPrediction;
+  final RiskPrediction? tomorrowPrediction;
+
+  RiskLoaded copyWith({
+    RiskPrediction? todayPrediction,
+    RiskPrediction? tomorrowPrediction,
+  }) =>
+      RiskLoaded(
+        info,
+        todayPrediction: todayPrediction ?? this.todayPrediction,
+        tomorrowPrediction: tomorrowPrediction ?? this.tomorrowPrediction,
+      );
 }
 
 class RiskFailure extends RiskState {
