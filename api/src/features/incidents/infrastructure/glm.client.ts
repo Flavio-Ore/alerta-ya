@@ -112,7 +112,8 @@ function buildRequestBody(
     temperature: 0.25,
     max_tokens: 700,
     stream,
-    thinking: { type: 'disabled' },
+    // `thinking` solo lo aceptan GLM-4.5/4.6; glm-4-flash (GLM-4) devuelve 400.
+    // Si se migra a un modelo 4.5+, reintroducir { thinking: { type: 'disabled' } }.
     ...(needsCurrentContext
       ? { tools: [{ type: 'web_search', web_search: { enable: true } }] }
       : {}),
@@ -296,7 +297,7 @@ export async function analyzeImage(
         model: env.GLM_VISION_MODEL,
         temperature: 0,
         max_tokens: 120,
-        thinking: { type: 'disabled' },
+        // Sin `thinking`: glm-4v-flash (GLM-4) lo rechaza con 400. Ver buildRequestBody.
         messages: [
           {
             role: 'user',
