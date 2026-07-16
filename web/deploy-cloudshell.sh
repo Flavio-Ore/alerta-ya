@@ -49,7 +49,12 @@ echo "Configuring Docker authentication for Artifact Registry..."
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 
 echo "Building Docker image locally in Cloud Shell..."
-docker build -t "$IMAGE_TAG" ./web
+# Vite hornea las VITE_* en build — se pasan como build args, NO como env de
+# runtime (un SPA estático no lee env de Cloud Run). Firebase sale de web/.env.
+docker build \
+  --build-arg VITE_API_BASE_URL="$API_URL" \
+  --build-arg VITE_WS_URL="$WS_URL" \
+  -t "$IMAGE_TAG" ./web
 
 echo "Pushing Docker image to Artifact Registry..."
 docker push "$IMAGE_TAG"
@@ -58,7 +63,6 @@ echo "Deploying container to Cloud Run..."
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_TAG" \
   --region "$REGION" \
-  --allow-unauthenticated \
-  --set-env-vars="VITE_API_BASE_URL=$API_URL,VITE_WS_URL=$WS_URL"
+  --allow-unauthenticated
 
 echo "✅ Web Panel successfully deployed!"
