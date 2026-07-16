@@ -44,7 +44,8 @@ describe('analyzeHistoricalData', () => {
     const requestBody = JSON.parse(
       String(vi.mocked(fetch).mock.calls[0]?.[1]?.body),
     ) as { thinking?: { type?: string }; tools?: unknown };
-    expect(requestBody.thinking).toEqual({ type: 'disabled' });
+    // `thinking` se removió: glm-4-flash (GLM-4) lo rechaza con 400.
+    expect(requestBody.thinking).toBeUndefined();
     expect(requestBody.tools).toBeUndefined();
   });
 

@@ -10,13 +10,9 @@ RUN bun install --frozen-lockfile
 
 COPY . .
 
-# Vite hornea las VITE_* en BUILD time (un SPA estático no lee env en runtime).
-# Se reciben como build args y se exponen como ENV antes de `bun run build`;
-# tienen precedencia sobre los valores de .env (que apuntan a localhost en dev).
-ARG VITE_API_BASE_URL
-ARG VITE_WS_URL
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_WS_URL=$VITE_WS_URL
+# Vite hornea las VITE_* en BUILD time desde web/.env (un SPA estático no lee env
+# en runtime). El deployer (deploy-all.sh) escribe web/.env con la API real +
+# Firebase antes de este build.
 RUN bun run build
 
 # Stage de producción — serve estático
