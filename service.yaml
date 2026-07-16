@@ -1,0 +1,42 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: alertaya-api
+  annotations:
+    run.googleapis.com/launch-stage: BETA
+spec:
+  template:
+    spec:
+      containers:
+      # Container 1: The Express API Backend
+      - name: alertaya-api-1
+        image: us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-api:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: DATABASE_URL
+          value: postgresql://postgres:superadmin-integrador-2@35.188.153.115:5432/alertaya_prod
+        - name: JWT_SECRET
+          value: super-secure-jwt-secret-key-of-at-least-32-characters
+        - name: JOB_SECRET
+          value: super-secure-job-secret-16-chars
+        - name: ML_SERVICE_URL
+          value: https://alertaya-ml-562740646244.us-central1.run.app
+        - name: WEB_URL
+          value: https://alertaya-web-562740646244.us-central1.run.app
+        - name: REDIS_URL
+          value: redis://localhost:6379
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "1"
+
+      # Container 2: Redis Cache (Sidecar)
+      - name: redis
+        image: redis:7-alpine
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: "0.5"

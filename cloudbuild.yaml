@@ -1,0 +1,71 @@
+steps:
+  # 1. Build and Push ML image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-ml:latest', './ml']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-ml:latest']
+
+  # 2. Build and Push API image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-api:latest', './api']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-api:latest']
+
+  # 3. Write compile-time environment variables for React Web build
+  - name: 'ubuntu'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cat << EOF > web/.env
+        VITE_API_BASE_URL=https://alertaya-api-562740646244.us-central1.run.app
+        VITE_WS_URL=wss://alertaya-api-562740646244.us-central1.run.app
+        VITE_FIREBASE_API_KEY=AIzaSyA4uKjyHk7DkzbghZ-ZsErvnolPRM6N2is
+        VITE_FIREBASE_AUTH_DOMAIN=alertaya-1b963.firebaseapp.com
+        VITE_FIREBASE_PROJECT_ID=alertaya-1b963
+        VITE_FIREBASE_STORAGE_BUCKET=alertaya-1b963.firebasestorage.app
+        VITE_FIREBASE_MESSAGING_SENDER_ID=562740646244
+        VITE_FIREBASE_APP_ID=1:562740646244:web:f79733afe076dbc47daa71
+        EOF
+
+  # 4. Build and Push Web image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-web:latest', './web']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-web:latest']
+
+  # 5. Deploy ML Service to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'alertaya-ml'
+      - '--image=us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-ml:latest'
+      - '--region=us-central1'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=ENVIRONMENT=production,DATABASE_URL=postgresql://postgres:superadmin-integrador-2@35.188.153.115:5432/alertaya_prod'
+
+  # 6. Deploy API Service (applying sidecar service.yaml config)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'replace'
+      - 'service.yaml'
+      - '--region=us-central1'
+
+  # 7. Deploy Web Service to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'alertaya-web'
+      - '--image=us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-web:latest'
+      - '--region=us-central1'
+      - '--allow-unauthenticated'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
