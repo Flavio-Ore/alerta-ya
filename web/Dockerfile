@@ -18,6 +18,4 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/dist ./dist
 
-EXPOSE 5173
-
-CMD ["bunx", "serve", "-s", "dist", "-l", "5173"]
+CMD sh -c "bunx serve -s dist -l \${PORT:-5173}"
