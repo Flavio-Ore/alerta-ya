@@ -1008,7 +1008,15 @@ class _ConfirmRequestSheetState extends State<_ConfirmRequestSheet> {
       if (mounted) setState(() => _loadingAddress = false);
       return;
     }
-    final addr = await getIt<PhotonService>().reverse(lat: lat, lng: lng);
+    // PhotonService NO está registrado en getIt — instanciar directo (como el
+    // resto del código). getIt<PhotonService>() lanzaba y dejaba el sheet
+    // colgado en "Cargando…" para siempre. Guard extra por si reverse cambia.
+    String? addr;
+    try {
+      addr = await PhotonService().reverse(lat: lat, lng: lng);
+    } catch (_) {
+      addr = null;
+    }
     if (mounted) {
       setState(() {
         _streetAddress = addr;
