@@ -24,7 +24,7 @@ export async function sendConfirmRequestPush(
   redis: Redis,
   streetAddress?: string | null,
 ): Promise<SendPushResult> {
-  const result: SendPushResult = { sent: 0, skippedCooldown: 0, failed: 0 };
+  const result: SendPushResult = { sent: 0, skippedCooldown: 0, failed: 0, invalidTokens: [] };
   if (tokens.length === 0) return result;
 
   const eligibleTokens: string[] = [];
@@ -64,8 +64,13 @@ export async function sendConfirmRequestPush(
     });
     result.sent = response.successCount;
     result.failed = response.failureCount;
-  } catch {
+    inspectResponses(response.responses, eligibleTokens, result);
+  } catch (err) {
     result.failed = eligibleTokens.length;
+    console.error(
+      '[FCM] sendEachForMulticast lanzó (confirm-request):',
+      err instanceof Error ? `${err.name}: ${err.message}` : err,
+    );
   }
 
   return result;
@@ -75,6 +80,33 @@ export interface SendPushResult {
   sent: number;
   skippedCooldown: number;
   failed: number;
+  /** Tokens que FCM rechazó como no registrados/inválidos — el caller debe borrarlos. */
+  invalidTokens: string[];
+}
+
+/** Códigos de FCM que indican un token muerto (app desinstalada, token rotado). */
+const DEAD_TOKEN_CODES = new Set([
+  'messaging/registration-token-not-registered',
+  'messaging/invalid-registration-token',
+  'messaging/invalid-argument',
+]);
+
+/**
+ * Registra el error real de cada token fallido y acumula los tokens muertos.
+ * Sin esto los fallos de FCM quedaban invisibles (solo un contador).
+ */
+function inspectResponses(
+  responses: { success: boolean; error?: { code: string; message: string } }[],
+  tokens: string[],
+  result: SendPushResult,
+): void {
+  responses.forEach((r, i) => {
+    if (r.success || !r.error) return;
+    console.error(
+      `[FCM] token ${tokens[i].slice(0, 8)}… falló: ${r.error.code} — ${r.error.message}`,
+    );
+    if (DEAD_TOKEN_CODES.has(r.error.code)) result.invalidTokens.push(tokens[i]);
+  });
 }
 
 export async function sendIncidentPush(
@@ -83,7 +115,7 @@ export async function sendIncidentPush(
   redis: Redis,
   streetAddress?: string | null,
 ): Promise<SendPushResult> {
-  const result: SendPushResult = { sent: 0, skippedCooldown: 0, failed: 0 };
+  const result: SendPushResult = { sent: 0, skippedCooldown: 0, failed: 0, invalidTokens: [] };
   if (tokens.length === 0) return result;
 
   const eligibleTokens: string[] = [];
@@ -130,8 +162,13 @@ export async function sendIncidentPush(
 
     result.sent = response.successCount;
     result.failed = response.failureCount;
-  } catch {
+    inspectResponses(response.responses, eligibleTokens, result);
+  } catch (err) {
     result.failed = eligibleTokens.length;
+    console.error(
+      '[FCM] sendEachForMulticast lanzó (incident):',
+      err instanceof Error ? `${err.name}: ${err.message}` : err,
+    );
   }
 
   return result;

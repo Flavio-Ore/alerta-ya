@@ -224,6 +224,18 @@ export function emitConfirmRequest(io: Server, payload: ConfirmRequestPayload): 
       console.log(
         `[FCM] 📊 push result sent=${result.sent} cooldown=${result.skippedCooldown} failed=${result.failed}`,
       );
+      // Limpieza de tokens muertos (app desinstalada / token rotado) — si no,
+      // se acumulan y cada push falla contra ellos para siempre.
+      if (result.invalidTokens.length > 0) {
+        console.log(`[FCM] 🧹 borrando ${result.invalidTokens.length} token(s) muerto(s)`);
+        await Promise.all(
+          result.invalidTokens.map((t) =>
+            deviceTokenRepo
+              .deleteByToken(t)
+              .catch((e) => console.error('[FCM] ⚠ no se pudo borrar token muerto:', e)),
+          ),
+        );
+      }
     })
     .catch((e) => console.error('[FCM] ⚠ push failed:', e));
 }
