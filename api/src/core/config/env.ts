@@ -43,9 +43,12 @@ const envSchema = z.object({
   GLM_API_KEY: z.string().optional(),
   // Provider: Z.AI (api.z.ai). La key del proyecto es de Z.AI — el endpoint de
   // Zhipu bigmodel.cn la rechaza (400). Base: https://api.z.ai/api/paas/v4.
-  GLM_API_URL: z.string().url().default('https://api.z.ai/api/paas/v4/chat/completions'),
-  // Modelo de Z.AI (glm-4-flash es de bigmodel.cn, no existe en z.ai → 400).
-  GLM_MODEL: z.string().default('glm-4.7'),
+  // La key del proyecto es de "GLM Coding Plan" → debe usar el endpoint de
+  // coding (api/coding/paas/v4). El general (api/paas/v4) devuelve 429 con esa
+  // key: los docs de z.ai dicen que NO son intercambiables.
+  GLM_API_URL: z.string().url().default('https://api.z.ai/api/coding/paas/v4/chat/completions'),
+  // Modelo de Z.AI. glm-4-flash es de bigmodel.cn (no existe en z.ai → 400).
+  GLM_MODEL: z.string().default('glm-4.5'),
   GLM_TIMEOUT_MS: z.coerce.number().int().min(1000).default(60000),
 
   // GLM Vision — verificación de relevancia visual de evidencia fotográfica.
