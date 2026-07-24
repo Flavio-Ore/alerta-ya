@@ -294,6 +294,13 @@ Ver `docs/rules/CODING_STANDARDS.md` para el detalle completo.
 
 ---
 
+## Despliegue en GCP
+
+Ver `docs/DEPLOYMENT.md` para reconstruir la infraestructura de Cloud Run +
+Cloud SQL + Secret Manager desde cero.
+
+---
+
 ## Contacto del equipo
 
 Para dudas sobre el proyecto, consultar primero `CLAUDE.md` y los documentos en `docs/`.
