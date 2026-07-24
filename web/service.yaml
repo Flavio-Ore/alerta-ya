@@ -1,0 +1,25 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: alertaya-web
+  annotations:
+    run.googleapis.com/launch-stage: BETA
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "20"
+    spec:
+      containers:
+      - name: alertaya-web-1
+        image: us-central1-docker.pkg.dev/alertaya-1b963/cloud-run-source-deploy/alertaya-web:latest
+        ports:
+        - containerPort: 8080
+        # Sin env vars: es un SPA de Vite servido estático. Las VITE_* se
+        # hornean en BUILD time desde web/.env (ver deploy-all.sh) — cualquier
+        # env var puesta en runtime en este servicio no tiene ningún efecto.
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "1"

@@ -31,12 +31,10 @@ echo "--------------------------------------------------"
 docker build -t "$ML_IMAGE" ./ml
 docker push "$ML_IMAGE"
 
-gcloud run deploy alertaya-ml \
-  --image="$ML_IMAGE" \
-  --region="$REGION" \
-  --allow-unauthenticated \
-  --set-env-vars="ENVIRONMENT=development,API_URL=https://alertaya-api-562740646244.us-central1.run.app,VERIFIER_MODEL_PATH=src/models/verifier_v1.joblib,PREDICTOR_MODEL_PATH=src/models/predictor_v1.joblib" \
-  --set-secrets="DATABASE_URL=alertaya-db-url:latest"
+# Aplicar ml/service.yaml (fuente de verdad de env vars + secrets)
+gcloud run services replace ml/service.yaml --region="$REGION"
+gcloud run services add-iam-policy-binding alertaya-ml \
+  --region="$REGION" --member="allUsers" --role="roles/run.invoker" --quiet
 
 # =====================================================================
 # ⚡ DESPLIEGUE 2: BACKEND API
@@ -48,8 +46,10 @@ echo "--------------------------------------------------"
 docker build -t "$API_IMAGE" ./api
 docker push "$API_IMAGE"
 
-# Aplicar service.yaml (sidecar redis + secrets de Secret Manager)
-gcloud run services replace service.yaml --region="$REGION"
+# Aplicar api/service.yaml (sidecar redis + secrets de Secret Manager)
+gcloud run services replace api/service.yaml --region="$REGION"
+gcloud run services add-iam-policy-binding alertaya-api \
+  --region="$REGION" --member="allUsers" --role="roles/run.invoker" --quiet
 
 # =====================================================================
 # 🌐 DESPLIEGUE 3: WEB PANEL (FRONTEND)
@@ -75,10 +75,10 @@ EOF
 docker build -t "$WEB_IMAGE" ./web
 docker push "$WEB_IMAGE"
 
-gcloud run deploy alertaya-web \
-  --image="$WEB_IMAGE" \
-  --region="$REGION" \
-  --allow-unauthenticated
+# Aplicar web/service.yaml
+gcloud run services replace web/service.yaml --region="$REGION"
+gcloud run services add-iam-policy-binding alertaya-web \
+  --region="$REGION" --member="allUsers" --role="roles/run.invoker" --quiet
 
 echo ""
 echo "=================================================="

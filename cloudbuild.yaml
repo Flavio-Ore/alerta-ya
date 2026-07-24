@@ -54,7 +54,7 @@ steps:
       - 'run'
       - 'services'
       - 'replace'
-      - 'service.yaml'
+      - 'api/service.yaml'
       - '--region=us-central1'
 
   # 7. Deploy Web Service to Cloud Run

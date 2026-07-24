@@ -6,6 +6,11 @@ metadata:
     run.googleapis.com/launch-stage: BETA
 spec:
   template:
+    metadata:
+      annotations:
+        # Min 1 instancia: evita cold start del sidecar de Redis en cada request.
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "3"
     spec:
       containers:
       # Container 1: The Express API Backend
@@ -46,6 +51,10 @@ spec:
             secretKeyRef:
               name: alertaya-glm-api-key
               key: latest
+        - name: GLM_API_URL
+          value: https://api.z.ai/api/coding/paas/v4/chat/completions
+        - name: GLM_MODEL
+          value: glm-4.5
         resources:
           limits:
             memory: 512Mi
